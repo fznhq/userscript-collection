@@ -13,6 +13,7 @@
 // @author       Fznhq
 // @namespace    https://github.com/fznhq
 // @homepageURL  https://github.com/fznhq/tampermonkey-collection
+// @license      GNU GPLv3
 // ==/UserScript==
 
 (function () {
