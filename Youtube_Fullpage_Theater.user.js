@@ -40,16 +40,6 @@
             display: none;
         }
 
-
-        html[full-bleed-player]:not([fullscreen]) #masthead-container {
-            transform: translateY(-100%);
-            transition: transform 0.3s ease;
-        }
-
-        html[full-bleed-player][show-header]:not([fullscreen]) #masthead-container {
-            transform: translateY(0)
-        }
-        
         html[full-bleed-player] #page-manager {
             margin-top: 0 !important;
         }
@@ -63,13 +53,22 @@
     GM_addStyle(styles);
 
     const html = document.documentElement;
+    const app = () => $("ytd-app");
     const main = () => $("ytd-watch-flexy");
     const attr = {
         theater: "full-bleed-player",
         role: "role",
         id: "video-id",
-        screen: "fullscreen",
+        hidden_header: "masthead-hidden",
     };
+
+    const keyToggleTheater = new KeyboardEvent("keydown", {
+        key: "t",
+        code: "KeyT",
+        which: 84,
+        keyCode: 84,
+        bubbles: true,
+    });
 
     /**
      * @param {MutationCallback} callback
@@ -88,7 +87,14 @@
     }
 
     function onScrollPage() {
-        html.toggleAttribute("show-header", window.scrollY > 0);
+        app().toggleAttribute(attr.hidden_header, !window.scrollY);
+    }
+
+    /**
+     * @param {KeyboardEvent} event
+     */
+    function onPressEscape(event) {
+        if (event.key == "Escape") document.dispatchEvent(keyToggleTheater);
     }
 
     function watchTheaterMode() {
@@ -96,24 +102,22 @@
 
         if (state && !html.hasAttribute(attr.theater)) {
             html.setAttribute(attr.theater, "");
+            app().setAttribute(attr.hidden_header, "");
+
             window.addEventListener("scroll", onScrollPage);
+            window.addEventListener("keydown", onPressEscape);
         } else if (!state) {
             html.removeAttribute(attr.theater);
-            window.removeEventListener("scroll", onScrollPage);
-        }
-    }
+            app().removeAttribute(attr.hidden_header);
 
-    function watchFullScreen() {
-        html.toggleAttribute(attr.screen, main().hasAttribute(attr.screen));
+            window.removeEventListener("scroll", onScrollPage);
+            window.removeEventListener("keydown", onPressEscape);
+        }
     }
 
     function initMain() {
         observer(watchTheaterMode, main(), {
             attributeFilter: [attr.id, attr.role, attr.theater],
-        });
-
-        observer(watchFullScreen, main(), {
-            attributeFilter: [attr.id, attr.screen],
         });
     }
 
