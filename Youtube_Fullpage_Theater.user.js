@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.2
+// @version      0.3
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://*.youtube.com/*
@@ -59,6 +59,7 @@
         theater: "full-bleed-player",
         role: "role",
         id: "video-id",
+        screen: "fullscreen",
         hidden_header: "masthead-hidden",
     };
 
@@ -87,7 +88,9 @@
     }
 
     function onScrollPage() {
-        app().toggleAttribute(attr.hidden_header, !window.scrollY);
+        if (!main().hasAttribute(attr.screen)) {
+            app().toggleAttribute(attr.hidden_header, !window.scrollY);
+        }
     }
 
     /**
