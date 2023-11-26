@@ -49,6 +49,10 @@
             display: none !important;
         }
 
+        html[full-bleed-player][masthead-hidden] ytd-app:not([scrolling]) #masthead-container {
+            transform: translateY(-100%) !important;
+        }
+
         html[full-bleed-player] #page-manager {
             margin-top: 0 !important;
         }
@@ -60,7 +64,6 @@
     `);
 
     const html = document.documentElement;
-    const app = () => $("ytd-app");
     const main = () => $("ytd-watch-flexy");
     const attr = {
         theater: "full-bleed-player",
@@ -97,8 +100,7 @@
     }
 
     function onScrollPage() {
-        if (main().hasAttribute(attr.screen)) return;
-        app().toggleAttribute(attr.hidden_header, !window.scrollY);
+        html.toggleAttribute(attr.hidden_header, !window.scrollY);
     }
 
     /**
@@ -113,13 +115,13 @@
 
         if (state && !html.hasAttribute(attr.theater)) {
             html.setAttribute(attr.theater, "");
-            app().setAttribute(attr.hidden_header, "");
+            html.setAttribute(attr.hidden_header, "");
 
             window.addEventListener("scroll", onScrollPage);
             window.addEventListener("keydown", onPressEscape);
         } else if (!state) {
             html.removeAttribute(attr.theater);
-            app().removeAttribute(attr.hidden_header);
+            html.removeAttribute(attr.hidden_header);
 
             window.removeEventListener("scroll", onScrollPage);
             window.removeEventListener("keydown", onPressEscape);
