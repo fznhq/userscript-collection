@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.3.1
+// @version      0.3.2
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://*.youtube.com/*
