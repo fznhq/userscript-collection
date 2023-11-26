@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.3
+// @version      0.3.1
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://*.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/embed*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
-// @grant        GM_addStyle
+// @grant        none
 // @updateURL    https://github.com/fznhq/tampermonkey-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @downloadURL  https://github.com/fznhq/tampermonkey-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @author       Fznhq
@@ -27,7 +27,16 @@
         return document.querySelector(query);
     }
 
-    const styles = /*css*/ `
+    /**
+     * @param {string} css
+     */
+    function addStyle(css) {
+        const style = document.createElement("style");
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
+
+    addStyle(/*css*/ `
         html[full-bleed-player] {
             scrollbar-width: none;
         }
@@ -37,7 +46,7 @@
         html[full-bleed-player] .iv-branding,
         html[full-bleed-player] .ytp-ce-element,
         html[full-bleed-player] .ytp-cards-button {
-            display: none;
+            display: none !important;
         }
 
         html[full-bleed-player] #page-manager {
@@ -48,9 +57,7 @@
             height: 100vh !important;
             max-height: none !important
         }
-    `;
-
-    GM_addStyle(styles);
+    `);
 
     const html = document.documentElement;
     const app = () => $("ytd-app");
@@ -69,6 +76,8 @@
         which: 84,
         keyCode: 84,
         bubbles: true,
+        cancelable: true,
+        view: window,
     });
 
     /**
@@ -88,9 +97,8 @@
     }
 
     function onScrollPage() {
-        if (!main().hasAttribute(attr.screen)) {
-            app().toggleAttribute(attr.hidden_header, !window.scrollY);
-        }
+        if (main().hasAttribute(attr.screen)) return;
+        app().toggleAttribute(attr.hidden_header, !window.scrollY);
     }
 
     /**
