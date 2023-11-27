@@ -37,27 +37,27 @@
     }
 
     addStyle(/*css*/ `
-        html[full-bleed-player] {
+        html[theater] {
             scrollbar-width: none;
         }
 
-        html[full-bleed-player]::-webkit-scrollbar,
-        html[full-bleed-player] .ytp-paid-content-overlay,
-        html[full-bleed-player] .iv-branding,
-        html[full-bleed-player] .ytp-ce-element,
-        html[full-bleed-player] .ytp-cards-button {
+        html[theater]::-webkit-scrollbar,
+        html[theater] .ytp-paid-content-overlay,
+        html[theater] .iv-branding,
+        html[theater] .ytp-ce-element,
+        html[theater] .ytp-cards-button {
             display: none !important;
         }
 
-        html[full-bleed-player][masthead-hidden] ytd-app:not([scrolling]) #masthead-container {
+        html[theater][masthead-hidden] #masthead-container {
             transform: translateY(-100%) !important;
         }
 
-        html[full-bleed-player] #page-manager {
+        html[theater] #page-manager {
             margin-top: 0 !important;
         }
 
-        html[full-bleed-player] #full-bleed-container {
+        html[theater] #full-bleed-container {
             height: 100vh !important;
             max-height: none !important
         }
@@ -66,7 +66,7 @@
     const html = document.documentElement;
     const main = () => $("ytd-watch-flexy");
     const attr = {
-        theater: "full-bleed-player",
+        theater: "theater",
         role: "role",
         id: "video-id",
         screen: "fullscreen",
@@ -96,7 +96,11 @@
     }
 
     function isTheater() {
-        return main().getAttribute(attr.role) == "main" && main().hasAttribute(attr.theater);
+        return (
+            main().getAttribute(attr.role) == "main" &&
+            !main().hasAttribute(attr.screen) &&
+            main().hasAttribute(attr.theater)
+        );
     }
 
     function onScrollPage() {
@@ -119,7 +123,7 @@
 
             window.addEventListener("scroll", onScrollPage);
             window.addEventListener("keydown", onPressEscape);
-        } else if (!state) {
+        } else if (!state && html.hasAttribute(attr.theater)) {
             html.removeAttribute(attr.theater);
             html.removeAttribute(attr.hidden_header);
 
@@ -130,7 +134,7 @@
 
     function initMain() {
         observer(watchTheaterMode, main(), {
-            attributeFilter: [attr.id, attr.role, attr.theater],
+            attributeFilter: [attr.id, attr.role, attr.theater, attr.screen],
         });
     }
 
