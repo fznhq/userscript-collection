@@ -3,7 +3,7 @@
 // @version      0.4
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
-// @match        https://*.youtube.com/*
+// @match        https://www.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/embed*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
