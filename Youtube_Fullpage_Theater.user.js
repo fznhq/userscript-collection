@@ -70,7 +70,6 @@
     const attr = {
         theater: "theater",
         role: "role",
-        id: "video-id",
         screen: "fullscreen",
         hidden_header: "masthead-hidden",
     };
@@ -98,10 +97,11 @@
     }
 
     function isTheater() {
+        const element = main();
         return (
-            main().getAttribute(attr.role) == "main" &&
-            !main().hasAttribute(attr.screen) &&
-            main().hasAttribute(attr.theater)
+            element.getAttribute(attr.role) == "main" &&
+            !element.hasAttribute(attr.screen) &&
+            element.hasAttribute(attr.theater)
         );
     }
 
@@ -135,9 +135,7 @@
     }
 
     function initMain() {
-        observer(watchTheaterMode, main(), {
-            attributeFilter: [attr.id, attr.role, attr.theater, attr.screen],
-        });
+        observer(watchTheaterMode, main(), { attributes: true });
     }
 
     observer((_, mobs) => {
