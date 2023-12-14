@@ -8,11 +8,11 @@
 // @exclude      https://*.youtube.com/embed*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        none
-// @updateURL    https://github.com/fznhq/tampermonkey-collection/raw/main/Youtube_Fullpage_Theater.user.js
-// @downloadURL  https://github.com/fznhq/tampermonkey-collection/raw/main/Youtube_Fullpage_Theater.user.js
+// @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
+// @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @author       Fznhq
 // @namespace    https://github.com/fznhq
-// @homepageURL  https://github.com/fznhq/tampermonkey-collection
+// @homepageURL  https://github.com/fznhq/userscript-collection
 // @license      GNU GPLv3
 // ==/UserScript==
 
