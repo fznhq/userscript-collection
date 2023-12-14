@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.6
+// @version      0.6.1
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -45,7 +45,7 @@
         html[theater]::-webkit-scrollbar,
         html[theater] body::-webkit-scrollbar,
         html[theater] #movie_player .ytp-paid-content-overlay,
-        html[theater] #movie_player .iv-branding
+        html[theater] #movie_player .iv-branding,
         html[theater] #movie_player .ytp-ce-element,
         html[theater] #movie_player .ytp-chrome-top,
         html[theater] #movie_player .ytp-suggested-action {
