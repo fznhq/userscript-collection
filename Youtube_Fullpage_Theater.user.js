@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.5
+// @version      0.6
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -44,10 +44,11 @@
 
         html[theater]::-webkit-scrollbar,
         html[theater] body::-webkit-scrollbar,
-        html[theater] .ytp-paid-content-overlay,
-        html[theater] .iv-branding,
-        html[theater] .ytp-ce-element,
-        html[theater] .ytp-cards-button {
+        html[theater] #movie_player .ytp-paid-content-overlay,
+        html[theater] #movie_player .iv-branding
+        html[theater] #movie_player .ytp-ce-element,
+        html[theater] #movie_player .ytp-chrome-top,
+        html[theater] #movie_player .ytp-suggested-action {
             display: none !important;
         }
 
@@ -70,7 +71,7 @@
     const attr = {
         theater: "theater",
         role: "role",
-        screen: "fullscreen",
+        fullscreen: "fullscreen",
         hidden_header: "masthead-hidden",
     };
 
@@ -92,7 +93,7 @@
      */
     function observer(callback, target, options) {
         const mutation = new MutationObserver(callback);
-        if (target) mutation.observe(target, options || { subtree: true, childList: true });
+        mutation.observe(target, options || { subtree: true, childList: true });
         return mutation;
     }
 
@@ -100,19 +101,19 @@
         const element = main();
         return (
             element.getAttribute(attr.role) == "main" &&
-            !element.hasAttribute(attr.screen) &&
+            !element.hasAttribute(attr.fullscreen) &&
             element.hasAttribute(attr.theater)
         );
     }
 
-    function onScrollPage() {
+    function toggleHeader() {
         html.toggleAttribute(attr.hidden_header, !window.scrollY);
     }
 
     /**
      * @param {KeyboardEvent} event
      */
-    function onPressEscape(event) {
+    function closeTheater(event) {
         if (event.key == "Escape") document.dispatchEvent(keyToggleTheater);
     }
 
@@ -123,14 +124,14 @@
             html.setAttribute(attr.theater, "");
             html.setAttribute(attr.hidden_header, "");
 
-            window.addEventListener("scroll", onScrollPage);
-            window.addEventListener("keydown", onPressEscape);
+            window.addEventListener("scroll", toggleHeader);
+            window.addEventListener("keydown", closeTheater);
         } else if (!state && html.hasAttribute(attr.theater)) {
             html.removeAttribute(attr.theater);
             html.removeAttribute(attr.hidden_header);
 
-            window.removeEventListener("scroll", onScrollPage);
-            window.removeEventListener("keydown", onPressEscape);
+            window.removeEventListener("scroll", toggleHeader);
+            window.removeEventListener("keydown", closeTheater);
         }
     }
 
