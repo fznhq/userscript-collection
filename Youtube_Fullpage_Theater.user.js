@@ -7,7 +7,8 @@
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/embed*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
-// @grant        none
+// @grant        GM.getValue
+// @grant        GM.setValue
 // @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @author       Fznhq
@@ -16,7 +17,7 @@
 // @license      GNU GPLv3
 // ==/UserScript==
 
-(function () {
+(async function () {
     "use strict";
 
     const config = {
@@ -24,8 +25,21 @@
         // this will not disable the default view
         // it just trigger theater mode automatically
         // every time the video is changed
-        auto_theater_mode: false,
+        auto_theater_mode: undefined,
     };
+
+    if (GM.getValue && GM.setValue) {
+        for (const name in config) {
+            if (config[name] !== undefined) {
+                GM.setValue(name, config[name]);
+            }
+
+            config[name] =
+                config[name] !== undefined
+                    ? config[name]
+                    : await GM.getValue(name, false);
+        }
+    }
 
     /**
      * @param {string} query
@@ -74,6 +88,7 @@
         }
     `);
 
+    const win = unsafeWindow;
     const html = document.documentElement;
     const main = () => $("ytd-watch-flexy");
     const attr = {
@@ -91,7 +106,7 @@
         keyCode: 84,
         bubbles: true,
         cancelable: true,
-        view: window,
+        view: win,
     });
 
     /**
@@ -115,7 +130,7 @@
     }
 
     function toggleHeader() {
-        html.toggleAttribute(attr.hidden_header, !window.scrollY);
+        html.toggleAttribute(attr.hidden_header, !win.scrollY);
     }
 
     function toggleTheater() {
@@ -147,14 +162,14 @@
             html.setAttribute(attr.theater, "");
             html.setAttribute(attr.hidden_header, "");
 
-            window.addEventListener("scroll", toggleHeader);
-            window.addEventListener("keydown", closeTheater);
+            win.addEventListener("scroll", toggleHeader);
+            win.addEventListener("keydown", closeTheater);
         } else if (!state && html.hasAttribute(attr.theater)) {
             html.removeAttribute(attr.theater);
             html.removeAttribute(attr.hidden_header);
 
-            window.removeEventListener("scroll", toggleHeader);
-            window.removeEventListener("keydown", closeTheater);
+            win.removeEventListener("scroll", toggleHeader);
+            win.removeEventListener("keydown", closeTheater);
         }
     }
 
