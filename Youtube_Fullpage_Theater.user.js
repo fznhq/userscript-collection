@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.6.2
+// @version      0.7
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -18,6 +18,14 @@
 
 (function () {
     "use strict";
+
+    const config = {
+        // Set theater mode every time the video is changed
+        // this will not disable the default view
+        // it just trigger theater mode automatically
+        // every time the video is changed
+        auto_theater_mode: false,
+    };
 
     /**
      * @param {string} query
@@ -57,7 +65,7 @@
         }
 
         html[theater] #page-manager {
-            margin-top: 0 !important;
+            margin: 0 !important;
         }
 
         html[theater] #full-bleed-container {
@@ -69,8 +77,9 @@
     const html = document.documentElement;
     const main = () => $("ytd-watch-flexy");
     const attr = {
-        theater: "theater",
+        video_id: "video-id",
         role: "role",
+        theater: "theater",
         fullscreen: "fullscreen",
         hidden_header: "masthead-hidden",
     };
@@ -98,11 +107,10 @@
     }
 
     function isTheater() {
-        const element = main();
         return (
-            element.getAttribute(attr.role) == "main" &&
-            !element.hasAttribute(attr.fullscreen) &&
-            element.hasAttribute(attr.theater)
+            main().getAttribute(attr.role) == "main" &&
+            !main().hasAttribute(attr.fullscreen) &&
+            main().hasAttribute(attr.theater)
         );
     }
 
@@ -110,11 +118,26 @@
         html.toggleAttribute(attr.hidden_header, !window.scrollY);
     }
 
+    function toggleTheater() {
+        document.dispatchEvent(keyToggleTheater);
+    }
+
     /**
      * @param {KeyboardEvent} event
      */
     function closeTheater(event) {
-        if (event.key == "Escape") document.dispatchEvent(keyToggleTheater);
+        if (event.key == "Escape") toggleTheater();
+    }
+
+    function openTheater() {
+        setTimeout(() => {
+            if (
+                !main().hasAttribute(attr.theater) &&
+                !main().hasAttribute(attr.fullscreen)
+            ) {
+                toggleTheater();
+            }
+        }, 1);
     }
 
     function watchTheaterMode() {
@@ -136,9 +159,15 @@
     }
 
     observer((_, observe) => {
-        if (main()) {
-            observer(watchTheaterMode, main(), { attributes: true });
-            observe.disconnect();
+        if (!main()) return;
+
+        if (config.auto_theater_mode) {
+            observer(openTheater, main(), {
+                attributeFilter: [attr.video_id, attr.role],
+            });
         }
+
+        observer(watchTheaterMode, main(), { attributes: true });
+        observe.disconnect();
     }, document.body);
 })();
