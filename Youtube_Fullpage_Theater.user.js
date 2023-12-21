@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.7
+// @version      0.7.1
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -28,16 +28,22 @@
         auto_theater_mode: undefined,
     };
 
-    if (GM.getValue && GM.setValue) {
-        for (const name in config) {
+    // Don't change `fallback` below, change `config` above.
+    // It's just a default value
+    // when config not yet applied
+    const fallbackConfig = {
+        auto_theater_mode: false,
+    };
+
+    for (const name in config) {
+        if (GM.getValue && GM.setValue) {
             if (config[name] !== undefined) {
                 GM.setValue(name, config[name]);
+            } else {
+                config[name] = await GM.getValue(name, fallbackConfig[name]);
             }
-
-            config[name] =
-                config[name] !== undefined
-                    ? config[name]
-                    : await GM.getValue(name, false);
+        } else if (config[name] === undefined) {
+            config[name] = fallbackConfig[name];
         }
     }
 
