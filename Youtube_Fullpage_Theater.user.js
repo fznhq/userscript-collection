@@ -26,13 +26,17 @@
         // it just trigger theater mode automatically
         // every time the video is changed
         auto_theater_mode: undefined,
+        hide_scrollbar: undefined,
     };
 
-    // Don't change `fallback` below, change `config` above.
-    // It's just a default value
-    // when config not yet applied
+    /**
+     * Don't change `fallback` below, change `config` above.
+     * It's just a default value
+     * when config not yet applied (undefined)
+     */
     const fallbackConfig = {
         auto_theater_mode: false,
+        hide_scrollbar: true,
     };
 
     for (const name in config) {
@@ -64,14 +68,21 @@
         document.head.appendChild(style);
     }
 
-    addStyle(/*css*/ `
-        html[theater],
-        html[theater] body {
-            scrollbar-width: none !important;
-        }
+    if (config.hide_scrollbar) {
+        addStyle(/*css*/ `
+            html[theater],
+            html[theater] body {
+                scrollbar-width: none !important;
+            }
 
-        html[theater]::-webkit-scrollbar,
-        html[theater] body::-webkit-scrollbar,
+            html[theater]::-webkit-scrollbar,
+            html[theater] body::-webkit-scrollbar {
+                display: none !important;
+            }
+        `);
+    }
+
+    addStyle(/*css*/ `
         html[theater] #movie_player .ytp-paid-content-overlay,
         html[theater] #movie_player .iv-branding,
         html[theater] #movie_player .ytp-ce-element,
