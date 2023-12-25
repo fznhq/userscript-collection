@@ -172,7 +172,7 @@
 
             if (document.activeElement != input) {
                 html.removeAttribute(attr.hidden_header);
-                input.focus();
+                setTimeout(() => input.focus(), 1);
             } else {
                 if (!win.scrollY) html.setAttribute(attr.hidden_header, "");
                 input.blur();
