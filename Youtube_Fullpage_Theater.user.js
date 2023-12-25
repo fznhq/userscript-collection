@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.7.2
+// @version      0.7.3
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -21,12 +21,12 @@
     "use strict";
 
     const config = {
-        // Set theater mode every time the video is changed
-        // this will not disable the default view
-        // it just trigger theater mode automatically
-        // every time the video is changed
+        // Open theater, every time video changed
         auto_theater_mode: undefined,
         hide_scrollbar: undefined,
+        // if value is false, it will
+        // get replace by focus search on esc
+        close_theater_with_esc: undefined,
     };
 
     /**
@@ -37,6 +37,7 @@
     const fallbackConfig = {
         auto_theater_mode: false,
         hide_scrollbar: true,
+        close_theater_with_esc: true,
     };
 
     for (const name in config) {
@@ -53,10 +54,10 @@
 
     /**
      * @param {string} query
-     * @returns {HTMLElement | null}
+     * @returns {() => HTMLElement | null}
      */
     function $(query) {
-        return document.querySelector(query);
+        return () => document.querySelector(query);
     }
 
     /**
@@ -105,9 +106,11 @@
         }
     `);
 
+    /** @type {Window} */
     const win = unsafeWindow;
     const html = document.documentElement;
-    const main = () => $("ytd-watch-flexy");
+    const main = $("ytd-watch-flexy");
+    const inputSearch = $("input#search");
     const attr = {
         video_id: "video-id",
         role: "role",
@@ -147,7 +150,9 @@
     }
 
     function toggleHeader() {
-        html.toggleAttribute(attr.hidden_header, !win.scrollY);
+        if (document.activeElement != inputSearch()) {
+            html.toggleAttribute(attr.hidden_header, !win.scrollY);
+        }
     }
 
     function toggleTheater() {
@@ -157,8 +162,22 @@
     /**
      * @param {KeyboardEvent} event
      */
-    function closeTheater(event) {
-        if (event.key == "Escape") toggleTheater();
+    function onEscapePress(event) {
+        if (event.key != "Escape") return;
+
+        if (config.close_theater_with_esc) {
+            toggleTheater();
+        } else {
+            const input = inputSearch();
+
+            if (document.activeElement != input) {
+                html.removeAttribute(attr.hidden_header);
+                input.focus();
+            } else {
+                if (!win.scrollY) html.setAttribute(attr.hidden_header, "");
+                input.blur();
+            }
+        }
     }
 
     function openTheater() {
@@ -180,13 +199,13 @@
             html.setAttribute(attr.hidden_header, "");
 
             win.addEventListener("scroll", toggleHeader);
-            win.addEventListener("keydown", closeTheater);
+            win.addEventListener("keydown", onEscapePress, true);
         } else if (!state && html.hasAttribute(attr.theater)) {
             html.removeAttribute(attr.theater);
             html.removeAttribute(attr.hidden_header);
 
             win.removeEventListener("scroll", toggleHeader);
-            win.removeEventListener("keydown", closeTheater);
+            win.removeEventListener("keydown", onEscapePress, true);
         }
     }
 
