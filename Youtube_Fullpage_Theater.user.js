@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.7.4
+// @version      0.7.5
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -173,8 +173,8 @@
             if (document.activeElement != input) {
                 html.removeAttribute(attr.hidden_header);
                 setTimeout(() => input.focus(), 1);
-            } else {
-                if (!win.scrollY) html.setAttribute(attr.hidden_header, "");
+            } else if (!win.scrollY) {
+                html.setAttribute(attr.hidden_header, "");
                 input.blur();
             }
         }
