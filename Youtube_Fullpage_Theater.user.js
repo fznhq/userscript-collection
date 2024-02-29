@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.8.0
+// @version      0.8.1
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -84,7 +84,7 @@
     }
 
     addStyle(/*css*/ `
-        ytd-watch-flexy[fixed-panels] #chat {
+        html[masthead-hidden] ytd-watch-flexy[fixed-panels] #chat {
             top: 0 !important;
         }
 
