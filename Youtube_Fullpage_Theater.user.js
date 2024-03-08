@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      0.8.1
+// @version      1.0.0
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -17,40 +17,128 @@
 // @license      GNU GPLv3
 // ==/UserScript==
 
+/**
+ * All icon provided by https://iconmonstr.com/
+ */
+
 (async function () {
     "use strict";
 
-    const config = {
-        // Open theater, every time video changed
-        auto_theater_mode: undefined,
-        hide_scrollbar: undefined,
-        // if value is false, it will
-        // get replace by focus search on esc
-        close_theater_with_esc: undefined,
-    };
+    /** @type {Window} */
+    const win = unsafeWindow;
+    /** @type {HTMLHtmlElement} */
+    const html = document.documentElement;
+    /** @type {HTMLBodyElement} */
+    const body = document.body;
 
     /**
-     * Don't change `fallback` below, change `config` above.
-     * It's just a default value
-     * when config not yet applied (undefined)
+     * Config can be changed via popup menu,
+     * just press (v) to open the menu
      */
-    const fallbackConfig = {
-        auto_theater_mode: false,
-        hide_scrollbar: true,
-        close_theater_with_esc: true,
+
+    const config = {
+        auto_theater_mode: {
+            icon: `<svg width="24" height="24" fill-rule="evenodd" clip-rule="evenodd"><path d="M24 22h-24v-20h24v20zm-1-19h-22v18h22v-18zm-4 7h-1v-3.241l-11.241 11.241h3.241v1h-5v-5h1v3.241l11.241-11.241h-3.241v-1h5v5z"/></svg>`,
+            label: "Auto Open Theater",
+            value: undefined, // <-- Only change this value
+            fallback: false,
+        },
+        hide_scrollbar: {
+            icon: `<svg width="24" height="24" viewBox="0 0 24 24"><path d="M14 12c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2zm-3-3.858c.321-.083.653-.142 1-.142s.679.059 1 .142v-2.142h4l-5-6-5 6h4v2.142zm2 7.716c-.321.083-.653.142-1 .142s-.679-.059-1-.142v2.142h-4l5 6 5-6h-4v-2.142z"/></svg>`,
+            label: "Theater Hide Scrollbar",
+            value: undefined, // <-- Only change this value
+            fallback: true,
+        },
+        // if value is false, it will
+        // get replace by focus search on esc
+        close_theater_with_esc: {
+            icon: `<svg clip-rule="evenodd" fill-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2" viewBox="0 0 24 24"><path d="m21 3.998c0-.478-.379-1-1-1h-16c-.62 0-1 .519-1 1v16c0 .621.52 1 1 1h16c.478 0 1-.379 1-1zm-16.5.5h15v15h-15zm7.491 6.432 2.717-2.718c.146-.146.338-.219.53-.219.404 0 .751.325.751.75 0 .193-.073.384-.22.531l-2.717 2.717 2.728 2.728c.147.147.22.339.22.531 0 .427-.349.75-.75.75-.192 0-.385-.073-.531-.219l-2.728-2.728-2.728 2.728c-.147.146-.339.219-.531.219-.401 0-.75-.323-.75-.75 0-.192.073-.384.22-.531l2.728-2.728-2.722-2.722c-.146-.147-.219-.338-.219-.531 0-.425.346-.749.75-.749.192 0 .384.073.53.219z" fill-rule="nonzero"/></svg>`,
+            label: "Close Theater with Esc",
+            value: undefined, // <-- Only change this value
+            fallback: true,
+        },
     };
+
+    function saveConfig(name, value) {
+        if (value !== undefined) config[name].value = value;
+        GM.setValue(name, config[name].value);
+    }
 
     for (const name in config) {
         if (GM.getValue && GM.setValue) {
-            if (config[name] !== undefined) {
-                GM.setValue(name, config[name]);
+            if (config[name].value !== undefined) {
+                saveConfig(name);
             } else {
-                config[name] = await GM.getValue(name, fallbackConfig[name]);
+                config[name].value = await GM.getValue(
+                    name,
+                    config[name].fallback
+                );
             }
-        } else if (config[name] === undefined) {
-            config[name] = fallbackConfig[name];
+        } else if (config[name].value === undefined) {
+            config[name].value = config[name].fallback;
         }
     }
+
+    function menuItemList(name) {
+        const item = document.createElement("div");
+        item.className = "ytp-menuitem";
+        item.ariaChecked = !!config[name].value;
+
+        item.innerHTML = /*html*/ `
+            <div class="ytp-menuitem-icon">${config[name].icon}</div>
+            <div class="ytp-menuitem-label">${config[name].label}</div>
+            <div class="ytp-menuitem-content">
+                <div class="ytp-menuitem-toggle-checkbox"></div>
+            </div>
+        `;
+
+        item.addEventListener("click", () => {
+            item.ariaChecked = !config[name].value;
+            saveConfig(name, !config[name].value);
+            document.dispatchEvent(
+                new CustomEvent("yft-config-updated", { detail: name })
+            );
+        });
+
+        return item;
+    }
+
+    const menu = document.createElement("div");
+    menu.className = "ytc-menu ytp-panel-menu";
+    for (const id in config) {
+        menu.append(menuItemList(id));
+    }
+
+    const containerPopupMenu = document.createElement("div");
+    containerPopupMenu.className = "ytc-popup-container";
+    containerPopupMenu.append(menu);
+    containerPopupMenu.addEventListener(
+        "click",
+        (ev) => !menu.contains(ev.target) && containerPopupMenu.remove()
+    );
+
+    window.addEventListener("keydown", (ev) => {
+        if (ev.key.toLowerCase() == "v" && !isActiveEditable()) {
+            if (document.contains(containerPopupMenu)) {
+                containerPopupMenu.remove();
+            } else {
+                body.append(containerPopupMenu);
+            }
+        } else if (
+            ev.key == "Escape" &&
+            document.contains(containerPopupMenu)
+        ) {
+            containerPopupMenu.remove();
+        }
+    });
+
+    document.addEventListener("yft-config-updated", (ev) => {
+        const name = ev.detail;
+
+        if (name == "hide_scrollbar") {
+            html.toggleAttribute(attr.no_scroll, config[name].value);
+        }
+    });
 
     /**
      * @param {string} query
@@ -69,21 +157,17 @@
         document.head.appendChild(style);
     }
 
-    if (config.hide_scrollbar) {
-        addStyle(/*css*/ `
-            html[theater],
-            html[theater] body {
-                scrollbar-width: none !important;
-            }
-
-            html[theater]::-webkit-scrollbar,
-            html[theater] body::-webkit-scrollbar {
-                display: none !important;
-            }
-        `);
-    }
-
     addStyle(/*css*/ `
+        html[theater][no-scroll],
+        html[theater][no-scroll] body {
+            scrollbar-width: none !important;
+        }
+
+        html[theater][no-scroll]::-webkit-scrollbar,
+        html[theater][no-scroll] body::-webkit-scrollbar {
+            display: none !important;
+        }
+        
         html[masthead-hidden] ytd-watch-flexy[fixed-panels] #chat {
             top: 0 !important;
         }
@@ -108,19 +192,47 @@
             height: 100vh !important;
             max-height: none !important;
         }
+
+        .ytc-popup-container {
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            background: rgba(0, 0, 0, .5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ytc-popup-container h1 {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid;
+        }
+
+        .ytc-menu.ytp-panel-menu {
+            background: #000;
+            width: 400px;
+            font-size: 120%;
+            padding: 10px;
+        }
+
+        .ytc-menu.ytp-panel-menu svg {
+            fill: #eee;
+        }
     `);
 
-    /** @type {Window} */
-    const win = unsafeWindow;
-    const html = document.documentElement;
-    const main = $("ytd-watch-flexy");
-    const inputSearch = $("input#search");
+    const element = {
+        watch: $("ytd-watch-flexy"),
+        search: $("input#search"),
+    };
+
     const attr = {
         video_id: "video-id",
         role: "role",
         theater: "theater",
         fullscreen: "fullscreen",
         hidden_header: "masthead-hidden",
+        no_scroll: "no-scroll",
     };
 
     const keyToggleTheater = new KeyboardEvent("keydown", {
@@ -146,15 +258,22 @@
     }
 
     function isTheater() {
+        const elem = element.watch();
         return (
-            main().getAttribute(attr.role) == "main" &&
-            !main().hasAttribute(attr.fullscreen) &&
-            main().hasAttribute(attr.theater)
+            elem.getAttribute(attr.role) == "main" &&
+            !elem.hasAttribute(attr.fullscreen) &&
+            elem.hasAttribute(attr.theater)
         );
     }
 
+    function isActiveEditable() {
+        /** @type {HTMLElement} */
+        const active = document.activeElement;
+        return active.tagName == "INPUT" || active.contentEditable == "true";
+    }
+
     function toggleHeader() {
-        if (document.activeElement != inputSearch()) {
+        if (document.activeElement != element.search()) {
             html.toggleAttribute(attr.hidden_header, !win.scrollY);
         }
     }
@@ -167,12 +286,14 @@
      * @param {KeyboardEvent} event
      */
     function onEscapePress(event) {
-        if (event.key != "Escape") return;
+        if (event.key != "Escape" || document.contains(containerPopupMenu)) {
+            return;
+        }
 
-        if (config.close_theater_with_esc) {
+        if (config.close_theater_with_esc.value) {
             toggleTheater();
         } else {
-            const input = inputSearch();
+            const input = element.search();
 
             if (document.activeElement != input) {
                 html.removeAttribute(attr.hidden_header);
@@ -185,23 +306,25 @@
     }
 
     function openTheater() {
-        setTimeout(() => {
-            if (
-                !main().hasAttribute(attr.theater) &&
-                !main().hasAttribute(attr.fullscreen)
-            ) {
-                toggleTheater();
-            }
-        }, 1);
+        const elem = element.watch();
+
+        if (
+            config.auto_theater_mode.value &&
+            !elem.hasAttribute(attr.theater) &&
+            !elem.hasAttribute(attr.fullscreen)
+        ) {
+            setTimeout(toggleTheater, 1);
+        }
     }
 
     function watchTheaterMode() {
         const state = isTheater();
-        const input = inputSearch();
+        const input = element.search();
 
         if (state && !html.hasAttribute(attr.theater)) {
             html.setAttribute(attr.theater, "");
             html.setAttribute(attr.hidden_header, "");
+            html.toggleAttribute(attr.no_scroll, config.hide_scrollbar.value);
 
             input.addEventListener("blur", toggleHeader);
             win.addEventListener("scroll", toggleHeader);
@@ -209,6 +332,7 @@
         } else if (!state && html.hasAttribute(attr.theater)) {
             html.removeAttribute(attr.theater);
             html.removeAttribute(attr.hidden_header);
+            html.removeAttribute(attr.no_scroll);
 
             input.removeEventListener("blur", toggleHeader);
             win.removeEventListener("scroll", toggleHeader);
@@ -217,15 +341,15 @@
     }
 
     observer((_, observe) => {
-        if (!main()) return;
+        const elem = element.watch();
 
-        if (config.auto_theater_mode) {
-            observer(openTheater, main(), {
-                attributeFilter: [attr.video_id, attr.role],
-            });
-        }
+        if (!elem) return;
 
-        observer(watchTheaterMode, main(), { attributes: true });
+        observer(watchTheaterMode, elem, { attributes: true });
+        observer(openTheater, elem, {
+            attributeFilter: [attr.video_id, attr.role],
+        });
+
         observe.disconnect();
-    }, document.body);
+    }, body);
 })();
