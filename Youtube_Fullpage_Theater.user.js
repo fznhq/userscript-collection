@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.0.0
+// @version      1.0.1
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -269,7 +269,11 @@
     function isActiveEditable() {
         /** @type {HTMLElement} */
         const active = document.activeElement;
-        return active.tagName == "INPUT" || active.contentEditable == "true";
+        return (
+            active.tagName == "TEXTAREA" ||
+            active.tagName == "INPUT" ||
+            active.contentEditable == "true"
+        );
     }
 
     function toggleHeader() {
