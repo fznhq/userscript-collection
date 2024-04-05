@@ -115,7 +115,7 @@
     popup.container.addEventListener(
         "click",
         (/** @type {MouseEvent} */ ev) => {
-            !popup.menu.container(ev.target) && popup.container.remove();
+            !popup.menu.contains(ev.target) && popup.container.remove();
         }
     );
 
