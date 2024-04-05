@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.0.1
+// @version      1.0.2
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -9,6 +9,7 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
 // @grant        GM.setValue
+// @grant        GM.addStyle
 // @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @author       Fznhq
@@ -78,65 +79,65 @@
             config[name].value = config[name].fallback;
         }
     }
+    const popup = {
+        menu: document.createElement("div"),
+        container: document.createElement("div"),
+        item_list: (name) => {
+            const item = document.createElement("div");
+            item.className = "ytp-menuitem";
+            item.ariaChecked = !!config[name].value;
 
-    function menuItemList(name) {
-        const item = document.createElement("div");
-        item.className = "ytp-menuitem";
-        item.ariaChecked = !!config[name].value;
+            item.innerHTML = /*html*/ `
+                <div class="ytp-menuitem-icon">${config[name].icon}</div>
+                <div class="ytp-menuitem-label">${config[name].label}</div>
+                <div class="ytp-menuitem-content">
+                    <div class="ytp-menuitem-toggle-checkbox"></div>
+                </div>
+            `;
 
-        item.innerHTML = /*html*/ `
-            <div class="ytp-menuitem-icon">${config[name].icon}</div>
-            <div class="ytp-menuitem-label">${config[name].label}</div>
-            <div class="ytp-menuitem-content">
-                <div class="ytp-menuitem-toggle-checkbox"></div>
-            </div>
-        `;
+            item.addEventListener("click", () => {
+                item.ariaChecked = !config[name].value;
+                saveConfig(name, !config[name].value);
+                document.dispatchEvent(
+                    new CustomEvent("yft-config-updated", { detail: name })
+                );
+            });
 
-        item.addEventListener("click", () => {
-            item.ariaChecked = !config[name].value;
-            saveConfig(name, !config[name].value);
-            document.dispatchEvent(
-                new CustomEvent("yft-config-updated", { detail: name })
-            );
-        });
+            return item;
+        },
+    };
 
-        return item;
-    }
+    popup.menu.className = "ytc-menu ytp-panel-menu";
+    for (const item in config) popup.menu.append(popup.item_list(item));
 
-    const menu = document.createElement("div");
-    menu.className = "ytc-menu ytp-panel-menu";
-    for (const id in config) {
-        menu.append(menuItemList(id));
-    }
-
-    const containerPopupMenu = document.createElement("div");
-    containerPopupMenu.className = "ytc-popup-container";
-    containerPopupMenu.append(menu);
-    containerPopupMenu.addEventListener(
+    popup.container.className = "ytc-popup-container";
+    popup.container.append(popup.menu);
+    popup.container.addEventListener(
         "click",
-        (ev) => !menu.contains(ev.target) && containerPopupMenu.remove()
+        (/** @type {MouseEvent} */ ev) => {
+            !popup.menu.container(ev.target) && popup.container.remove();
+        }
     );
 
-    window.addEventListener("keydown", (ev) => {
+    window.addEventListener("keydown", (/** @type {KeyboardEvent} */ ev) => {
         if (ev.key.toLowerCase() == "v" && !isActiveEditable()) {
-            if (document.contains(containerPopupMenu)) {
-                containerPopupMenu.remove();
+            if (document.contains(popup.container)) {
+                popup.container.remove();
             } else {
-                body.append(containerPopupMenu);
+                body.append(popup.container);
             }
-        } else if (
-            ev.key == "Escape" &&
-            document.contains(containerPopupMenu)
-        ) {
-            containerPopupMenu.remove();
+        } else if (ev.key == "Escape" && document.contains(popup.container)) {
+            popup.container.remove();
         }
     });
 
     document.addEventListener("yft-config-updated", (ev) => {
         const name = ev.detail;
 
-        if (name == "hide_scrollbar") {
-            html.toggleAttribute(attr.no_scroll, config[name].value);
+        switch (name) {
+            case "hide_scrollbar":
+                html.toggleAttribute(attr.no_scroll, config[name].value);
+                break;
         }
     });
 
@@ -148,16 +149,7 @@
         return () => document.querySelector(query);
     }
 
-    /**
-     * @param {string} css
-     */
-    function addStyle(css) {
-        const style = document.createElement("style");
-        style.textContent = css;
-        document.head.appendChild(style);
-    }
-
-    addStyle(/*css*/ `
+    GM.addStyle(/*css*/ `
         html[theater][no-scroll],
         html[theater][no-scroll] body {
             scrollbar-width: none !important;
@@ -172,11 +164,11 @@
             top: 0 !important;
         }
 
-        html[theater] #movie_player .ytp-paid-content-overlay,
-        html[theater] #movie_player .iv-branding,
-        html[theater] #movie_player .ytp-ce-element,
-        html[theater] #movie_player .ytp-chrome-top,
-        html[theater] #movie_player .ytp-suggested-action {
+        html[theater] ytd-player .ytp-paid-content-overlay,
+        html[theater] ytd-player .iv-branding,
+        html[theater] ytd-player .ytp-ce-element,
+        html[theater] ytd-player .ytp-chrome-top,
+        html[theater] ytd-player .ytp-suggested-action {
             display: none !important;
         }
 
@@ -201,12 +193,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-
-        .ytc-popup-container h1 {
-            padding: 20px;
-            text-align: center;
-            border-bottom: 1px solid;
         }
 
         .ytc-menu.ytp-panel-menu {
@@ -290,7 +276,7 @@
      * @param {KeyboardEvent} event
      */
     function onEscapePress(event) {
-        if (event.key != "Escape" || document.contains(containerPopupMenu)) {
+        if (event.key != "Escape" || document.contains(popup.container)) {
             return;
         }
 
