@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.0.2
+// @version      1.1.0
 // @description  Make theater mode fill the entire page view with hidden navbar
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -79,6 +79,7 @@
             config[name].value = config[name].fallback;
         }
     }
+
     const popup = {
         menu: document.createElement("div"),
         container: document.createElement("div"),
@@ -112,14 +113,11 @@
 
     popup.container.className = "ytc-popup-container";
     popup.container.append(popup.menu);
-    popup.container.addEventListener(
-        "click",
-        (/** @type {MouseEvent} */ ev) => {
-            !popup.menu.contains(ev.target) && popup.container.remove();
-        }
-    );
+    popup.container.addEventListener("click", (ev) => {
+        !popup.menu.contains(ev.target) && popup.container.remove();
+    });
 
-    window.addEventListener("keydown", (/** @type {KeyboardEvent} */ ev) => {
+    window.addEventListener("keydown", (ev) => {
         if (ev.key.toLowerCase() == "v" && !isActiveEditable()) {
             if (document.contains(popup.container)) {
                 popup.container.remove();
@@ -131,15 +129,18 @@
         }
     });
 
-    document.addEventListener("yft-config-updated", (ev) => {
-        const name = ev.detail;
+    document.addEventListener(
+        "yft-config-updated",
+        (/** @type {CustomEvent} */ ev) => {
+            const name = ev.detail;
 
-        switch (name) {
-            case "hide_scrollbar":
-                html.toggleAttribute(attr.no_scroll, config[name].value);
-                break;
+            switch (name) {
+                case "hide_scrollbar":
+                    html.toggleAttribute(attr.no_scroll, config[name].value);
+                    break;
+            }
         }
-    });
+    );
 
     /**
      * @param {string} query
@@ -180,7 +181,8 @@
             margin: 0 !important;
         }
 
-        html[theater] #full-bleed-container {
+        html[theater] #full-bleed-container,
+        html[theater] #player-full-bleed-container {
             height: 100vh !important;
             max-height: none !important;
         }
@@ -208,7 +210,7 @@
     `);
 
     const element = {
-        watch: $("ytd-watch-flexy"),
+        watch: $("ytd-watch-flexy, ytd-watch-grid"), // Add: trash UI support
         search: $("input#search"),
     };
 
