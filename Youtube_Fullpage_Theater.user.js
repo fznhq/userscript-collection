@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.1.0
-// @description  Make theater mode fill the entire page view with hidden navbar
+// @version      1.1.1
+// @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode
 // @run-at       document-body
 // @match        https://www.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/embed*
+// @exclude      https://*.youtube.com/tv*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
 // @grant        GM.setValue
@@ -147,7 +148,8 @@
      * @returns {() => HTMLElement | null}
      */
     function $(query) {
-        return () => document.querySelector(query);
+        let cache;
+        return () => cache || (cache = document.querySelector(query));
     }
 
     GM.addStyle(/*css*/ `
@@ -297,10 +299,15 @@
         }
     }
 
-    function openTheater() {
+    /**
+     * @param {MutationRecord[]} mutations
+     */
+    function openTheater(mutations) {
+        const attrs = [attr.role, attr.video_id];
         const elem = element.watch();
 
         if (
+            mutations.some((m) => attrs.includes(m.attributeName)) &&
             config.auto_theater_mode.value &&
             !elem.hasAttribute(attr.theater) &&
             !elem.hasAttribute(attr.fullscreen)
@@ -337,10 +344,14 @@
 
         if (!elem) return;
 
-        observer(watchTheaterMode, elem, { attributes: true });
-        observer(openTheater, elem, {
-            attributeFilter: [attr.video_id, attr.role],
-        });
+        observer(
+            (mutations) => {
+                watchTheaterMode();
+                openTheater(mutations);
+            },
+            elem,
+            { attributes: true }
+        );
 
         observe.disconnect();
     }, body);
