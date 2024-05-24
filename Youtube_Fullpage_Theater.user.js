@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.1.1
+// @version      1.2.0
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -19,9 +19,7 @@
 // @license      GNU GPLv3
 // ==/UserScript==
 
-/**
- * All icon provided by https://iconmonstr.com/
- */
+// Icons provided by https://iconmonstr.com/
 
 (async function () {
     "use strict";
@@ -34,88 +32,86 @@
     const body = document.body;
 
     /**
-     * Config can be changed via popup menu,
+     * Options must be changed via popup menu,
      * just press (v) to open the menu
      */
-
-    const config = {
+    const options = {
         auto_theater_mode: {
             icon: `<svg width="24" height="24" fill-rule="evenodd" clip-rule="evenodd"><path d="M24 22h-24v-20h24v20zm-1-19h-22v18h22v-18zm-4 7h-1v-3.241l-11.241 11.241h3.241v1h-5v-5h1v3.241l11.241-11.241h-3.241v-1h5v5z"/></svg>`,
             label: "Auto Open Theater",
-            value: undefined, // <-- Only change this value
-            fallback: false,
+            value: false, // fallback value
         },
         hide_scrollbar: {
             icon: `<svg width="24" height="24" viewBox="0 0 24 24"><path d="M14 12c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2zm-3-3.858c.321-.083.653-.142 1-.142s.679.059 1 .142v-2.142h4l-5-6-5 6h4v2.142zm2 7.716c-.321.083-.653.142-1 .142s-.679-.059-1-.142v2.142h-4l5 6 5-6h-4v-2.142z"/></svg>`,
             label: "Theater Hide Scrollbar",
-            value: undefined, // <-- Only change this value
-            fallback: true,
+            value: true, // fallback value
+            onUpdate: (attr, value) => html.toggleAttribute(attr, value),
         },
-        // if value is false, it will
-        // get replace by focus search on esc
         close_theater_with_esc: {
             icon: `<svg clip-rule="evenodd" fill-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2" viewBox="0 0 24 24"><path d="m21 3.998c0-.478-.379-1-1-1h-16c-.62 0-1 .519-1 1v16c0 .621.52 1 1 1h16c.478 0 1-.379 1-1zm-16.5.5h15v15h-15zm7.491 6.432 2.717-2.718c.146-.146.338-.219.53-.219.404 0 .751.325.751.75 0 .193-.073.384-.22.531l-2.717 2.717 2.728 2.728c.147.147.22.339.22.531 0 .427-.349.75-.75.75-.192 0-.385-.073-.531-.219l-2.728-2.728-2.728 2.728c-.147.146-.339.219-.531.219-.401 0-.75-.323-.75-.75 0-.192.073-.384.22-.531l2.728-2.728-2.722-2.722c-.146-.147-.219-.338-.219-.531 0-.425.346-.749.75-.749.192 0 .384.073.53.219z" fill-rule="nonzero"/></svg>`,
             label: "Close Theater with Esc",
-            value: undefined, // <-- Only change this value
-            fallback: true,
+            value: true, // fallback value
         },
     };
 
-    function saveConfig(name, value) {
-        if (value !== undefined) config[name].value = value;
-        GM.setValue(name, config[name].value);
+    function saveOptions(name, value) {
+        options[name].value = value;
+        GM.setValue(name, value);
+        return value;
     }
 
-    for (const name in config) {
-        if (GM.getValue && GM.setValue) {
-            if (config[name].value !== undefined) {
-                saveConfig(name);
+    if (GM.getValue && GM.setValue) {
+        for (const name in options) {
+            const saved_option = await GM.getValue(name);
+
+            if (saved_option === undefined) {
+                saveOptions(name, options[name].value);
             } else {
-                config[name].value = await GM.getValue(
-                    name,
-                    config[name].fallback
-                );
+                options[name].value = saved_option;
             }
-        } else if (config[name].value === undefined) {
-            config[name].value = config[name].fallback;
         }
     }
 
     const popup = {
-        menu: document.createElement("div"),
         container: document.createElement("div"),
-        item_list: (name) => {
-            const item = document.createElement("div");
-            item.className = "ytp-menuitem";
-            item.ariaChecked = !!config[name].value;
+        menu: (() => {
+            const menu = document.createElement("div");
+            menu.className = "ytc-menu ytp-panel-menu";
 
-            item.innerHTML = /*html*/ `
-                <div class="ytp-menuitem-icon">${config[name].icon}</div>
-                <div class="ytp-menuitem-label">${config[name].label}</div>
-                <div class="ytp-menuitem-content">
-                    <div class="ytp-menuitem-toggle-checkbox"></div>
-                </div>
-            `;
+            for (const name in options) {
+                const container = document.createElement("div");
+                container.innerHTML = /*html*/ `
+                    <div class="ytp-menuitem" aria-checked=${options[name].value}>
+                        <div class="ytp-menuitem-icon">${options[name].icon}</div>
+                        <div class="ytp-menuitem-label">${options[name].label}</div>
+                        <div class="ytp-menuitem-content">
+                            <div class="ytp-menuitem-toggle-checkbox"></div>
+                        </div>
+                    </div>   
+                `;
 
-            item.addEventListener("click", () => {
-                item.ariaChecked = !config[name].value;
-                saveConfig(name, !config[name].value);
-                document.dispatchEvent(
-                    new CustomEvent("yft-config-updated", { detail: name })
-                );
-            });
+                const item = container.firstElementChild;
+                item.addEventListener("click", () => {
+                    const newValue = saveOptions(name, !options[name].value);
+                    item.ariaChecked = newValue;
+                    if (options[name].onUpdate) {
+                        options[name].onUpdate(attr.no_scroll, newValue);
+                    }
+                });
 
-            return item;
-        },
+                menu.append(item);
+            }
+
+            return menu;
+        })(),
     };
-
-    popup.menu.className = "ytc-menu ytp-panel-menu";
-    for (const item in config) popup.menu.append(popup.item_list(item));
 
     popup.container.className = "ytc-popup-container";
     popup.container.append(popup.menu);
     popup.container.addEventListener("click", (ev) => {
-        !popup.menu.contains(ev.target) && popup.container.remove();
+        if (!popup.menu.contains(ev.target)) {
+            popup.container.remove();
+        }
     });
 
     window.addEventListener("keydown", (ev) => {
@@ -129,19 +125,6 @@
             popup.container.remove();
         }
     });
-
-    document.addEventListener(
-        "yft-config-updated",
-        (/** @type {CustomEvent} */ ev) => {
-            const name = ev.detail;
-
-            switch (name) {
-                case "hide_scrollbar":
-                    html.toggleAttribute(attr.no_scroll, config[name].value);
-                    break;
-            }
-        }
-    );
 
     /**
      * @param {string} query
@@ -206,13 +189,13 @@
             padding: 10px;
         }
 
-        .ytc-menu.ytp-panel-menu svg {
+        .ytc-menu svg {
             fill: #eee;
         }
     `);
 
     const element = {
-        watch: $("ytd-watch-flexy, ytd-watch-grid"), // Add: trash UI support
+        watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid == trash
         search: $("input#search"),
     };
 
@@ -284,7 +267,7 @@
             return;
         }
 
-        if (config.close_theater_with_esc.value) {
+        if (options.close_theater_with_esc.value) {
             toggleTheater();
         } else {
             const input = element.search();
@@ -307,8 +290,8 @@
         const elem = element.watch();
 
         if (
+            options.auto_theater_mode.value &&
             mutations.some((m) => attrs.includes(m.attributeName)) &&
-            config.auto_theater_mode.value &&
             !elem.hasAttribute(attr.theater) &&
             !elem.hasAttribute(attr.fullscreen)
         ) {
@@ -316,32 +299,32 @@
         }
     }
 
+    function setAttribute(theater, header, scroll) {
+        html.toggleAttribute(attr.theater, theater);
+        html.toggleAttribute(attr.hidden_header, header);
+        html.toggleAttribute(attr.no_scroll, scroll);
+    }
+
+    function setListener(action) {
+        element.search()[action]("blur", toggleHeader);
+        win[action]("scroll", toggleHeader);
+        win[action]("keydown", onEscapePress, true);
+    }
+
     function watchTheaterMode() {
         const state = isTheater();
-        const input = element.search();
 
         if (state && !html.hasAttribute(attr.theater)) {
-            html.setAttribute(attr.theater, "");
-            html.setAttribute(attr.hidden_header, "");
-            html.toggleAttribute(attr.no_scroll, config.hide_scrollbar.value);
-
-            input.addEventListener("blur", toggleHeader);
-            win.addEventListener("scroll", toggleHeader);
-            win.addEventListener("keydown", onEscapePress, true);
+            setAttribute(true, true, options.hide_scrollbar.value);
+            setListener("addEventListener");
         } else if (!state && html.hasAttribute(attr.theater)) {
-            html.removeAttribute(attr.theater);
-            html.removeAttribute(attr.hidden_header);
-            html.removeAttribute(attr.no_scroll);
-
-            input.removeEventListener("blur", toggleHeader);
-            win.removeEventListener("scroll", toggleHeader);
-            win.removeEventListener("keydown", onEscapePress, true);
+            setAttribute(false, false, false);
+            setListener("removeEventListener");
         }
     }
 
     observer((_, observe) => {
         const elem = element.watch();
-
         if (!elem) return;
 
         observer(
