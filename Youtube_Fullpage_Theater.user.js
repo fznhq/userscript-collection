@@ -54,7 +54,7 @@
         },
     };
 
-    function saveOptions(name, value) {
+    function saveOption(name, value) {
         options[name].value = value;
         GM.setValue(name, value);
         return value;
@@ -65,7 +65,7 @@
             const saved_option = await GM.getValue(name);
 
             if (saved_option === undefined) {
-                saveOptions(name, options[name].value);
+                saveOption(name, options[name].value);
             } else {
                 options[name].value = saved_option;
             }
@@ -92,7 +92,7 @@
 
                 const item = container.firstElementChild;
                 item.addEventListener("click", () => {
-                    const newValue = saveOptions(name, !options[name].value);
+                    const newValue = saveOption(name, !options[name].value);
                     item.ariaChecked = newValue;
                     if (options[name].onUpdate) {
                         options[name].onUpdate(attr.no_scroll, newValue);
