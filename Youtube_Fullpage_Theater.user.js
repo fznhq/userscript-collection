@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.2.0
+// @version      1.2.1
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -60,15 +60,13 @@
         return value;
     }
 
-    if (GM.getValue && GM.setValue) {
-        for (const name in options) {
-            const saved_option = await GM.getValue(name);
+    for (const name in options) {
+        const saved_option = await GM.getValue(name);
 
-            if (saved_option === undefined) {
-                saveOption(name, options[name].value);
-            } else {
-                options[name].value = saved_option;
-            }
+        if (saved_option === undefined) {
+            saveOption(name, options[name].value);
+        } else {
+            options[name].value = saved_option;
         }
     }
 
