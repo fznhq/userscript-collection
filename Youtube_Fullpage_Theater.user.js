@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.2.1
+// @version      1.2.2
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -77,18 +77,16 @@
             menu.className = "ytc-menu ytp-panel-menu";
 
             for (const name in options) {
-                const container = document.createElement("div");
-                container.innerHTML = /*html*/ `
-                    <div class="ytp-menuitem" aria-checked=${options[name].value}>
+                const item = document.createElement("div");
+                item.className = "ytp-menuitem";
+                item.ariaChecked = options[name].value;
+                item.innerHTML = /*html*/ `
                         <div class="ytp-menuitem-icon">${options[name].icon}</div>
                         <div class="ytp-menuitem-label">${options[name].label}</div>
                         <div class="ytp-menuitem-content">
                             <div class="ytp-menuitem-toggle-checkbox"></div>
                         </div>
-                    </div>   
                 `;
-
-                const item = container.firstElementChild;
                 item.addEventListener("click", () => {
                     const newValue = saveOption(name, !options[name].value);
                     item.ariaChecked = newValue;
@@ -96,7 +94,6 @@
                         options[name].onUpdate(attr.no_scroll, newValue);
                     }
                 });
-
                 menu.append(item);
             }
 
