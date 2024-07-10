@@ -46,10 +46,11 @@
             label: "Theater Hide Scrollbar",
             value: true, // fallback value
             onUpdate: () => {
-                html.toggleAttribute(
-                    attr.no_scroll,
-                    options.hide_scrollbar.value
-                );
+                if (html.hasAttribute(attr.theater))
+                    html.toggleAttribute(
+                        attr.no_scroll,
+                        options.hide_scrollbar.value
+                    );
             },
         },
         close_theater_with_esc: {
@@ -145,13 +146,13 @@
     }
 
     GM.addStyle(/*css*/ `
-        html[theater][no-scroll],
-        html[theater][no-scroll] body {
+        html[no-scroll],
+        html[no-scroll] body {
             scrollbar-width: none !important;
         }
 
-        html[theater][no-scroll]::-webkit-scrollbar,
-        html[theater][no-scroll] body::-webkit-scrollbar {
+        html[no-scroll]::-webkit-scrollbar,
+        html[no-scroll] body::-webkit-scrollbar {
             display: none !important;
         }
         
