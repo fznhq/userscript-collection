@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.2.3
+// @version      1.3.0
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -45,16 +45,29 @@
             icon: `<svg width="24" height="24" viewBox="0 0 24 24"><path d="M14 12c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2zm-3-3.858c.321-.083.653-.142 1-.142s.679.059 1 .142v-2.142h4l-5-6-5 6h4v2.142zm2 7.716c-.321.083-.653.142-1 .142s-.679-.059-1-.142v2.142h-4l5 6 5-6h-4v-2.142z"/></svg>`,
             label: "Theater Hide Scrollbar",
             value: true, // fallback value
-            onUpdate: () =>
+            onUpdate: () => {
                 html.toggleAttribute(
                     attr.no_scroll,
                     options.hide_scrollbar.value
-                ),
+                );
+            },
         },
         close_theater_with_esc: {
             icon: `<svg clip-rule="evenodd" fill-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2" viewBox="0 0 24 24"><path d="m21 3.998c0-.478-.379-1-1-1h-16c-.62 0-1 .519-1 1v16c0 .621.52 1 1 1h16c.478 0 1-.379 1-1zm-16.5.5h15v15h-15zm7.491 6.432 2.717-2.718c.146-.146.338-.219.53-.219.404 0 .751.325.751.75 0 .193-.073.384-.22.531l-2.717 2.717 2.728 2.728c.147.147.22.339.22.531 0 .427-.349.75-.75.75-.192 0-.385-.073-.531-.219l-2.728-2.728-2.728 2.728c-.147.146-.339.219-.531.219-.401 0-.75-.323-.75-.75 0-.192.073-.384.22-.531l2.728-2.728-2.722-2.722c-.146-.147-.219-.338-.219-.531 0-.425.346-.749.75-.749.192 0 .384.073.53.219z" fill-rule="nonzero"/></svg>`,
-            label: "Close Theater with Esc",
+            label: "Close Theater With Esc",
             value: true, // fallback value
+        },
+        hide_card: {
+            icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M22 2v20H2V2h20zm2-2H0v24h24V0zm-6 10v8h-8v-8h8zm2-2H8v12h12V8zM4 4v12h2V6h10V4H4z"/></svg>`,
+            label: "Hide Card Outside Theater Mode",
+            value: false, // fallback value
+            onUpdate: () => {
+                if (!html.hasAttribute(attr.theater))
+                    html.toggleAttribute(
+                        attr.hide_card,
+                        options.hide_card.value
+                    );
+            },
         },
     };
 
@@ -146,11 +159,11 @@
             top: 0 !important;
         }
 
-        html[theater] ytd-player .ytp-paid-content-overlay,
-        html[theater] ytd-player .iv-branding,
-        html[theater] ytd-player .ytp-ce-element,
-        html[theater] ytd-player .ytp-chrome-top,
-        html[theater] ytd-player .ytp-suggested-action {
+        html[hide-card] ytd-player .ytp-paid-content-overlay,
+        html[hide-card] ytd-player .iv-branding,
+        html[hide-card] ytd-player .ytp-ce-element,
+        html[hide-card] ytd-player .ytp-chrome-top,
+        html[hide-card] ytd-player .ytp-suggested-action {
             display: none !important;
         }
 
@@ -202,6 +215,7 @@
         fullscreen: "fullscreen",
         hidden_header: "masthead-hidden",
         no_scroll: "no-scroll",
+        hide_card: "hide-card",
     };
 
     const keyToggleTheater = new KeyboardEvent("keydown", {
@@ -295,10 +309,11 @@
         }
     }
 
-    function setAttribute(theater, header, scroll) {
+    function setAttribute(theater, header, scroll, card) {
         html.toggleAttribute(attr.theater, theater);
         html.toggleAttribute(attr.hidden_header, header);
         html.toggleAttribute(attr.no_scroll, scroll);
+        html.toggleAttribute(attr.hide_card, card);
     }
 
     function setListener(action) {
@@ -311,10 +326,10 @@
         const state = isTheater();
 
         if (state && !html.hasAttribute(attr.theater)) {
-            setAttribute(true, true, options.hide_scrollbar.value);
+            setAttribute(true, true, options.hide_scrollbar.value, true);
             setListener("addEventListener");
         } else if (!state && html.hasAttribute(attr.theater)) {
-            setAttribute(false, false, false);
+            setAttribute(false, false, false, options.hide_card.value);
             setListener("removeEventListener");
         }
     }
