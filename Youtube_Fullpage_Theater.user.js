@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.3.0
-// @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode
+// @version      1.4.0
+// @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
@@ -125,13 +125,15 @@
     });
 
     window.addEventListener("keydown", (ev) => {
-        if (ev.key.toLowerCase() == "v" && !isActiveEditable()) {
+        const isVClick = ev.key.toLowerCase() == "v" || ev.code == "KeyV";
+
+        if (isVClick && !isActiveEditable()) {
             if (document.contains(popup.container)) {
                 popup.container.remove();
             } else {
                 body.append(popup.container);
             }
-        } else if (ev.key == "Escape" && document.contains(popup.container)) {
+        } else if (ev.code == "Escape" && document.contains(popup.container)) {
             popup.container.remove();
         }
     });
@@ -274,7 +276,7 @@
      * @param {KeyboardEvent} event
      */
     function onEscapePress(event) {
-        if (event.key != "Escape" || document.contains(popup.container)) {
+        if (event.code != "Escape" || document.contains(popup.container)) {
             return;
         }
 
