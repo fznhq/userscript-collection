@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.5.0
+// @version      1.5.1
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -82,7 +82,7 @@
     }
 
     for (const name in options) {
-        let saved_option = await (GM.getValue || GM_getValue)(name);
+        const saved_option = await (GM.getValue || GM_getValue)(name);
 
         if (saved_option === undefined) {
             saveOption(name, options[name].value);
