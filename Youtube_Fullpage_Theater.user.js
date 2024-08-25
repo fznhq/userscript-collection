@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.5.1
+// @version      1.6.0
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -34,18 +34,52 @@
     /** @type {HTMLBodyElement} */
     const body = document.body;
 
+    function makeIcon(configs) {
+        const namespace = "http://www.w3.org/2000/svg";
+        let element;
+
+        for (const name in configs) {
+            const temp = document.createElementNS(namespace, name);
+            const current = configs[name];
+
+            for (const config in current) {
+                temp.setAttributeNS(null, config, current[config]);
+            }
+
+            if (name == "svg") element = temp;
+            else element.append(temp);
+        }
+
+        return element;
+    }
+
     /**
      * Options must be changed via popup menu,
      * just press (v) to open the menu
      */
     const options = {
         auto_theater_mode: {
-            icon: `<svg width="24" height="24" fill-rule="evenodd" clip-rule="evenodd"><path d="M24 22h-24v-20h24v20zm-1-19h-22v18h22v-18zm-4 7h-1v-3.241l-11.241 11.241h3.241v1h-5v-5h1v3.241l11.241-11.241h-3.241v-1h5v5z"/></svg>`,
+            icon: makeIcon({
+                svg: {
+                    width: 24,
+                    height: 24,
+                    "fill-rule": "evenodd",
+                    "clip-rule": "evenodd",
+                },
+                path: {
+                    d: "M24 22h-24v-20h24v20zm-1-19h-22v18h22v-18zm-4 7h-1v-3.241l-11.241 11.241h3.241v1h-5v-5h1v3.241l11.241-11.241h-3.241v-1h5v5z",
+                },
+            }),
             label: "Auto Open Theater",
             value: false, // fallback value
         },
         hide_scrollbar: {
-            icon: `<svg width="24" height="24" viewBox="0 0 24 24"><path d="M14 12c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2zm-3-3.858c.321-.083.653-.142 1-.142s.679.059 1 .142v-2.142h4l-5-6-5 6h4v2.142zm2 7.716c-.321.083-.653.142-1 .142s-.679-.059-1-.142v2.142h-4l5 6 5-6h-4v-2.142z"/></svg>`,
+            icon: makeIcon({
+                svg: { width: 24, height: 24, viewBox: "0 0 24 24" },
+                path: {
+                    d: "M14 12c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2zm-3-3.858c.321-.083.653-.142 1-.142s.679.059 1 .142v-2.142h4l-5-6-5 6h4v2.142zm2 7.716c-.321.083-.653.142-1 .142s-.679-.059-1-.142v2.142h-4l5 6 5-6h-4v-2.142z",
+                },
+            }),
             label: "Theater Hide Scrollbar",
             value: true, // fallback value
             onUpdate: () => {
@@ -57,12 +91,29 @@
             },
         },
         close_theater_with_esc: {
-            icon: `<svg clip-rule="evenodd" fill-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2" viewBox="0 0 24 24"><path d="m21 3.998c0-.478-.379-1-1-1h-16c-.62 0-1 .519-1 1v16c0 .621.52 1 1 1h16c.478 0 1-.379 1-1zm-16.5.5h15v15h-15zm7.491 6.432 2.717-2.718c.146-.146.338-.219.53-.219.404 0 .751.325.751.75 0 .193-.073.384-.22.531l-2.717 2.717 2.728 2.728c.147.147.22.339.22.531 0 .427-.349.75-.75.75-.192 0-.385-.073-.531-.219l-2.728-2.728-2.728 2.728c-.147.146-.339.219-.531.219-.401 0-.75-.323-.75-.75 0-.192.073-.384.22-.531l2.728-2.728-2.722-2.722c-.146-.147-.219-.338-.219-.531 0-.425.346-.749.75-.749.192 0 .384.073.53.219z" fill-rule="nonzero"/></svg>`,
+            icon: makeIcon({
+                svg: {
+                    "clip-rule": "evenodd",
+                    "fill-rule": "evenodd",
+                    "stroke-linejoin": "round",
+                    "stroke-miterlimit": 2,
+                    viewBox: "0 0 24 24",
+                },
+                path: {
+                    d: "m21 3.998c0-.478-.379-1-1-1h-16c-.62 0-1 .519-1 1v16c0 .621.52 1 1 1h16c.478 0 1-.379 1-1zm-16.5.5h15v15h-15zm7.491 6.432 2.717-2.718c.146-.146.338-.219.53-.219.404 0 .751.325.751.75 0 .193-.073.384-.22.531l-2.717 2.717 2.728 2.728c.147.147.22.339.22.531 0 .427-.349.75-.75.75-.192 0-.385-.073-.531-.219l-2.728-2.728-2.728 2.728c-.147.146-.339.219-.531.219-.401 0-.75-.323-.75-.75 0-.192.073-.384.22-.531l2.728-2.728-2.722-2.722c-.146-.147-.219-.338-.219-.531 0-.425.346-.749.75-.749.192 0 .384.073.53.219z",
+                    "fill-rule": "nonzero",
+                },
+            }),
             label: "Close Theater With Esc",
             value: true, // fallback value
         },
         hide_card: {
-            icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M22 2v20H2V2h20zm2-2H0v24h24V0zm-6 10v8h-8v-8h8zm2-2H8v12h12V8zM4 4v12h2V6h10V4H4z"/></svg>`,
+            icon: makeIcon({
+                svg: { width: 24, height: 24 },
+                path: {
+                    d: "M22 2v20H2V2h20zm2-2H0v24h24V0zm-6 10v8h-8v-8h8zm2-2H8v12h12V8zM4 4v12h2V6h10V4H4z",
+                },
+            }),
             label: "Hide Card Outside Theater Mode",
             value: false, // fallback value
             onUpdate: () => {
@@ -91,28 +142,39 @@
         }
     }
 
+    function createDIV(className) {
+        const element = document.createElement("div");
+        element.className = className || "";
+        return element;
+    }
+
     const popup = {
-        container: document.createElement("div"),
+        container: createDIV(),
         menu: (() => {
-            const menu = document.createElement("div");
-            menu.className = "ytc-menu ytp-panel-menu";
+            const menu = createDIV("ytc-menu ytp-panel-menu");
 
             for (const name in options) {
-                const item = document.createElement("div");
-                item.className = "ytp-menuitem";
-                item.ariaChecked = options[name].value;
-                item.innerHTML = /*html*/ `
-                        <div class="ytp-menuitem-icon">${options[name].icon}</div>
-                        <div class="ytp-menuitem-label">${options[name].label}</div>
-                        <div class="ytp-menuitem-content">
-                            <div class="ytp-menuitem-toggle-checkbox"></div>
-                        </div>
-                `;
-                item.addEventListener("click", () => {
-                    item.ariaChecked = saveOption(name, !options[name].value);
-                    if (options[name].onUpdate) options[name].onUpdate();
+                const option = options[name];
+                const item = {
+                    container: createDIV("ytp-menuitem"),
+                    icon: createDIV("ytp-menuitem-icon"),
+                    label: createDIV("ytp-menuitem-label"),
+                    content: createDIV("ytp-menuitem-content"),
+                    checkbox: createDIV("ytp-menuitem-toggle-checkbox"),
+                };
+                item.container.ariaChecked = option.value;
+                item.icon.append(option.icon);
+                item.label.textContent = option.label;
+                item.content.append(item.checkbox);
+                item.container.append(item.icon, item.label, item.content);
+                item.container.addEventListener("click", () => {
+                    item.container.ariaChecked = saveOption(
+                        name,
+                        !option.value
+                    );
+                    if (option.onUpdate) option.onUpdate();
                 });
-                menu.append(item);
+                menu.append(item.container);
             }
 
             return menu;
