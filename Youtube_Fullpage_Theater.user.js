@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.6.1
+// @version      1.6.2
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -31,16 +31,17 @@
     /** @type {HTMLBodyElement} */
     const body = document.body;
 
-    function makeIcon(configs) {
-        const namespace = "http://www.w3.org/2000/svg";
-        let element;
+    function makeIcon(attributes) {
+        const create = (name) =>
+            document.createElementNS("http://www.w3.org/2000/svg", name);
+        let element = create("svg");
 
-        for (const name in configs) {
-            const temp = document.createElementNS(namespace, name);
-            const current = configs[name];
+        for (const name in attributes) {
+            const temp = create(name);
+            const current = attributes[name];
 
-            for (const config in current) {
-                temp.setAttributeNS(null, config, current[config]);
+            for (const attr in current) {
+                temp.setAttributeNS(null, attr, current[attr]);
             }
 
             if (name == "svg") element = temp;
@@ -57,12 +58,7 @@
     const options = {
         auto_theater_mode: {
             icon: makeIcon({
-                svg: {
-                    width: 24,
-                    height: 24,
-                    "fill-rule": "evenodd",
-                    "clip-rule": "evenodd",
-                },
+                svg: { "fill-rule": "evenodd", "clip-rule": "evenodd" },
                 path: {
                     d: "M24 22h-24v-20h24v20zm-1-19h-22v18h22v-18zm-4 7h-1v-3.241l-11.241 11.241h3.241v1h-5v-5h1v3.241l11.241-11.241h-3.241v-1h5v5z",
                 },
@@ -72,7 +68,6 @@
         },
         hide_scrollbar: {
             icon: makeIcon({
-                svg: { width: 24, height: 24, viewBox: "0 0 24 24" },
                 path: {
                     d: "M14 12c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2zm-3-3.858c.321-.083.653-.142 1-.142s.679.059 1 .142v-2.142h4l-5-6-5 6h4v2.142zm2 7.716c-.321.083-.653.142-1 .142s-.679-.059-1-.142v2.142h-4l5 6 5-6h-4v-2.142z",
                 },
@@ -80,11 +75,13 @@
             label: "Theater Hide Scrollbar",
             value: true, // fallback value
             onUpdate: () => {
-                if (html.hasAttribute(attr.theater))
+                if (html.hasAttribute(attr.theater)) {
                     html.toggleAttribute(
                         attr.no_scroll,
                         options.hide_scrollbar.value
                     );
+                    win.dispatchEvent(new Event("resize"));
+                }
             },
         },
         close_theater_with_esc: {
@@ -94,7 +91,6 @@
                     "fill-rule": "evenodd",
                     "stroke-linejoin": "round",
                     "stroke-miterlimit": 2,
-                    viewBox: "0 0 24 24",
                 },
                 path: {
                     d: "m21 3.998c0-.478-.379-1-1-1h-16c-.62 0-1 .519-1 1v16c0 .621.52 1 1 1h16c.478 0 1-.379 1-1zm-16.5.5h15v15h-15zm7.491 6.432 2.717-2.718c.146-.146.338-.219.53-.219.404 0 .751.325.751.75 0 .193-.073.384-.22.531l-2.717 2.717 2.728 2.728c.147.147.22.339.22.531 0 .427-.349.75-.75.75-.192 0-.385-.073-.531-.219l-2.728-2.728-2.728 2.728c-.147.146-.339.219-.531.219-.401 0-.75-.323-.75-.75 0-.192.073-.384.22-.531l2.728-2.728-2.722-2.722c-.146-.147-.219-.338-.219-.531 0-.425.346-.749.75-.749.192 0 .384.073.53.219z",
@@ -106,9 +102,8 @@
         },
         hide_card: {
             icon: makeIcon({
-                svg: { width: 24, height: 24 },
                 path: {
-                    d: "M22 2v20H2V2h20zm2-2H0v24h24V0zm-6 10v8h-8v-8h8zm2-2H8v12h12V8zM4 4v12h2V6h10V4H4z",
+                    d: "M22 6v16H6V6h16zm2-2H4v20h20V4zM0 0v20h2V2h18V0H0zm14.007 11.225C10.853 11.225 9 13.822 9 13.822s2.015 2.953 5.007 2.953c3.222 0 4.993-2.953 4.993-2.953s-1.788-2.597-4.993-2.597zm.042 4.717a1.942 1.942 0 1 1 .002-3.884 1.942 1.942 0 0 1-.002 3.884zM15.141 14a1.092 1.092 0 1 1-2.184 0l.02-.211a.68.68 0 0 0 .875-.863l.197-.019c.603 0 1.092.489 1.092 1.093z",
                 },
             }),
             label: "Hide Card Outside Theater Mode",
@@ -145,44 +140,37 @@
     }
 
     const popup = {
-        container: createDIV(),
+        container: createDIV("ytc-popup-container"),
         menu: (() => {
             const menu = createDIV("ytc-menu ytp-panel-menu");
 
             for (const name in options) {
-                const option = options[name];
-                const item = {
-                    container: createDIV("ytp-menuitem"),
-                    icon: createDIV("ytp-menuitem-icon"),
-                    label: createDIV("ytp-menuitem-label"),
-                    content: createDIV("ytp-menuitem-content"),
-                    checkbox: createDIV("ytp-menuitem-toggle-checkbox"),
-                };
-                item.container.ariaChecked = option.value;
-                item.icon.append(option.icon);
-                item.label.textContent = option.label;
-                item.content.append(item.checkbox);
-                item.container.append(item.icon, item.label, item.content);
-                item.container.addEventListener("click", () => {
-                    item.container.ariaChecked = saveOption(
-                        name,
-                        !option.value
-                    );
+                const option = options[name],
+                    menuItem = createDIV("ytp-menuitem"),
+                    icon = createDIV("ytp-menuitem-icon"),
+                    label = createDIV("ytp-menuitem-label"),
+                    content = createDIV("ytp-menuitem-content"),
+                    checkbox = createDIV("ytp-menuitem-toggle-checkbox");
+
+                menuItem.ariaChecked = option.value;
+                icon.append(option.icon);
+                label.textContent = option.label;
+                content.append(checkbox);
+                menuItem.append(icon, label, content);
+                menuItem.addEventListener("click", () => {
+                    menuItem.ariaChecked = saveOption(name, !option.value);
                     if (option.onUpdate) option.onUpdate();
                 });
-                menu.append(item.container);
+                menu.append(menuItem);
             }
 
             return menu;
         })(),
     };
 
-    popup.container.className = "ytc-popup-container";
     popup.container.append(popup.menu);
     popup.container.addEventListener("click", (ev) => {
-        if (!popup.menu.contains(ev.target)) {
-            popup.container.remove();
-        }
+        if (!popup.menu.contains(ev.target)) popup.container.remove();
     });
 
     window.addEventListener("keydown", (ev) => {
@@ -317,11 +305,11 @@
     }
 
     function isTheater() {
-        const elem = element.watch();
+        const watch = element.watch();
         return (
-            elem.getAttribute(attr.role) == "main" &&
-            !elem.hasAttribute(attr.fullscreen) &&
-            elem.hasAttribute(attr.theater)
+            watch.getAttribute(attr.role) == "main" &&
+            !watch.hasAttribute(attr.fullscreen) &&
+            watch.hasAttribute(attr.theater)
         );
     }
 
@@ -336,7 +324,7 @@
     }
 
     function toggleHeader() {
-        if (document.activeElement != element.search()) {
+        if (isTheater() && document.activeElement != element.search()) {
             html.toggleAttribute(attr.hidden_header, !win.scrollY);
         }
     }
@@ -349,7 +337,11 @@
      * @param {KeyboardEvent} event
      */
     function onEscapePress(event) {
-        if (event.code != "Escape" || document.contains(popup.container)) {
+        if (
+            event.code != "Escape" ||
+            !isTheater() ||
+            document.contains(popup.container)
+        ) {
             return;
         }
 
@@ -385,41 +377,36 @@
         }
     }
 
-    function setAttribute(theater, header, scroll, card) {
-        html.toggleAttribute(attr.theater, theater);
-        html.toggleAttribute(attr.hidden_header, header);
-        html.toggleAttribute(attr.no_scroll, scroll);
-        html.toggleAttribute(attr.hide_card, card);
+    function registerEventListener() {
+        element.search().addEventListener("blur", toggleHeader);
+        win.addEventListener("scroll", toggleHeader);
+        win.addEventListener("keydown", onEscapePress, true);
     }
 
-    function setListener(action) {
-        element.search()[action]("blur", toggleHeader);
-        win[action]("scroll", toggleHeader);
-        win[action]("keydown", onEscapePress, true);
-    }
-
-    function watchTheaterMode() {
+    function applyTheaterMode() {
         const state = isTheater();
 
-        if (state && !html.hasAttribute(attr.theater)) {
-            setAttribute(true, true, options.hide_scrollbar.value, true);
-            setListener("addEventListener");
-        } else if (!state && html.hasAttribute(attr.theater)) {
-            setAttribute(false, false, false, options.hide_card.value);
-            setListener("removeEventListener");
-        }
+        html.toggleAttribute(attr.theater, state);
+        html.toggleAttribute(attr.hidden_header, state);
+        html.toggleAttribute(
+            attr.no_scroll,
+            state && options.hide_scrollbar.value
+        );
+        html.toggleAttribute(attr.hide_card, state || options.hide_card.value);
     }
 
     observer((_, observe) => {
-        const elem = element.watch();
-        if (!elem) return;
+        const watch = element.watch();
+        if (!watch) return;
+
+        registerEventListener();
 
         observer(
             (mutations) => {
-                watchTheaterMode();
+                applyTheaterMode();
                 openTheater(mutations);
             },
-            elem,
+            watch,
             { attributes: true }
         );
 
