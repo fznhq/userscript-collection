@@ -239,10 +239,9 @@
             margin: 0 !important;
         }
 
-        html[theater] #full-bleed-container,
-        html[theater] #player-full-bleed-container {
-            height: 100vh !important;
-            max-height: none !important;
+        [theater] > #full-bleed-container,
+        [theater] > #player-full-bleed-container {
+            min-height: 100vh !important;
         }
 
         .ytc-popup-container {
@@ -324,8 +323,11 @@
     }
 
     function toggleHeader() {
-        if (isTheater() && document.activeElement != element.search()) {
-            html.toggleAttribute(attr.hidden_header, !win.scrollY);
+        if (isTheater()) {
+            setTimeout(() => {
+                if (document.activeElement != element.search())
+                    html.toggleAttribute(attr.hidden_header, !win.scrollY);
+            }, 1);
         }
     }
 
@@ -344,7 +346,6 @@
         ) {
             return;
         }
-
         if (options.close_theater_with_esc.value) {
             toggleTheater();
         } else {
@@ -365,13 +366,13 @@
      */
     function openTheater(mutations) {
         const attrs = [attr.role, attr.video_id];
-        const elem = element.watch();
+        const watch = element.watch();
 
         if (
             options.auto_theater_mode.value &&
             mutations.some((m) => attrs.includes(m.attributeName)) &&
-            !elem.hasAttribute(attr.theater) &&
-            !elem.hasAttribute(attr.fullscreen)
+            !watch.hasAttribute(attr.theater) &&
+            !watch.hasAttribute(attr.fullscreen)
         ) {
             setTimeout(toggleTheater, 1);
         }
@@ -385,21 +386,25 @@
 
     function applyTheaterMode() {
         const state = isTheater();
+        const hasTheater = html.hasAttribute(attr.theater);
 
-        html.toggleAttribute(attr.theater, state);
-        html.toggleAttribute(attr.hidden_header, state);
-        html.toggleAttribute(
-            attr.no_scroll,
-            state && options.hide_scrollbar.value
-        );
-        html.toggleAttribute(attr.hide_card, state || options.hide_card.value);
+        if ((state && !hasTheater) || (!state && hasTheater)) {
+            html.toggleAttribute(attr.theater, state);
+            html.toggleAttribute(attr.hidden_header, state);
+            html.toggleAttribute(
+                attr.no_scroll,
+                state && options.hide_scrollbar.value
+            );
+            html.toggleAttribute(
+                attr.hide_card,
+                state || options.hide_card.value
+            );
+        }
     }
 
     observer((_, observe) => {
         const watch = element.watch();
         if (!watch) return;
-
-        registerEventListener();
 
         observer(
             (mutations) => {
@@ -410,6 +415,7 @@
             { attributes: true }
         );
 
+        registerEventListener();
         observe.disconnect();
     }, body);
 })();
