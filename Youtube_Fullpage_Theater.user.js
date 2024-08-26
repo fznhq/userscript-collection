@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.6.3
+// @version      1.6.4
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -239,8 +239,8 @@
             margin: 0 !important;
         }
 
-        [theater] > #full-bleed-container,
-        [theater] > #player-full-bleed-container {
+        html[theater] #full-bleed-container,
+        html[theater] #player-full-bleed-container {
             min-height: 100vh !important;
         }
 
