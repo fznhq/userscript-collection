@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.6.0
+// @version      1.6.1
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -9,11 +9,8 @@
 // @exclude      https://*.youtube.com/tv*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
-// @grant        GM_getValue
 // @grant        GM.setValue
-// @grant        GM_setValue
-// @grant        GM.addStyle
-// @grant        GM_addStyle
+// @grant        unsafeWindow
 // @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @author       Fznhq
@@ -127,13 +124,12 @@
     };
 
     function saveOption(name, value) {
-        options[name].value = value;
-        (GM.setValue || GM_setValue)(name, value);
-        return value;
+        GM.setValue(name, value);
+        return (options[name].value = value);
     }
 
     for (const name in options) {
-        const saved_option = await (GM.getValue || GM_getValue)(name);
+        const saved_option = await GM.getValue(name);
 
         if (saved_option === undefined) {
             saveOption(name, options[name].value);
@@ -215,7 +211,16 @@
         return () => cache || (cache = document.querySelector(query));
     }
 
-    (GM.addStyle || GM_addStyle)(/*css*/ `
+    /**
+     * @param {string} css
+     */
+    function addStyle(css) {
+        const style = document.createElement("style");
+        style.textContent = css;
+        document.head.append(style);
+    }
+
+    addStyle(/*css*/ `
         html[no-scroll],
         html[no-scroll] body {
             scrollbar-width: none !important;
