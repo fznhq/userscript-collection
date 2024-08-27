@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.6.4
+// @version      1.7.0
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -74,7 +74,7 @@
             }),
             label: "Theater Hide Scrollbar",
             value: true, // fallback value
-            onUpdate: () => {
+            onUpdate() {
                 if (html.hasAttribute(attr.theater)) {
                     html.toggleAttribute(
                         attr.no_scroll,
@@ -108,13 +108,22 @@
             }),
             label: "Hide Card Outside Theater Mode",
             value: false, // fallback value
-            onUpdate: () => {
+            onUpdate() {
                 if (!html.hasAttribute(attr.theater))
                     html.toggleAttribute(
                         attr.hide_card,
                         options.hide_card.value
                     );
             },
+        },
+        show_header_near: {
+            icon: makeIcon({
+                path: {
+                    d: "M5 4.27 15.476 13H8.934L5 18.117V4.27zM3 0v24l6.919-9H21L3 0z",
+                },
+            }),
+            label: "Show Header When Mouse is Near",
+            value: false, // fallback value
         },
     };
 
@@ -239,9 +248,11 @@
             margin: 0 !important;
         }
 
-        html[theater] #full-bleed-container,
-        html[theater] #player-full-bleed-container {
-            min-height: 100vh !important;
+        html[theater] #content #page-manager ytd-watch-flexy #full-bleed-container,
+        html[theater] #content #page-manager ytd-watch-grid #player-full-bleed-container {
+            height: 100vh;
+            min-height: auto;
+            max-height: none;
         }
 
         .ytc-popup-container {
@@ -322,9 +333,23 @@
         );
     }
 
-    function toggleHeader() {
-        if (isTheater() && document.activeElement != element.search())
-            html.toggleAttribute(attr.hidden_header, !win.scrollY);
+    function toggleHeader(state) {
+        if (isTheater() && document.activeElement != element.search()) {
+            html.toggleAttribute(attr.hidden_header, !(state || win.scrollY));
+        }
+    }
+
+    let showHeaderTimer;
+
+    /**
+     * @param {MouseEvent} ev
+     */
+    function mouseShowHeader(ev) {
+        if (options.show_header_near.value) {
+            clearTimeout(showHeaderTimer);
+            showHeaderTimer = setTimeout(() => toggleHeader(false), 1500);
+            toggleHeader(ev.pageY < 250);
+        }
     }
 
     function toggleTheater() {
@@ -342,16 +367,16 @@
         ) {
             return;
         }
+
         if (options.close_theater_with_esc.value) {
             toggleTheater();
         } else {
             const input = element.search();
 
             if (document.activeElement != input) {
-                html.removeAttribute(attr.hidden_header);
+                toggleHeader(true);
                 setTimeout(() => input.focus(), 1);
-            } else if (!win.scrollY) {
-                html.setAttribute(attr.hidden_header, "");
+            } else {
                 input.blur();
             }
         }
@@ -375,10 +400,11 @@
     }
 
     function registerEventListener() {
-        element
-            .search()
-            .addEventListener("blur", () => setTimeout(toggleHeader, 1));
-        win.addEventListener("scroll", toggleHeader);
+        element.search().addEventListener("blur", () => {
+            setTimeout(() => toggleHeader(false), 1);
+        });
+        win.addEventListener("scroll", () => toggleHeader());
+        win.addEventListener("mousemove", mouseShowHeader);
         win.addEventListener("keydown", onEscapePress, true);
     }
 
