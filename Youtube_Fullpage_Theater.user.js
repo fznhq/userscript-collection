@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.7.1
+// @version      1.7.2
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -314,13 +314,14 @@
         return mutation;
     }
 
+    let theater = false;
+
     function isTheater() {
         const watch = element.watch();
-        return (
+        return (theater =
             watch.getAttribute(attr.role) == "main" &&
             !watch.hasAttribute(attr.fullscreen) &&
-            watch.hasAttribute(attr.theater)
-        );
+            watch.hasAttribute(attr.theater));
     }
 
     function isActiveEditable() {
@@ -334,21 +335,24 @@
     }
 
     function toggleHeader(state) {
-        if (isTheater() && document.activeElement != element.search()) {
+        if (theater && document.activeElement != element.search()) {
             html.toggleAttribute(attr.hidden_header, !(state || win.scrollY));
         }
     }
 
-    let showHeaderTimer;
+    let showHeaderTimer = 0;
 
     /**
      * @param {MouseEvent} ev
      */
     function mouseShowHeader(ev) {
-        if (options.show_header_near.value) {
-            clearTimeout(showHeaderTimer);
-            showHeaderTimer = setTimeout(() => toggleHeader(false), 1500);
-            toggleHeader(ev.pageY < 250);
+        if (options.show_header_near.value && theater) {
+            const state = ev.pageY < 250;
+            if (state) {
+                clearTimeout(showHeaderTimer);
+                showHeaderTimer = setTimeout(() => toggleHeader(false), 1500);
+            }
+            toggleHeader(state);
         }
     }
 
@@ -357,12 +361,12 @@
     }
 
     /**
-     * @param {KeyboardEvent} event
+     * @param {KeyboardEvent} ev
      */
-    function onEscapePress(event) {
+    function onEscapePress(ev) {
         if (
-            event.code != "Escape" ||
-            !isTheater() ||
+            ev.code != "Escape" ||
+            !theater ||
             document.contains(popup.container)
         ) {
             return;
