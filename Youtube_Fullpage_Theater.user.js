@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.7.6
+// @version      1.7.7
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -194,7 +194,7 @@
 
     popup.container.append(popup.menu);
     popup.container.addEventListener("click", function (ev) {
-        if (this === ev.target) popup.show = !!this.remove();
+        if (!popup.menu.contains(ev.target)) popup.show = !!this.remove();
     });
 
     win.addEventListener("keydown", (ev) => {
