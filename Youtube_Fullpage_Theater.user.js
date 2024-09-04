@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.7.3
+// @version      1.7.4
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -163,6 +163,7 @@
     }
 
     const popup = {
+        show: false,
         container: createDIV("ytc-popup-container"),
         menu: (() => {
             const menu = createDIV("ytc-menu ytp-panel-menu");
@@ -197,19 +198,15 @@
     });
 
     win.addEventListener("keydown", (ev) => {
-        const isV =
-            ev.key.toLowerCase() == "v" ||
-            ev.code == "KeyV" ||
-            ev.keyCode == 86;
+        const isV = ev.key.toLowerCase() == "v" || ev.code == "KeyV";
 
-        if (!ev.ctrlKey && isV && !isActiveEditable()) {
-            if (document.contains(popup.container)) {
-                popup.container.remove();
-            } else {
-                body.append(popup.container);
-            }
-        } else if (ev.code == "Escape" && document.contains(popup.container)) {
-            popup.container.remove();
+        if (
+            (!ev.ctrlKey && isV && !isActiveEditable()) ||
+            (ev.code == "Escape" && popup.show)
+        ) {
+            if (popup.show) popup.container.remove();
+            else body.append(popup.container);
+            popup.show = !popup.show;
         }
     });
 
@@ -388,7 +385,7 @@
                 clearTimeout(showHeaderTimer);
                 showHeaderTimer = setTimeout(() => toggleHeader(false), 1500);
             }
-            toggleHeader(state);
+            toggleHeader(!popup.show && state);
         }
     }
 
@@ -400,13 +397,7 @@
      * @param {KeyboardEvent} ev
      */
     function onEscapePress(ev) {
-        if (
-            ev.code != "Escape" ||
-            !theater ||
-            document.contains(popup.container)
-        ) {
-            return;
-        }
+        if (ev.code != "Escape" || !theater || popup.show) return;
 
         if (options.close_theater_with_esc.value) {
             toggleTheater();
