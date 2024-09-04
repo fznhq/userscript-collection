@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.7.7
+// @version      1.7.8
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -164,8 +164,8 @@
 
     const popup = {
         show: false,
-        container: createDIV("ytc-popup-container"),
         menu: (() => {
+            const container = createDIV("ytc-popup-container");
             const menu = createDIV("ytc-menu ytp-panel-menu");
 
             for (const name in options) {
@@ -188,14 +188,15 @@
                 menu.append(menuItem);
             }
 
-            return menu;
+            container.append(menu);
+            win.addEventListener("click", (ev) => {
+                if (popup.show && !menu.contains(ev.target))
+                    popup.show = !!container.remove();
+            });
+
+            return container;
         })(),
     };
-
-    popup.container.append(popup.menu);
-    popup.container.addEventListener("click", function (ev) {
-        if (!popup.menu.contains(ev.target)) popup.show = !!this.remove();
-    });
 
     win.addEventListener("keydown", (ev) => {
         const isV = ev.key.toLowerCase() == "v" || ev.code == "KeyV";
@@ -204,8 +205,8 @@
             (isV && !ev.ctrlKey && !isActiveEditable()) ||
             (ev.code == "Escape" && popup.show)
         ) {
-            if (popup.show) popup.container.remove();
-            else body.append(popup.container);
+            if (popup.show) popup.menu.remove();
+            else body.append(popup.menu);
             popup.show = !popup.show;
         }
     });
@@ -303,17 +304,17 @@
 
     addStyle(style);
 
-    const element = {
-        watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid == trash
-        search: $("input#search"),
-    };
-
     const attr = {
         video_id: "video-id",
         role: "role",
         theater: "theater",
         fullscreen: "fullscreen",
         ...customAttr,
+    };
+
+    const element = {
+        watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid == trash
+        search: $("input#search"),
     };
 
     const keyToggleTheater = new KeyboardEvent("keydown", {
