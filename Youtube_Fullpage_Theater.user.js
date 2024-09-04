@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.7.2
+// @version      1.7.3
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -31,24 +31,28 @@
     /** @type {HTMLBodyElement} */
     const body = document.body;
 
+    /**
+     * @param {string} attributes
+     * @returns {SVGSVGElement}
+     */
     function makeIcon(attributes) {
-        const create = (name) =>
-            document.createElementNS("http://www.w3.org/2000/svg", name);
-        let element = create("svg");
+        const create = (tagName) =>
+            document.createElementNS("http://www.w3.org/2000/svg", tagName);
+        let icon = create("svg");
 
         for (const name in attributes) {
-            const temp = create(name);
-            const current = attributes[name];
+            const element = create(name);
+            const attribute = attributes[name];
 
-            for (const attr in current) {
-                temp.setAttributeNS(null, attr, current[attr]);
+            for (const key in attribute) {
+                element.setAttributeNS(null, key, attribute[key]);
             }
 
-            if (name == "svg") element = temp;
-            else element.append(temp);
+            if (name == "svg") icon = element;
+            else icon.append(element);
         }
 
-        return element;
+        return icon;
     }
 
     /**
@@ -109,11 +113,12 @@
             label: "Hide Card Outside Theater Mode",
             value: false, // fallback value
             onUpdate() {
-                if (!html.hasAttribute(attr.theater))
+                if (!html.hasAttribute(attr.theater)) {
                     html.toggleAttribute(
                         attr.hide_card,
                         options.hide_card.value
                     );
+                }
             },
         },
         show_header_near: {
@@ -127,6 +132,11 @@
         },
     };
 
+    /**
+     * @param {string} name
+     * @param {boolean} value
+     * @returns {boolean}
+     */
     function saveOption(name, value) {
         GM.setValue(name, value);
         return (options[name].value = value);
@@ -142,6 +152,10 @@
         }
     }
 
+    /**
+     * @param {string} className
+     * @returns {HTMLDivElement}
+     */
     function createDIV(className) {
         const element = document.createElement("div");
         element.className = className || "";
@@ -182,13 +196,13 @@
         if (!popup.menu.contains(ev.target)) popup.container.remove();
     });
 
-    window.addEventListener("keydown", (ev) => {
-        const isVClick =
+    win.addEventListener("keydown", (ev) => {
+        const isV =
             ev.key.toLowerCase() == "v" ||
             ev.code == "KeyV" ||
             ev.keyCode == 86;
 
-        if (!ev.ctrlKey && isVClick && !isActiveEditable()) {
+        if (!ev.ctrlKey && isV && !isActiveEditable()) {
             if (document.contains(popup.container)) {
                 popup.container.remove();
             } else {
@@ -217,7 +231,13 @@
         document.head.append(style);
     }
 
-    addStyle(/*css*/ `
+    const customAttr = {
+        hidden_header: "masthead-hidden",
+        no_scroll: "no-scroll",
+        hide_card: "hide-card",
+    };
+
+    let style = /*css*/ `
         html[no-scroll],
         html[no-scroll] body {
             scrollbar-width: none !important;
@@ -275,7 +295,16 @@
         .ytc-menu svg {
             fill: #eee;
         }
-    `);
+    `;
+
+    for (const key in customAttr) {
+        const oldAttr = new RegExp("\\[" + customAttr[key], "g");
+        const uniqueKey = Math.random().toString(36).slice(2);
+        customAttr[key] = customAttr[key] + `-${uniqueKey}`;
+        style = style.replace(oldAttr, "[" + customAttr[key]);
+    }
+
+    addStyle(style);
 
     const element = {
         watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid == trash
@@ -287,9 +316,7 @@
         role: "role",
         theater: "theater",
         fullscreen: "fullscreen",
-        hidden_header: "masthead-hidden",
-        no_scroll: "no-scroll",
-        hide_card: "hide-card",
+        ...customAttr,
     };
 
     const keyToggleTheater = new KeyboardEvent("keydown", {
@@ -316,6 +343,9 @@
 
     let theater = false;
 
+    /**
+     * @returns {boolean}
+     */
     function isTheater() {
         const watch = element.watch();
         return (theater =
@@ -324,6 +354,9 @@
             watch.hasAttribute(attr.theater));
     }
 
+    /**
+     * @returns {boolean}
+     */
     function isActiveEditable() {
         /** @type {HTMLElement} */
         const active = document.activeElement;
@@ -334,6 +367,9 @@
         );
     }
 
+    /**
+     * @param {boolean} state
+     */
     function toggleHeader(state) {
         if (theater && document.activeElement != element.search()) {
             html.toggleAttribute(attr.hidden_header, !(state || win.scrollY));
@@ -389,15 +425,15 @@
     /**
      * @param {MutationRecord[]} mutations
      */
-    function openTheater(mutations) {
+    function autoOpenTheater(mutations) {
         const attrs = [attr.role, attr.video_id];
         const watch = element.watch();
 
         if (
             options.auto_theater_mode.value &&
-            mutations.some((m) => attrs.includes(m.attributeName)) &&
             !watch.hasAttribute(attr.theater) &&
-            !watch.hasAttribute(attr.fullscreen)
+            !watch.hasAttribute(attr.fullscreen) &&
+            mutations.some((m) => attrs.includes(m.attributeName))
         ) {
             setTimeout(toggleTheater, 1);
         }
@@ -437,7 +473,7 @@
         observer(
             (mutations) => {
                 applyTheaterMode();
-                openTheater(mutations);
+                autoOpenTheater(mutations);
             },
             watch,
             { attributes: true }
