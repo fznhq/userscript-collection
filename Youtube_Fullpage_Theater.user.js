@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.8.0
+// @version      1.8.1
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -389,7 +389,7 @@
      */
     function mouseShowHeader(ev) {
         if (options.show_header_near.value && theater) {
-            const state = ev.clientY < 300;
+            const state = ev.clientY < 200;
             if (state) {
                 clearTimeout(showHeaderTimer);
                 showHeaderTimer = setTimeout(() => toggleHeader(false), 1500);
