@@ -176,13 +176,16 @@
                     content = createDIV("ytp-menuitem-content"),
                     checkbox = createDIV("ytp-menuitem-toggle-checkbox");
 
-                menuItem.ariaChecked = option.value;
+                menuItem.setAttribute("aria-checked", option.value);
                 icon.append(option.icon);
                 label.textContent = option.label;
                 content.append(checkbox);
                 menuItem.append(icon, label, content);
                 menuItem.addEventListener("click", () => {
-                    menuItem.ariaChecked = saveOption(name, !option.value);
+                    menuItem.setAttribute(
+                        "aria-checked",
+                        saveOption(name, !option.value)
+                    );
                     if (option.onUpdate) option.onUpdate();
                 });
                 menu.append(menuItem);
@@ -367,10 +370,15 @@
 
     /**
      * @param {boolean} state
+     * @param {boolean} skipActive
      */
-    function toggleHeader(state) {
-        if (theater && document.activeElement != element.search()) {
-            html.toggleAttribute(attr.hidden_header, !(state || win.scrollY));
+    function toggleHeader(state, skipActive) {
+        if (
+            theater &&
+            (skipActive || document.activeElement != element.search())
+        ) {
+            const scroll = !options.show_header_near.value && win.scrollY;
+            html.toggleAttribute(attr.hidden_header, !(state || scroll));
         }
     }
 
@@ -381,7 +389,7 @@
      */
     function mouseShowHeader(ev) {
         if (options.show_header_near.value && theater) {
-            const state = ev.pageY < 250;
+            const state = ev.clientY < 300;
             if (state) {
                 clearTimeout(showHeaderTimer);
                 showHeaderTimer = setTimeout(() => toggleHeader(false), 1500);
@@ -406,7 +414,6 @@
             const input = element.search();
 
             if (document.activeElement != input) {
-                toggleHeader(true);
                 setTimeout(() => input.focus(), 1);
             } else {
                 setTimeout(() => input.blur(), 1);
@@ -432,6 +439,9 @@
     }
 
     function registerEventListener() {
+        element.search().addEventListener("focus", () => {
+            setTimeout(() => toggleHeader(true, true), 1);
+        });
         element.search().addEventListener("blur", () => {
             setTimeout(() => toggleHeader(false), 1);
         });
