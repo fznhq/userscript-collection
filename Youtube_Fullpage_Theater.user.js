@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.8.1
+// @version      1.8.2
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -158,7 +158,7 @@
      */
     function createDIV(className) {
         const element = document.createElement("div");
-        element.className = className || "";
+        element.className = className;
         return element;
     }
 
@@ -208,9 +208,9 @@
             (isV && !ev.ctrlKey && !isActiveEditable()) ||
             (ev.code == "Escape" && popup.show)
         ) {
-            if (popup.show) popup.menu.remove();
-            else body.append(popup.menu);
-            popup.show = !popup.show;
+            popup.show = popup.show
+                ? !!popup.menu.remove()
+                : !body.append(popup.menu);
         }
     });
 
@@ -412,12 +412,8 @@
             toggleTheater();
         } else {
             const input = element.search();
-
-            if (document.activeElement != input) {
-                setTimeout(() => input.focus(), 1);
-            } else {
-                setTimeout(() => input.blur(), 1);
-            }
+            if (document.activeElement != input) input.focus();
+            else input.blur();
         }
     }
 
@@ -445,7 +441,9 @@
         element.search().addEventListener("blur", () => {
             setTimeout(() => toggleHeader(false), 1);
         });
-        win.addEventListener("scroll", () => toggleHeader());
+        win.addEventListener("scroll", () => {
+            if (!options.show_header_near.value) toggleHeader();
+        });
         win.addEventListener("mousemove", mouseShowHeader);
         win.addEventListener("keydown", onEscapePress, true);
     }
