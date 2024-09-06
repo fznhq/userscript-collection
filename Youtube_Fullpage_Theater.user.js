@@ -31,6 +31,9 @@
     /** @type {HTMLBodyElement} */
     const body = document.body;
 
+    /** @type {boolean} */
+    let theater = false;
+
     /**
      * @param {string} attributes
      * @returns {SVGSVGElement}
@@ -69,6 +72,9 @@
             }),
             label: "Auto Open Theater",
             value: false, // fallback value
+            onUpdate() {
+                if (this.value && !theater) toggleTheater();
+            },
         },
         hide_scrollbar: {
             icon: makeIcon({
@@ -79,11 +85,8 @@
             label: "Theater Hide Scrollbar",
             value: true, // fallback value
             onUpdate() {
-                if (html.hasAttribute(attr.theater)) {
-                    html.toggleAttribute(
-                        attr.no_scroll,
-                        options.hide_scrollbar.value
-                    );
+                if (theater) {
+                    html.toggleAttribute(attr.no_scroll, this.value);
                     win.dispatchEvent(new Event("resize"));
                 }
             },
@@ -113,12 +116,7 @@
             label: "Hide Card Outside Theater Mode",
             value: false, // fallback value
             onUpdate() {
-                if (!html.hasAttribute(attr.theater)) {
-                    html.toggleAttribute(
-                        attr.hide_card,
-                        options.hide_card.value
-                    );
-                }
+                if (!theater) html.toggleAttribute(attr.hide_card, this.value);
             },
         },
         show_header_near: {
@@ -193,8 +191,9 @@
 
             container.append(menu);
             win.addEventListener("click", (ev) => {
-                if (popup.show && !menu.contains(ev.target))
+                if (popup.show && !menu.contains(ev.target)) {
                     popup.show = !!container.remove();
+                }
             });
 
             return container;
@@ -342,8 +341,6 @@
         return mutation;
     }
 
-    let theater = false;
-
     /**
      * @returns {boolean}
      */
@@ -359,7 +356,6 @@
      * @returns {boolean}
      */
     function isActiveEditable() {
-        /** @type {HTMLElement} */
         const active = document.activeElement;
         return (
             active.tagName == "TEXTAREA" ||
