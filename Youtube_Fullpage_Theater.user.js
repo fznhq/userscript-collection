@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.8.3
+// @version      1.8.4
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -31,7 +31,6 @@
     /** @type {HTMLBodyElement} */
     const body = document.body;
 
-    /** @type {boolean} */
     let theater = false;
 
     /**
@@ -346,10 +345,11 @@
      */
     function isTheater() {
         const watch = element.watch();
-        return (theater =
+        return (
             watch.getAttribute(attr.role) == "main" &&
-            !watch.hasAttribute(attr.fullscreen) &&
-            watch.hasAttribute(attr.theater));
+            watch.hasAttribute(attr.theater) &&
+            !watch.hasAttribute(attr.fullscreen)
+        );
     }
 
     /**
@@ -446,20 +446,17 @@
 
     function applyTheaterMode() {
         const state = isTheater();
-        const hasTheater = html.hasAttribute(attr.theater);
 
-        if ((state && !hasTheater) || (!state && hasTheater)) {
-            html.toggleAttribute(attr.theater, state);
-            html.toggleAttribute(attr.hidden_header, state);
-            html.toggleAttribute(
-                attr.no_scroll,
-                state && options.hide_scrollbar.value
-            );
-            html.toggleAttribute(
-                attr.hide_card,
-                state || options.hide_card.value
-            );
-        }
+        if (theater == state) return;
+        theater = state;
+
+        html.toggleAttribute(attr.theater, state);
+        html.toggleAttribute(attr.hidden_header, state);
+        html.toggleAttribute(
+            attr.no_scroll,
+            state && options.hide_scrollbar.value
+        );
+        html.toggleAttribute(attr.hide_card, state || options.hide_card.value);
     }
 
     observer((_, observe) => {
