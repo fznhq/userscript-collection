@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.8.5
+// @version      1.8.6
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -167,13 +167,14 @@
             const container = createDiv("ytc-popup-container", [menu]);
 
             for (const name in options) {
-                const option = options[name],
-                    checkbox = createDiv("ytp-menuitem-toggle-checkbox"),
-                    item = createDiv("ytp-menuitem", [
-                        createDiv("ytp-menuitem-icon", [option.icon]),
-                        createDiv("ytp-menuitem-label", [option.label]),
-                        createDiv("ytp-menuitem-content", [checkbox]),
-                    ]);
+                const option = options[name];
+                const item = createDiv("ytp-menuitem", [
+                    createDiv("ytp-menuitem-icon", [option.icon]),
+                    createDiv("ytp-menuitem-label", [option.label]),
+                    createDiv("ytp-menuitem-content", [
+                        createDiv("ytp-menuitem-toggle-checkbox"),
+                    ]),
+                ]);
 
                 menu.append(item);
                 item.setAttribute("aria-checked", option.value);
