@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.8.4
+// @version      1.8.5
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -44,10 +44,9 @@
 
         for (const name in attributes) {
             const element = create(name);
-            const attribute = attributes[name];
 
-            for (const key in attribute) {
-                element.setAttributeNS(null, key, attribute[key]);
+            for (const key in attributes[name]) {
+                element.setAttribute(key, attributes[name][key]);
             }
 
             if (name == "svg") icon = element;
@@ -70,7 +69,7 @@
                 },
             }),
             label: "Auto Open Theater",
-            value: false, // fallback value
+            value: false, //fallback
             onUpdate() {
                 if (this.value && !theater) toggleTheater();
             },
@@ -82,7 +81,7 @@
                 },
             }),
             label: "Theater Hide Scrollbar",
-            value: true, // fallback value
+            value: true, //fallback
             onUpdate() {
                 if (theater) {
                     html.toggleAttribute(attr.no_scroll, this.value);
@@ -104,7 +103,7 @@
                 },
             }),
             label: "Close Theater With Esc",
-            value: true, // fallback value
+            value: true, //fallback
         },
         hide_card: {
             icon: makeIcon({
@@ -113,7 +112,7 @@
                 },
             }),
             label: "Hide Card Outside Theater Mode",
-            value: false, // fallback value
+            value: false, //fallback
             onUpdate() {
                 if (!theater) html.toggleAttribute(attr.hide_card, this.value);
             },
@@ -125,7 +124,7 @@
                 },
             }),
             label: "Show Header When Mouse is Near",
-            value: false, // fallback value
+            value: false, //fallback
         },
     };
 
@@ -151,44 +150,40 @@
 
     /**
      * @param {string} className
+     * @param {Array} append
      * @returns {HTMLDivElement}
      */
-    function createDIV(className) {
+    function createDiv(className, append = []) {
         const element = document.createElement("div");
         element.className = className;
+        if (append.length) element.append(...append);
         return element;
     }
 
     const popup = {
         show: false,
         menu: (() => {
-            const container = createDIV("ytc-popup-container");
-            const menu = createDIV("ytc-menu ytp-panel-menu");
+            const menu = createDiv("ytc-menu ytp-panel-menu");
+            const container = createDiv("ytc-popup-container", [menu]);
 
             for (const name in options) {
                 const option = options[name],
-                    menuItem = createDIV("ytp-menuitem"),
-                    icon = createDIV("ytp-menuitem-icon"),
-                    label = createDIV("ytp-menuitem-label"),
-                    content = createDIV("ytp-menuitem-content"),
-                    checkbox = createDIV("ytp-menuitem-toggle-checkbox");
+                    checkbox = createDiv("ytp-menuitem-toggle-checkbox"),
+                    item = createDiv("ytp-menuitem", [
+                        createDiv("ytp-menuitem-icon", [option.icon]),
+                        createDiv("ytp-menuitem-label", [option.label]),
+                        createDiv("ytp-menuitem-content", [checkbox]),
+                    ]);
 
-                menuItem.setAttribute("aria-checked", option.value);
-                icon.append(option.icon);
-                label.textContent = option.label;
-                content.append(checkbox);
-                menuItem.append(icon, label, content);
-                menuItem.addEventListener("click", () => {
-                    menuItem.setAttribute(
-                        "aria-checked",
-                        saveOption(name, !option.value)
-                    );
+                menu.append(item);
+                item.setAttribute("aria-checked", option.value);
+                item.addEventListener("click", () => {
+                    const newValue = saveOption(name, !option.value);
+                    item.setAttribute("aria-checked", newValue);
                     if (option.onUpdate) option.onUpdate();
                 });
-                menu.append(menuItem);
             }
 
-            container.append(menu);
             win.addEventListener("click", (ev) => {
                 if (popup.show && !menu.contains(ev.target)) {
                     popup.show = !!container.remove();
@@ -332,7 +327,7 @@
      * @param {MutationCallback} callback
      * @param {Node} target
      * @param {MutationObserverInit | undefined} options
-     * @returns
+     * @returns {MutationObserver}
      */
     function observer(callback, target, options) {
         const mutation = new MutationObserver(callback);
