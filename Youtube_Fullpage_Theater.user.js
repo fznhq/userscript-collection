@@ -34,7 +34,7 @@
     let theater = false;
 
     /**
-     * @param {string} attributes
+     * @param {object} attributes
      * @returns {SVGSVGElement}
      */
     function makeIcon(attributes) {
