@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.8.6
+// @version      1.8.7
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -34,40 +34,17 @@
     let theater = false;
 
     /**
-     * @param {object} attributes
-     * @returns {SVGSVGElement}
-     */
-    function makeIcon(attributes) {
-        const create = (tagName) =>
-            document.createElementNS("http://www.w3.org/2000/svg", tagName);
-        let icon = create("svg");
-
-        for (const name in attributes) {
-            const element = create(name);
-
-            for (const key in attributes[name]) {
-                element.setAttribute(key, attributes[name][key]);
-            }
-
-            if (name == "svg") icon = element;
-            else icon.append(element);
-        }
-
-        return icon;
-    }
-
-    /**
      * Options must be changed via popup menu,
      * just press (v) to open the menu
      */
     const options = {
         auto_theater_mode: {
-            icon: makeIcon({
+            icon: {
                 svg: { "fill-rule": "evenodd", "clip-rule": "evenodd" },
                 path: {
                     d: "M24 22h-24v-20h24v20zm-1-19h-22v18h22v-18zm-4 7h-1v-3.241l-11.241 11.241h3.241v1h-5v-5h1v3.241l11.241-11.241h-3.241v-1h5v5z",
                 },
-            }),
+            },
             label: "Auto Open Theater",
             value: false, //fallback
             onUpdate() {
@@ -75,11 +52,11 @@
             },
         },
         hide_scrollbar: {
-            icon: makeIcon({
+            icon: {
                 path: {
                     d: "M14 12c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2zm-3-3.858c.321-.083.653-.142 1-.142s.679.059 1 .142v-2.142h4l-5-6-5 6h4v2.142zm2 7.716c-.321.083-.653.142-1 .142s-.679-.059-1-.142v2.142h-4l5 6 5-6h-4v-2.142z",
                 },
-            }),
+            },
             label: "Theater Hide Scrollbar",
             value: true, //fallback
             onUpdate() {
@@ -90,7 +67,7 @@
             },
         },
         close_theater_with_esc: {
-            icon: makeIcon({
+            icon: {
                 svg: {
                     "clip-rule": "evenodd",
                     "fill-rule": "evenodd",
@@ -101,16 +78,16 @@
                     d: "m21 3.998c0-.478-.379-1-1-1h-16c-.62 0-1 .519-1 1v16c0 .621.52 1 1 1h16c.478 0 1-.379 1-1zm-16.5.5h15v15h-15zm7.491 6.432 2.717-2.718c.146-.146.338-.219.53-.219.404 0 .751.325.751.75 0 .193-.073.384-.22.531l-2.717 2.717 2.728 2.728c.147.147.22.339.22.531 0 .427-.349.75-.75.75-.192 0-.385-.073-.531-.219l-2.728-2.728-2.728 2.728c-.147.146-.339.219-.531.219-.401 0-.75-.323-.75-.75 0-.192.073-.384.22-.531l2.728-2.728-2.722-2.722c-.146-.147-.219-.338-.219-.531 0-.425.346-.749.75-.749.192 0 .384.073.53.219z",
                     "fill-rule": "nonzero",
                 },
-            }),
+            },
             label: "Close Theater With Esc",
             value: true, //fallback
         },
         hide_card: {
-            icon: makeIcon({
+            icon: {
                 path: {
                     d: "M22 6v16H6V6h16zm2-2H4v20h20V4zM0 0v20h2V2h18V0H0zm14.007 11.225C10.853 11.225 9 13.822 9 13.822s2.015 2.953 5.007 2.953c3.222 0 4.993-2.953 4.993-2.953s-1.788-2.597-4.993-2.597zm.042 4.717a1.942 1.942 0 1 1 .002-3.884 1.942 1.942 0 0 1-.002 3.884zM15.141 14a1.092 1.092 0 1 1-2.184 0l.02-.211a.68.68 0 0 0 .875-.863l.197-.019c.603 0 1.092.489 1.092 1.093z",
                 },
-            }),
+            },
             label: "Hide Card Outside Theater Mode",
             value: false, //fallback
             onUpdate() {
@@ -118,11 +95,11 @@
             },
         },
         show_header_near: {
-            icon: makeIcon({
+            icon: {
                 path: {
                     d: "M5 4.27 15.476 13H8.934L5 18.117V4.27zM3 0v24l6.919-9H21L3 0z",
                 },
-            }),
+            },
             label: "Show Header When Mouse is Near",
             value: false, //fallback
         },
@@ -138,14 +115,31 @@
         return (options[name].value = value);
     }
 
+    /**
+     * @param {string} name
+     * @param {object} attributes
+     * @param {Array} append
+     * @returns {SVGElement}
+     */
+    function createNS(name, attributes = {}, append = []) {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+        for (const k in attributes) el.setAttributeNS(null, k, attributes[k]);
+        return el.append(...append), el;
+    }
+
     for (const name in options) {
         const saved_option = await GM.getValue(name);
+        const icon = options[name].icon;
 
         if (saved_option === undefined) {
             saveOption(name, options[name].value);
         } else {
             options[name].value = saved_option;
         }
+
+        options[name].icon = createNS("svg", icon.svg, [
+            createNS("path", icon.path),
+        ]);
     }
 
     /**
@@ -154,10 +148,9 @@
      * @returns {HTMLDivElement}
      */
     function createDiv(className, append = []) {
-        const element = document.createElement("div");
-        element.className = className;
-        if (append.length) element.append(...append);
-        return element;
+        const el = document.createElement("div");
+        el.className = className;
+        return el.append(...append), el;
     }
 
     const popup = {
