@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Youtube Quality HD
 // @version      1.0.0
-// @description  Automatically select your desired video quality.
+// @description  Automatically select your desired video quality and select premium when posibble.
 // @run-at       document-body
 // @match        https://www.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
