@@ -151,12 +151,11 @@
      */
     function getQuality(qualityData, prefer) {
         const selected = qualityData.filter((data) => {
-            const quality = parseLabel(data.qualityLabel);
-            return quality == prefer && data.isPlayable;
+            return parseLabel(data.qualityLabel) == prefer && data.isPlayable;
         });
-        const premium = selected.findIndex((data) =>
-            data.qualityLabel.toLowerCase().includes("premium")
-        );
+        const premium = selected.findIndex((data) => {
+            return data.qualityLabel.toLowerCase().includes("premium");
+        });
         const isPremiumExists = premium > -1;
         return options.preferred_premium && isPremiumExists
             ? selected[premium]
