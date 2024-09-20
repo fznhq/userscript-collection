@@ -61,7 +61,7 @@
             value: true, //fallback
             onUpdate() {
                 if (theater) {
-                    html.toggleAttribute(attr.no_scroll, this.value);
+                    setHtmlAttr("no_scroll", this.value);
                     win.dispatchEvent(new Event("resize"));
                 }
             },
@@ -91,7 +91,7 @@
             label: "Hide Card Outside Theater Mode",
             value: false, //fallback
             onUpdate() {
-                if (!theater) html.toggleAttribute(attr.hide_card, this.value);
+                if (!theater) setHtmlAttr("hide_card", this.value);
             },
         },
         show_header_near: {
@@ -206,8 +206,8 @@
      * @returns {() => HTMLElement | null}
      */
     function $(query) {
-        let cache;
-        return () => cache || (cache = document.querySelector(query));
+        let element = null;
+        return () => element || (element = document.querySelector(query));
     }
 
     /**
@@ -285,15 +285,18 @@
         hide_card: "hide-card",
     };
 
+    const simpleId = Date.now().toString(36);
+
     for (const key in customAttr) {
-        const oldAttr = new RegExp("\\[" + customAttr[key], "g");
-        const uniqueKey = Math.random().toString(36).slice(2);
-        customAttr[key] = customAttr[key] + `-${uniqueKey}`;
-        style = style.replace(oldAttr, "[" + customAttr[key]);
+        style = style.replaceAll(
+            "[" + customAttr[key],
+            "[" + (customAttr[key] = customAttr[key] + "-" + simpleId)
+        );
     }
 
     addStyle(style);
 
+    /** @namespace */
     const attr = {
         video_id: "video-id",
         role: "role",
@@ -316,6 +319,14 @@
         cancelable: true,
         view: win,
     });
+
+    /**
+     * @param {keyof attr} name
+     * @param {boolean} state
+     */
+    function setHtmlAttr(name, state) {
+        html.toggleAttribute(attr[name], state);
+    }
 
     /**
      * @param {MutationCallback} callback
@@ -363,7 +374,7 @@
             (skipActive || document.activeElement != element.search())
         ) {
             const scroll = !options.show_header_near.value && win.scrollY;
-            html.toggleAttribute(attr.hidden_header, !(state || scroll));
+            setHtmlAttr("hidden_header", !(state || scroll));
         }
     }
 
@@ -439,13 +450,10 @@
         if (theater == state) return;
         theater = state;
 
-        html.toggleAttribute(attr.theater, state);
-        html.toggleAttribute(attr.hidden_header, state);
-        html.toggleAttribute(
-            attr.no_scroll,
-            state && options.hide_scrollbar.value
-        );
-        html.toggleAttribute(attr.hide_card, state || options.hide_card.value);
+        setHtmlAttr("theater", state);
+        setHtmlAttr("hidden_header", state);
+        setHtmlAttr("no_scroll", state && options.hide_scrollbar.value);
+        setHtmlAttr("hide_card", state || options.hide_card.value);
     }
 
     observer((_, observe) => {
