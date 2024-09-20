@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.0.0
+// @version      1.0.1
 // @description  Automatically select your desired video quality and select premium when posibble.
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -150,16 +150,17 @@
      * @returns {QualityData}
      */
     function getQuality(qualityData, prefer) {
-        const selected = qualityData.filter((data) => {
-            return parseLabel(data.qualityLabel) == prefer && data.isPlayable;
+        const quality = { premium: null, normal: null };
+
+        qualityData.forEach((data) => {
+            const label = data.qualityLabel.toLowerCase();
+            if (parseLabel(label) == prefer && data.isPlayable) {
+                if (label.includes("premium")) quality.premium = data;
+                else quality.normal = data;
+            }
         });
-        const premium = selected.findIndex((data) => {
-            return data.qualityLabel.toLowerCase().includes("premium");
-        });
-        const isPremiumExists = premium > -1;
-        return options.preferred_premium && isPremiumExists
-            ? selected[premium]
-            : selected[isPremiumExists ? selected.length - 1 - premium : 0];
+
+        return (options.preferred_premium && quality.premium) || quality.normal;
     }
 
     /**
