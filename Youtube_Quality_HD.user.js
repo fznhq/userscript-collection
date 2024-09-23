@@ -27,6 +27,7 @@
 
     let manualOverride = false;
     let currentMaxQuality = 0;
+    let isUpdated = false;
 
     const options = {
         preferred_quality: defaultPreferredQuality,
@@ -92,8 +93,8 @@
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
         quality_menu: $(".ytp-quality-menu", false),
-        movie: $("#movie_player video"),
-        short: $("#shorts-player video"),
+        movie_video: $("#movie_player video"),
+        short_video: $("#shorts-player video"),
         // Reserve Element
         text_quality: document.createTextNode(options.preferred_quality + "p"),
         premium_menu: document.createElement("div"),
@@ -188,8 +189,6 @@
         return elem;
     }
 
-    let isUpdated = false;
-
     function setVideoQuality() {
         if (manualOverride) return;
         if (isUpdated) return (isUpdated = false);
@@ -262,7 +261,7 @@
         menu.item.addEventListener("click", function () {
             setChecked(this, saveOption(optName, !options[optName]));
             triggerSyncOptions();
-            setVideoQuality.call(element.movie());
+            setVideoQuality.call(element.movie_video());
         });
 
         return (element.premium_menu = menu.item);
@@ -302,8 +301,8 @@
             ) {
                 const newValue = saveOption(optName, listQuality[pos]);
                 setTextQuality(element.text_quality, newValue);
-                triggerSyncOptions();
-                setVideoQuality.call(element.movie(), (manualOverride = false));
+                triggerSyncOptions((manualOverride = false));
+                setVideoQuality.call(element.movie_video());
             }
         });
 
@@ -359,8 +358,8 @@
     })();
 
     observer((_, observe) => {
-        const movie = element.movie();
-        const short = element.short();
+        const movie = element.movie_video();
+        const short = element.short_video();
 
         if (short && !cachePlayers.has(short)) addVideoListener(short);
 
