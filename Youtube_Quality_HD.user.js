@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.1.0
+// @version      1.1.1
 // @description  Automatically select your desired video quality and select premium when posibble.
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -38,9 +38,6 @@
         premium: `{"svg":{"viewBox":"0 0 123 95"},"path":{"fill":"white","d":"M1 28 20 1a3 3 0 0 1 3-1h77a3 3 0 0 1 3 1l19 27a3 3 0 0 1 1 2 3 3 0 0 1-1 2L64 94a3 3 0 0 1-4 0L1 32a3 3 0 0 1-1-1 3 3 0 0 1 1-3Zm44 5 17 51 17-51Zm39 0L68 82l46-49ZM56 82 39 33H9l47 49ZM28 5l13 20L56 5Zm39 0 15 20L95 5Zm33 2L87 27h28L100 7ZM77 27 61 7 47 27Zm-41 0L22 7 8 27Z"}}`,
         quality: `{"svg":{"viewBox":"0 0 123 107"},"path":{"fill":"white","fill-rule":"evenodd","d":"M113 57a4 4 0 0 1 2 1l3 4a5 5 0 0 1 1 2 4 4 0 0 1 0 1 4 4 0 0 1 0 2 4 4 0 0 1-1 1l-3 2v1l1 1v2h3a4 4 0 0 1 3 1 4 4 0 0 1 1 2 4 4 0 0 1 0 1l-1 6a4 4 0 0 1-1 3 4 4 0 0 1-3 1h-3l-1 1-1 1v1l2 2a4 4 0 0 1 1 1 4 4 0 0 1-1 3 4 4 0 0 1-1 2l-4 3a4 4 0 0 1-1 1 4 4 0 0 1-2 0 5 5 0 0 1-1 0 4 4 0 0 1-2-1l-2-3a1 1 0 0 1 0 1h-3v3a4 4 0 0 1-1 2 4 4 0 0 1-1 1 4 4 0 0 1-1 1 4 4 0 0 1-2 0h-5a4 4 0 0 1-4-5v-3l-2-1-1-1-2 2a4 4 0 0 1-2 1 4 4 0 0 1-1 0 4 4 0 0 1-2 0 4 4 0 0 1-1-1l-4-4a5 5 0 0 1 0-2 4 4 0 0 1-1-2 4 4 0 0 1 2-3l2-2v-1l-1-2h-2a4 4 0 0 1-2-1 4 4 0 0 1-1-1 4 4 0 0 1-1-1 4 4 0 0 1 0-2v-5a4 4 0 0 1 1-2 5 5 0 0 1 1-1 4 4 0 0 1 1-1 4 4 0 0 1 2 0h3l1-1v-2l-1-2a4 4 0 0 1-1-1 4 4 0 0 1 0-2 4 4 0 0 1 0-2 4 4 0 0 1 1-1l4-3a5 5 0 0 1 2-1 4 4 0 0 1 1-1 4 4 0 0 1 2 1 4 4 0 0 1 1 1l2 2h2l1-1 1-2a4 4 0 0 1 0-2 4 4 0 0 1 1-1 4 4 0 0 1 2-1 4 4 0 0 1 1 0h6a5 5 0 0 1 1 1 4 4 0 0 1 2 1 4 4 0 0 1 0 1 4 4 0 0 1 1 2l-1 3h1l1 1 1 1 3-2a4 4 0 0 1 1-1 4 4 0 0 1 2 0 4 4 0 0 1 1 0ZM11 0h82a11 11 0 0 1 11 11v30h-1a11 11 0 0 0-2-1h-2V21H5v49h51a12 12 0 0 0 0 2v4h-1v11h4l1 1h1l-1 1a12 12 0 0 0 0 2v1H11A11 11 0 0 1 0 81V11A11 11 0 0 1 11 0Zm35 31 19 13a3 3 0 0 1 0 4L47 61a3 3 0 0 1-2 0 3 3 0 0 1-3-2V33l1-1a3 3 0 0 1 3-1Zm4 56V76H29v11ZM24 76H5v5a6 6 0 0 0 6 6h13V76Zm52-60V5H55v11Zm5-11v11h18v-5a6 6 0 0 0-6-6ZM50 16V5H29v11Zm-26 0V5H11a6 6 0 0 0-6 6v5Zm70 56a6 6 0 1 1-6 7 6 6 0 0 1 6-7Zm-1-8a14 14 0 1 1-13 16 14 14 0 0 1 13-16Z"}}`,
     };
-
-    const allowedIds = ["movie_player", "shorts-player"];
-    const cachePlayers = new Map();
 
     /**
      * @param {string} name
@@ -89,13 +86,16 @@
         return () => (cache && elem) || (elem = document.querySelector(query));
     }
 
+    const allowedIds = ["movie_player", "shorts-player"];
+    const cachePlayers = new Map();
     const element = {
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
         quality_menu: $(".ytp-quality-menu", false),
-        video: $("#movie_player video"),
+        movie: $("#movie_player video"),
+        short: $("#shorts-player video"),
         // Reserve Element
-        text_quality: document.createTextNode(""),
+        text_quality: document.createTextNode(options.preferred_quality + "p"),
         premium_menu: document.createElement("div"),
     };
 
@@ -150,22 +150,30 @@
     }
 
     /**
-     * @param {QualityData[]} qualityData
+     * @typedef {object} Player
+     * @property {() => string} getPlaybackQualityLabel
+     * @property {() => QualityData[]} getAvailableQualityData
+     * @property {Function} setPlaybackQualityRange
+     */
+
+    /**
+     * @param {HTMLElement & Player} player
      * @param {number} prefer
      * @returns {QualityData}
      */
-    function getQuality(qualityData, prefer) {
-        const quality = { premium: null, normal: null };
+    function getQuality(player, prefer) {
+        const q = { premium: null, normal: null };
+        const short = player.id.includes("short");
 
-        qualityData.forEach((data) => {
+        player.getAvailableQualityData().forEach((data) => {
             const label = data.qualityLabel.toLowerCase();
             if (parseLabel(label) == prefer && data.isPlayable) {
-                if (label.includes("premium")) quality.premium = data;
-                else quality.normal = data;
+                if (label.includes("premium")) q.premium = data;
+                else q.normal = data;
             }
         });
 
-        return (options.preferred_premium && quality.premium) || quality.normal;
+        return (options.preferred_premium && !short && q.premium) || q.normal;
     }
 
     /**
@@ -180,18 +188,8 @@
         return elem;
     }
 
-    /**
-     * @typedef {object} Player
-     * @property {() => string} getPlaybackQualityLabel
-     * @property {() => QualityData[]} getAvailableQualityData
-     * @property {Function} setPlaybackQualityRange
-     */
-
     let isUpdated = false;
 
-    /**
-     * @param {Player} player
-     */
     function setVideoQuality() {
         if (manualOverride) return;
         if (isUpdated) return (isUpdated = false);
@@ -199,17 +197,15 @@
         /** @type {Player} */
         const player = findPlayer(this);
         if (!currentMaxQuality) setCurrentMaxQuality(player);
-        const short = player.id.includes("short");
         const label = player.getPlaybackQualityLabel();
         const quality = parseLabel(label);
-        const prefer = getPreferredQuality();
-        const selected = getQuality(player.getAvailableQualityData(), prefer);
+        const preferred = getPreferredQuality();
+        const selected = getQuality(player, preferred);
 
         if (
             quality &&
             listQuality.includes(quality) &&
-            (isUpdated =
-                quality != prefer || (!short && selected.qualityLabel != label))
+            (isUpdated = quality != preferred || selected.qualityLabel != label)
         ) {
             player.setPlaybackQualityRange(
                 selected.quality,
@@ -266,7 +262,7 @@
         menu.item.addEventListener("click", function () {
             setChecked(this, saveOption(optName, !options[optName]));
             triggerSyncOptions();
-            setVideoQuality.call(element.video());
+            setVideoQuality.call(element.movie());
         });
 
         return (element.premium_menu = menu.item);
@@ -293,7 +289,6 @@
             wordSpacing: "2rem",
         });
 
-        setTextQuality(element.text_quality, options[optName]);
         menu.content.append("< ", element.text_quality, " >");
         menu.content.addEventListener("click", function (ev) {
             const threshold = this.clientWidth / 2;
@@ -308,7 +303,7 @@
                 const newValue = saveOption(optName, listQuality[pos]);
                 setTextQuality(element.text_quality, newValue);
                 triggerSyncOptions();
-                setVideoQuality.call(element.video(), (manualOverride = false));
+                setVideoQuality.call(element.movie(), (manualOverride = false));
             }
         });
 
@@ -323,22 +318,6 @@
         const quality = parseLabel(ev.target.textContent);
         if (menu && listQuality.includes(quality)) manualOverride = true;
     }
-
-    async function syncOptions() {
-        if ((await GM.getValue("updated_id")) != options.updated_id) {
-            isUpdated = false;
-            for (const name in options) options[name] = await GM.getValue(name);
-            setChecked(element.premium_menu, options.preferred_premium);
-            setTextQuality(element.text_quality, options.preferred_quality);
-            for (const [video] of cachePlayers) {
-                if (!video.paused) setVideoQuality.call(video);
-            }
-        }
-    }
-
-    (function checkOptions() {
-        setTimeout(() => syncOptions().then(checkOptions), 1e3);
-    })();
 
     /**
      * @param {HTMLVideoElement} video
@@ -363,15 +342,34 @@
         }
     }
 
+    async function syncOptions() {
+        if ((await GM.getValue("updated_id")) != options.updated_id) {
+            isUpdated = false;
+            for (const name in options) options[name] = await GM.getValue(name);
+            setChecked(element.premium_menu, options.preferred_premium);
+            setTextQuality(element.text_quality, options.preferred_quality);
+            for (const [video] of cachePlayers) {
+                if (!video.paused) setVideoQuality.call(video);
+            }
+        }
+    }
+
+    (function checkOptions() {
+        setTimeout(() => syncOptions().then(checkOptions), 1e3);
+    })();
+
     observer((_, observe) => {
-        if (!element.video()) return;
+        const movie = element.movie();
+        const short = element.short();
 
-        const videos = document.querySelectorAll("video");
-        videos.forEach((video) => addVideoListener(video));
-        element.panel_settings().append(premiumMenu(), qualityMenu());
-        element.settings().addEventListener("click", setOverride, true);
-        document.addEventListener("yt-player-updated", playerUpdated);
+        if (short && !cachePlayers.has(short)) addVideoListener(short);
 
-        observe.disconnect();
+        if (movie) {
+            addVideoListener(movie);
+            element.panel_settings().append(premiumMenu(), qualityMenu());
+            element.settings().addEventListener("click", setOverride, true);
+            document.addEventListener("yt-player-updated", playerUpdated);
+            observe.disconnect();
+        }
     }, document.body);
 })();
