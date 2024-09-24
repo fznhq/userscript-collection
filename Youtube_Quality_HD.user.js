@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.1.2
+// @version      1.1.3
 // @description  Automatically select your desired video quality and select premium when posibble.
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -195,7 +195,7 @@
 
         /** @type {Player} */
         const player = findPlayer(this);
-        if (!currentMaxQuality) setCurrentMaxQuality(player);
+        setCurrentMaxQuality(player);
         const label = player.getPlaybackQualityLabel();
         const quality = parseLabel(label);
         const preferred = getPreferredQuality();
@@ -336,7 +336,6 @@
         if (allowedIds.some((id) => target.querySelector("#" + id))) {
             isUpdated = false;
             manualOverride = false;
-            setCurrentMaxQuality(ev.detail);
             addVideoListener(target.querySelector("video"));
         }
     }
