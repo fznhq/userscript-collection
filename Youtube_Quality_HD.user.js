@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.1.4
+// @version      1.1.5
 // @description  Automatically select your desired video quality and select premium when posibble.
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -95,7 +95,7 @@
         movie_video: $("#movie_player video"),
         short_video: $("#shorts-player video"),
         // Reserve Element
-        text_quality: document.createTextNode(options.preferred_quality + "p"),
+        text_quality: document.createTextNode(""),
         premium_menu: document.createElement("div"),
     };
 
@@ -261,11 +261,10 @@
     }
 
     /**
-     * @param {Text} element
      * @param {string} text
      */
-    function setTextQuality(element, text) {
-        element.textContent = text + "p";
+    function setTextQuality(text) {
+        element.text_quality.textContent = text + "p";
     }
 
     function qualityMenu() {
@@ -281,6 +280,7 @@
             wordSpacing: "2rem",
         });
 
+        setTextQuality(options[optName]);
         menu.content.append("< ", element.text_quality, " >");
         menu.content.addEventListener("click", function (ev) {
             const threshold = this.clientWidth / 2;
@@ -293,7 +293,7 @@
                 (clickPos > threshold && pos < listQuality.length - 1 && ++pos)
             ) {
                 const newValue = saveOption(optName, listQuality[pos]);
-                setTextQuality(element.text_quality, newValue);
+                setTextQuality(newValue);
                 triggerSyncOptions((manualOverride = false));
                 setVideoQuality.call(element.movie_video());
             }
@@ -338,7 +338,7 @@
             isUpdated = false;
             for (const name in options) options[name] = await GM.getValue(name);
             setChecked(element.premium_menu, options.preferred_premium);
-            setTextQuality(element.text_quality, options.preferred_quality);
+            setTextQuality(options.preferred_quality);
             for (const [video] of cachePlayers) {
                 if (!video.paused) setVideoQuality.call(video);
             }
