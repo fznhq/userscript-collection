@@ -26,7 +26,6 @@
     const defaultPreferredQuality = 1080;
 
     let manualOverride = false;
-    let currentMaxQuality = 0;
     let isUpdated = false;
 
     const options = {
@@ -121,15 +120,6 @@
     }
 
     /**
-     * @returns {number}
-     */
-    function getPreferredQuality() {
-        return currentMaxQuality > options.preferred_quality
-            ? options.preferred_quality
-            : currentMaxQuality;
-    }
-
-    /**
      * @typedef {object} QualityData
      * @property {any} formatId
      * @property {string} qualityLabel
@@ -138,24 +128,28 @@
      */
 
     /**
-     * @param {HTMLElement} player
-     */
-    function setCurrentMaxQuality(player) {
-        /** @type {QualityData[]} */
-        const qualityData = player.getAvailableQualityData();
-        if (qualityData.length) {
-            currentMaxQuality = Math.max(
-                ...qualityData.map((data) => parseLabel(data.qualityLabel))
-            );
-        }
-    }
-
-    /**
      * @typedef {object} Player
      * @property {() => string} getPlaybackQualityLabel
      * @property {() => QualityData[]} getAvailableQualityData
      * @property {Function} setPlaybackQualityRange
      */
+
+    /**
+     * @param {HTMLElement & Player} player
+     * @returns {number}
+     */
+    function getPreferredQuality(player) {
+        const currentMaxQuality = Math.max(
+            ...player
+                .getAvailableQualityData()
+                .map((data) => parseLabel(data.qualityLabel))
+        );
+
+        return !isFinite(currentMaxQuality) ||
+            currentMaxQuality > options.preferred_quality
+            ? options.preferred_quality
+            : currentMaxQuality;
+    }
 
     /**
      * @param {HTMLElement & Player} player
@@ -195,10 +189,9 @@
 
         /** @type {Player} */
         const player = findPlayer(this);
-        setCurrentMaxQuality(player);
         const label = player.getPlaybackQualityLabel();
         const quality = parseLabel(label);
-        const preferred = getPreferredQuality();
+        const preferred = getPreferredQuality(player);
         const selected = getQuality(player, preferred);
 
         if (
