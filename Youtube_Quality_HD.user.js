@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.1.5
+// @version      1.2.0
 // @description  Automatically select your desired video quality and select premium when posibble.
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -83,19 +83,25 @@
      */
     function $(query, cache = true) {
         let elem = null;
-        return () => (cache && elem) || (elem = document.querySelector(query));
+        return (context = document) => {
+            return (cache && elem) || (elem = context.querySelector(query));
+        };
     }
 
     const allowedIds = ["movie_player", "shorts-player"];
     const cachePlayers = new Map();
+    const cacheTextQuality = new Set();
     const element = {
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
         quality_menu: $(".ytp-quality-menu", false),
         movie_video: $("#movie_player video"),
         short_video: $("#shorts-player video"),
+        popup: {
+            container: $("ytd-popup-container"),
+            menu: $("ytd-menu-service-item-renderer"),
+        },
         // Reserve Element
-        text_quality: document.createTextNode(""),
         premium_menu: document.createElement("div"),
     };
 
@@ -230,11 +236,13 @@
     }
 
     function createMenuItem(svgIcon, textLabel, checkbox = false) {
-        const icon = itemElement("icon", [svgIcon]);
-        const label = itemElement("label", [textLabel]);
         const inner = checkbox ? [itemElement("toggle-checkbox")] : [];
         const content = itemElement("content", inner);
-        const item = itemElement("", [icon, label, content]);
+        const item = itemElement("", [
+            itemElement("icon", [svgIcon]),
+            itemElement("label", [textLabel]),
+            content,
+        ]);
         return { item, content };
     }
 
@@ -261,28 +269,35 @@
     }
 
     /**
-     * @param {string} text
+     * @param {string} value
+     * @param {Text | undefined} text
      */
-    function setTextQuality(text) {
-        element.text_quality.textContent = text + "p";
+    function setTextQuality(value, text) {
+        if (text && !cacheTextQuality.has(text)) cacheTextQuality.add(text);
+
+        cacheTextQuality.forEach((qualityText) => {
+            qualityText.textContent = value + "p";
+        });
     }
 
-    function qualityMenu() {
-        const menu = createMenuItem(icons.quality, "Preferred Quality");
+    /**
+     * @param {HTMLElement} content
+     * @param {HTMLVideoElement} video
+     */
+    function qualityOption(content, video) {
         const optName = "preferred_quality";
+        const text = document.createTextNode("");
 
-        menu.item.style.cursor = "default";
-        Object.assign(menu.content.style, {
+        Object.assign(content.style, {
             cursor: "pointer",
             fontWeight: 500,
-            fontSize: "130%",
             textAlignLast: "justify",
-            wordSpacing: "2rem",
         });
 
-        setTextQuality(options[optName]);
-        menu.content.append("< ", element.text_quality, " >");
-        menu.content.addEventListener("click", function (ev) {
+        setTextQuality(options[optName], text);
+
+        content.append("< ", text, " >");
+        content.addEventListener("click", function (ev) {
             const threshold = this.clientWidth / 2;
             const offset = this.getBoundingClientRect();
             const clickPos = ev.clientX - offset.left;
@@ -295,11 +310,100 @@
                 const newValue = saveOption(optName, listQuality[pos]);
                 setTextQuality(newValue);
                 triggerSyncOptions((manualOverride = false));
-                setVideoQuality.call(element.movie_video());
+                setVideoQuality.call(video);
             }
         });
+    }
 
+    function qualityMenu() {
+        const menu = createMenuItem(icons.quality, "Preferred Quality");
+
+        menu.item.style.cursor = "default";
+        menu.content.style.fontSize = "130%";
+        menu.content.style.wordSpacing = "2rem";
+
+        qualityOption(menu.content, element.movie_video());
         return menu.item;
+    }
+
+    function shortQualityMenuStyle() {
+        const replaceList = {
+            "ytd-menu-service-item-renderer": ".ytp-menuitem-custom-element",
+            "tp-yt-paper-item": ".item",
+            "yt-icon": ".icon",
+            "yt-formatted-string": ".message",
+        };
+        const tags = Object.keys(replaceList);
+        const styleElement = document.createElement("style");
+
+        function replaceTag(css) {
+            css = css.replace(/\[system-icons\]|\[use-icons\]/gi, "");
+            for (const k in replaceList) {
+                css = css.replaceAll("." + k, "").replaceAll(k, replaceList[k]);
+            }
+            return css;
+        }
+
+        function replaceSelector(css) {
+            const split = css.split("{");
+            const selector = split[0].split(",").map((query) => {
+                query = query.trim();
+                const menu = replaceList[tags[0]];
+                if (!query.startsWith(menu)) query = menu + " " + query;
+                return query;
+            });
+            return selector.join(",") + "{" + split[1];
+        }
+
+        function checkSelector(selector) {
+            return (
+                selector &&
+                tags.some(
+                    (tag) =>
+                        !selector.includes(tag + "-") &&
+                        !selector.includes("." + tag) &&
+                        selector.includes(tag)
+                )
+            );
+        }
+
+        for (const styles of document.styleSheets) {
+            try {
+                for (const rule of styles.cssRules) {
+                    if (checkSelector(rule.selectorText)) {
+                        styleElement.textContent += replaceSelector(
+                            replaceTag(rule.cssText)
+                        );
+                    }
+                }
+            } catch (e) {}
+        }
+
+        document.head.append(styleElement);
+    }
+
+    function shortQualityMenu() {
+        const options = itemElement(" message");
+        const menu = itemElement("custom-element", [
+            itemElement(" item", [
+                itemElement(" icon", [
+                    itemElement(" yt-icon-shape yt-spec-icon-shape", [
+                        icons.quality.cloneNode(true),
+                    ]),
+                ]),
+                itemElement(" message", ["Preferred Quality"]),
+                options,
+            ]),
+        ]);
+
+        menu.style.userSelect = "none";
+        menu.style.cursor = "default";
+        options.style.paddingInline = "24px";
+        options.style.margin = 0;
+        options.style.minWidth = "100px";
+
+        qualityOption(options, element.short_video());
+        return menu;
     }
 
     /**
@@ -353,13 +457,30 @@
         const movie = element.movie_video();
         const short = element.short_video();
 
-        if (short && !cachePlayers.has(short)) addVideoListener(short);
+        if (short) addVideoListener(short);
 
         if (movie) {
             addVideoListener(movie);
             element.panel_settings().append(premiumMenu(), qualityMenu());
             element.settings().addEventListener("click", setOverride, true);
             document.addEventListener("yt-player-updated", playerUpdated);
+            observe.disconnect();
+        }
+    }, document.body);
+
+    observer((_, observe) => {
+        const container = element.popup.container();
+
+        if (container) {
+            observer((_, observe) => {
+                const menu = element.popup.menu(container);
+                if (menu) {
+                    shortQualityMenuStyle();
+                    const item = menu.parentElement;
+                    item.append(shortQualityMenu());
+                    observe.disconnect();
+                }
+            }, container);
             observe.disconnect();
         }
     }, document.body);
