@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.2.0
-// @description  Automatically select your desired video quality and select premium when posibble.
+// @version      1.2.1
+// @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube short)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
@@ -9,6 +9,7 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
 // @grant        GM.setValue
+// @grant        unsafeWindow
 // @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Quality_HD.user.js
 // @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Quality_HD.user.js
 // @author       Fznhq
@@ -22,6 +23,8 @@
 (async function () {
     "use strict";
 
+    /** @type {Window} */
+    const win = unsafeWindow;
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
     const defaultPreferredQuality = 1080;
 
@@ -83,9 +86,7 @@
      */
     function $(query, cache = true) {
         let elem = null;
-        return (context = document) => {
-            return (cache && elem) || (elem = context.querySelector(query));
-        };
+        return () => (cache && elem) || (elem = document.querySelector(query));
     }
 
     const allowedIds = ["movie_player", "shorts-player"];
@@ -97,10 +98,7 @@
         quality_menu: $(".ytp-quality-menu", false),
         movie_video: $("#movie_player video"),
         short_video: $("#shorts-player video"),
-        popup: {
-            container: $("ytd-popup-container"),
-            menu: $("ytd-menu-service-item-renderer"),
-        },
+        popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
         // Reserve Element
         premium_menu: document.createElement("div"),
     };
@@ -453,6 +451,20 @@
         setTimeout(() => syncOptions().then(checkOptions), 1e3);
     })();
 
+    function initShortMenu() {
+        const short = win.location.pathname.startsWith("/short");
+        const menu = element.popup_menu();
+
+        if (short && menu) {
+            shortQualityMenuStyle();
+            const item = menu.parentElement;
+            item.append(shortQualityMenu());
+            win.removeEventListener("click", initShortMenu);
+        }
+    }
+
+    win.addEventListener("click", initShortMenu);
+
     observer((_, observe) => {
         const movie = element.movie_video();
         const short = element.short_video();
@@ -464,23 +476,6 @@
             element.panel_settings().append(premiumMenu(), qualityMenu());
             element.settings().addEventListener("click", setOverride, true);
             document.addEventListener("yt-player-updated", playerUpdated);
-            observe.disconnect();
-        }
-    }, document.body);
-
-    observer((_, observe) => {
-        const container = element.popup.container();
-
-        if (container) {
-            observer((_, observe) => {
-                const menu = element.popup.menu(container);
-                if (menu) {
-                    shortQualityMenuStyle();
-                    const item = menu.parentElement;
-                    item.append(shortQualityMenu());
-                    observe.disconnect();
-                }
-            }, container);
             observe.disconnect();
         }
     }, document.body);
