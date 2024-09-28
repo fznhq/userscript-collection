@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.2.1
+// @version      1.2.2
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube short)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -119,7 +119,7 @@
      * @param {string} label
      * @returns {number}
      */
-    function parseLabel(label) {
+    function parseQualityLabel(label) {
         return parseInt(label.slice(0, 4), 10);
     }
 
@@ -139,14 +139,12 @@
      */
 
     /**
-     * @param {HTMLElement & Player} player
+     * @param {QualityData[]} qualityData
      * @returns {number}
      */
-    function getPreferredQuality(player) {
+    function getPreferredQuality(qualityData) {
         const currentMaxQuality = Math.max(
-            ...player
-                .getAvailableQualityData()
-                .map((data) => parseLabel(data.qualityLabel))
+            ...qualityData.map((data) => parseQualityLabel(data.qualityLabel))
         );
 
         return !isFinite(currentMaxQuality) ||
@@ -156,17 +154,18 @@
     }
 
     /**
-     * @param {HTMLElement & Player} player
+     * @param {HTMLElement} player
+     * @param {QualityData[]} qualityData
      * @param {number} prefer
      * @returns {QualityData}
      */
-    function getQuality(player, prefer) {
+    function getQuality(player, qualityData, prefer) {
         const q = { premium: null, normal: null };
         const short = player.id.includes("short");
 
-        player.getAvailableQualityData().forEach((data) => {
+        qualityData.forEach((data) => {
             const label = data.qualityLabel.toLowerCase();
-            if (parseLabel(label) == prefer && data.isPlayable) {
+            if (parseQualityLabel(label) == prefer && data.isPlayable) {
                 if (label.includes("premium")) q.premium = data;
                 else q.normal = data;
             }
@@ -194,9 +193,10 @@
         /** @type {Player} */
         const player = findPlayer(this);
         const label = player.getPlaybackQualityLabel();
-        const quality = parseLabel(label);
-        const preferred = getPreferredQuality(player);
-        const selected = getQuality(player, preferred);
+        const quality = parseQualityLabel(label);
+        const qualityData = player.getAvailableQualityData();
+        const preferred = getPreferredQuality(qualityData);
+        const selected = getQuality(player, qualityData, preferred);
 
         if (
             quality &&
@@ -271,7 +271,7 @@
      * @param {Text | undefined} text
      */
     function setTextQuality(value, text) {
-        if (text && !cacheTextQuality.has(text)) cacheTextQuality.add(text);
+        if (text) cacheTextQuality.add(text);
 
         cacheTextQuality.forEach((qualityText) => {
             qualityText.textContent = value + "p";
@@ -409,7 +409,7 @@
      */
     function setOverride(ev) {
         const menu = element.quality_menu();
-        const quality = parseLabel(ev.target.textContent);
+        const quality = parseQualityLabel(ev.target.textContent);
         if (menu && listQuality.includes(quality)) manualOverride = true;
     }
 
