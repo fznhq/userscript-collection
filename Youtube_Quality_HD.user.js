@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.2.3
+// @version      1.3.0
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube short)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -31,6 +31,7 @@
     let manualOverride = false;
     let isUpdated = false;
 
+    /** @namespace */
     const options = {
         preferred_quality: defaultPreferredQuality,
         preferred_premium: true,
@@ -80,24 +81,32 @@
     }
 
     /**
+     * @param {Document | HTMLElement} context
+     * @param {string} query
+     */
+    function find(context, query) {
+        return context.querySelector(query);
+    }
+
+    /**
      * @param {string} query
      * @param {boolean} cache
      * @returns {() => HTMLElement | null}
      */
     function $(query, cache = true) {
-        let elem = null;
-        return () => (cache && elem) || (elem = document.querySelector(query));
+        let element = null;
+        return () => (cache && element) || (element = find(document, query));
     }
 
-    const allowedIds = ["movie_player", "shorts-player"];
-    const cachePlayers = new Map();
+    const allowedIds = ["#movie_player", "#shorts-player"];
+    const cachePlayers = new Set();
     const cacheTextQuality = new Set();
     const element = {
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
         quality_menu: $(".ytp-quality-menu", false),
-        movie_video: $("#movie_player video"),
-        short_video: $("#shorts-player video"),
+        movie_player: $(allowedIds[0]),
+        short_player: $(allowedIds[1]),
         popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
         // Reserve Element
         premium_menu: document.createElement("div"),
@@ -156,16 +165,26 @@
     /**
      * @param {HTMLElement} player
      * @param {QualityData[]} qualityData
-     * @param {number} prefer
+     * @param {number} preferred
      * @returns {QualityData}
      */
-    function getQuality(player, qualityData, prefer) {
+    function getQuality(player, qualityData, preferred) {
         const q = { premium: null, normal: null };
         const short = player.id.includes("short");
+        let indexQuality = listQuality.indexOf(preferred);
+
+        while (
+            indexQuality-- &&
+            !qualityData.some((data) => {
+                return parseQualityLabel(data.qualityLabel) == preferred;
+            })
+        ) {
+            preferred = listQuality[indexQuality];
+        }
 
         qualityData.forEach((data) => {
             const label = data.qualityLabel.toLowerCase();
-            if (parseQualityLabel(label) == prefer && data.isPlayable) {
+            if (parseQualityLabel(label) == preferred && data.isPlayable) {
                 if (label.includes("premium")) q.premium = data;
                 else q.normal = data;
             }
@@ -174,24 +193,12 @@
         return (options.preferred_premium && !short && q.premium) || q.normal;
     }
 
-    /**
-     * @param {HTMLVideoElement} video
-     * @returns {HTMLElement}
-     */
-    function findPlayer(video) {
-        if (cachePlayers.has(video)) return cachePlayers.get(video);
-        let elem = video.parentElement;
-        while (elem && !allowedIds.includes(elem.id)) elem = elem.parentElement;
-        if (elem) cachePlayers.set(video, elem);
-        return elem;
-    }
-
     function setVideoQuality() {
         if (manualOverride) return;
         if (isUpdated) return (isUpdated = false);
 
         /** @type {Player} */
-        const player = findPlayer(this);
+        const player = this;
         const label = player.getPlaybackQualityLabel();
         const quality = parseQualityLabel(label);
         const qualityData = player.getAvailableQualityData();
@@ -200,6 +207,7 @@
 
         if (
             quality &&
+            selected &&
             listQuality.includes(quality) &&
             (isUpdated = quality != preferred || selected.qualityLabel != label)
         ) {
@@ -220,6 +228,20 @@
         isUpdated = false;
         const id = generateSimpleId();
         GM.setValue("updated_id", id).then(() => (options.updated_id = id));
+    }
+
+    /**
+     *
+     * @param {keyof options} optionName
+     * @param {any} newValue
+     * @param {HTMLElement} player
+     * @returns {any}
+     */
+    function savePreferred(optionName, newValue, player) {
+        saveOption(optionName, newValue);
+        triggerSyncOptions();
+        setVideoQuality.call(player);
+        return newValue;
     }
 
     /**
@@ -254,13 +276,12 @@
 
     function premiumMenu() {
         const menu = createMenuItem(icons.premium, "Preferred Premium", true);
-        const optName = "preferred_premium";
+        const name = "preferred_premium";
 
-        setChecked(menu.item, options[optName]);
+        setChecked(menu.item, options[name]);
         menu.item.addEventListener("click", function () {
-            setChecked(this, saveOption(optName, !options[optName]));
-            triggerSyncOptions();
-            setVideoQuality.call(element.movie_video());
+            const player = element.movie_player();
+            setChecked(this, savePreferred(name, !options[name], player));
         });
 
         return (element.premium_menu = menu.item);
@@ -280,10 +301,10 @@
 
     /**
      * @param {HTMLElement} content
-     * @param {HTMLVideoElement} video
+     * @param {HTMLElement} player
      */
-    function qualityOption(content, video) {
-        const optName = "preferred_quality";
+    function qualityOption(content, player) {
+        const name = "preferred_quality";
         const text = document.createTextNode("");
 
         Object.assign(content.style, {
@@ -292,23 +313,21 @@
             textAlignLast: "justify",
         });
 
-        setTextQuality(options[optName], text);
+        setTextQuality(options[name], text);
 
         content.append("< ", text, " >");
         content.addEventListener("click", function (ev) {
             const threshold = this.clientWidth / 2;
             const offset = this.getBoundingClientRect();
             const clickPos = ev.clientX - offset.left;
-            let pos = listQuality.indexOf(options[optName]);
+            let pos = listQuality.indexOf(options[name]);
 
             if (
                 (clickPos < threshold && pos > 0 && pos--) ||
                 (clickPos > threshold && pos < listQuality.length - 1 && ++pos)
             ) {
-                const newValue = saveOption(optName, listQuality[pos]);
-                setTextQuality(newValue);
-                triggerSyncOptions((manualOverride = false));
-                setVideoQuality.call(video);
+                manualOverride = false;
+                setTextQuality(savePreferred(name, listQuality[pos], player));
             }
         });
     }
@@ -320,7 +339,7 @@
         menu.content.style.fontSize = "130%";
         menu.content.style.wordSpacing = "2rem";
 
-        qualityOption(menu.content, element.movie_video());
+        qualityOption(menu.content, element.movie_player());
         return menu.item;
     }
 
@@ -400,7 +419,7 @@
         options.style.margin = 0;
         options.style.minWidth = "100px";
 
-        qualityOption(options, element.short_video());
+        qualityOption(options, element.short_player());
         return menu;
     }
 
@@ -414,11 +433,13 @@
     }
 
     /**
-     * @param {HTMLVideoElement} video
+     * @param {HTMLElement} player
      */
-    function addVideoListener(video) {
-        if (cachePlayers.has(video) || !findPlayer(video)) return;
-        const fn = setVideoQuality.bind(video);
+    function addVideoListener(player) {
+        if (cachePlayers.has(player)) return;
+        cachePlayers.add(player);
+        const video = find(player, "video");
+        const fn = setVideoQuality.bind(player);
         video.addEventListener("play", () => setTimeout(fn, 200));
         video.addEventListener("resize", fn);
     }
@@ -428,10 +449,11 @@
      */
     function playerUpdated(ev) {
         const target = ev.target;
-        if (allowedIds.some((id) => target.querySelector("#" + id))) {
+        let player = null;
+        if (allowedIds.some((id) => (player = find(target, id)))) {
             isUpdated = false;
             manualOverride = false;
-            addVideoListener(target.querySelector("video"));
+            addVideoListener(player);
         }
     }
 
@@ -441,9 +463,10 @@
             for (const name in options) options[name] = await GM.getValue(name);
             setChecked(element.premium_menu, options.preferred_premium);
             setTextQuality(options.preferred_quality);
-            for (const [video] of cachePlayers) {
-                if (!video.paused) setVideoQuality.call(video);
-            }
+            cachePlayers.forEach((player) => {
+                const video = find(player, "video");
+                if (!video.paused) setVideoQuality.call(player);
+            });
         }
     }
 
@@ -466,13 +489,13 @@
     win.addEventListener("click", initShortMenu);
 
     observer((_, observe) => {
-        const movie = element.movie_video();
-        const short = element.short_video();
+        const movie_player = element.movie_player();
+        const short_player = element.short_player();
 
-        if (short) addVideoListener(short);
+        if (short_player) addVideoListener(short_player);
 
-        if (movie) {
-            addVideoListener(movie);
+        if (movie_player) {
+            addVideoListener(movie_player);
             element.panel_settings().append(premiumMenu(), qualityMenu());
             element.settings().addEventListener("click", setOverride, true);
             document.addEventListener("yt-player-updated", playerUpdated);
