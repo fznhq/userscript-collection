@@ -362,14 +362,14 @@
         }
 
         function replaceSelector(css) {
-            const split = css.split("{");
-            const selector = split[0].split(",").map((query) => {
+            let [selector, content] = css.split("{");
+            selector = selector.split(",").map((query) => {
                 query = query.trim();
-                const menu = replaceList[tags[0]];
+                const menu = replaceList["ytd-menu-service-item-renderer"];
                 if (!query.startsWith(menu)) query = menu + " " + query;
                 return query;
             });
-            return selector.join(",") + "{" + split[1];
+            return selector.join(",") + "{" + content;
         }
 
         function checkSelector(selector) {
