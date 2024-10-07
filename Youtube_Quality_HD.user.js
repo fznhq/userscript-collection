@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.3.0
+// @version      1.4.0
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube short)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
+// @match        https://m.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/tv*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
@@ -25,15 +26,20 @@
 
     /** @type {Window} */
     const win = unsafeWindow;
+    const isMobile = win.location.hostname.includes("m.youtube");
+
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
-    const defaultPreferredQuality = 1080;
+    const defaultQuality = 1080;
 
     let manualOverride = false;
     let isUpdated = false;
+    let settingsClicked = false;
+    let maybeChangeQuality = false;
+    let subMenu = false;
 
     /** @namespace */
     const options = {
-        preferred_quality: defaultPreferredQuality,
+        preferred_quality: defaultQuality,
         preferred_premium: true,
         updated_id: "",
     };
@@ -41,6 +47,8 @@
     const icons = {
         premium: `{"svg":{"viewBox":"-12 -12 147 119"},"path":{"fill":"white","d":"M1 28 20 1a3 3 0 0 1 3-1h77a3 3 0 0 1 3 1l19 27a3 3 0 0 1 1 2 3 3 0 0 1-1 2L64 94a3 3 0 0 1-4 0L1 32a3 3 0 0 1-1-1 3 3 0 0 1 1-3m44 5 17 51 17-51Zm39 0L68 82l46-49ZM56 82 39 33H9zM28 5l13 20L56 5Zm39 0 15 20L95 5Zm33 2L87 27h28zM77 27 61 7 47 27Zm-41 0L22 7 8 27Z"}}`,
         quality: `{"svg":{"viewBox":"-12 -12 147 131"},"path":{"fill":"white","fill-rule":"evenodd","d":"M113 57a4 4 0 0 1 2 1l3 4a5 5 0 0 1 1 2 4 4 0 0 1 0 1 4 4 0 0 1 0 2 4 4 0 0 1-1 1l-3 2v1l1 1v2h3a4 4 0 0 1 3 1 4 4 0 0 1 1 2 4 4 0 0 1 0 1l-1 6a4 4 0 0 1-1 3 4 4 0 0 1-3 1h-3l-1 1-1 1v1l2 2a4 4 0 0 1 1 1 4 4 0 0 1-1 3 4 4 0 0 1-1 2l-4 3a4 4 0 0 1-1 1 4 4 0 0 1-2 0 5 5 0 0 1-1 0 4 4 0 0 1-2-1l-2-3a1 1 0 0 1 0 1h-3v3a4 4 0 0 1-1 2 4 4 0 0 1-1 1 4 4 0 0 1-1 1 4 4 0 0 1-2 0h-5a4 4 0 0 1-4-5v-3l-2-1-1-1-2 2a4 4 0 0 1-2 1 4 4 0 0 1-1 0 4 4 0 0 1-2 0 4 4 0 0 1-1-1l-4-4a5 5 0 0 1 0-2 4 4 0 0 1-1-2 4 4 0 0 1 2-3l2-2v-1l-1-2h-2a4 4 0 0 1-2-1 4 4 0 0 1-1-1 4 4 0 0 1-1-1 4 4 0 0 1 0-2v-5a4 4 0 0 1 1-2 5 5 0 0 1 1-1 4 4 0 0 1 1-1 4 4 0 0 1 2 0h3l1-1v-2l-1-2a4 4 0 0 1-1-1 4 4 0 0 1 0-2 4 4 0 0 1 0-2 4 4 0 0 1 1-1l4-3a5 5 0 0 1 2-1 4 4 0 0 1 1-1 4 4 0 0 1 2 1 4 4 0 0 1 1 1l2 2h2l1-1 1-2a4 4 0 0 1 0-2 4 4 0 0 1 1-1 4 4 0 0 1 2-1 4 4 0 0 1 1 0h6a5 5 0 0 1 1 1 4 4 0 0 1 2 1 4 4 0 0 1 0 1 4 4 0 0 1 1 2l-1 3h1l1 1 1 1 3-2a4 4 0 0 1 1-1 4 4 0 0 1 2 0 4 4 0 0 1 1 0M11 0h82a11 11 0 0 1 11 11v30h-1a11 11 0 0 0-2-1h-2V21H5v49h51a12 12 0 0 0 0 2v4h-1v11h4l1 1h1l-1 1a12 12 0 0 0 0 2v1H11A11 11 0 0 1 0 81V11A11 11 0 0 1 11 0m35 31 19 13a3 3 0 0 1 0 4L47 61a3 3 0 0 1-2 0 3 3 0 0 1-3-2V33l1-1a3 3 0 0 1 3-1m4 56V76H29v11ZM24 76H5v5a6 6 0 0 0 6 6h13zm52-60V5H55v11Zm5-11v11h18v-5a6 6 0 0 0-6-6ZM50 16V5H29v11Zm-26 0V5H11a6 6 0 0 0-6 6v5Zm70 56a6 6 0 1 1-6 7 6 6 0 0 1 6-7m-1-8a14 14 0 1 1-13 16 14 14 0 0 1 13-16"}}`,
+        check_mark: `{"svg":{"viewBox":"-32 -32 186.9 153.8"},"path":{"d":"M1.2 55.5a3.7 3.7 0 0 1 5-5.5l34.1 30.9 76.1-79.7a3.8 3.8 0 0 1 5.4 5.1L43.2 88.7a3.7 3.7 0 0 1-5.2.2L1.2 55.5z"}}`,
+        arrow: `{"svg":{"viewBox":"-80 -80 227 283","fill":"#aaa"},"path":{"d":"M2 111a7 7 0 1 0 10 10l53-55-5-5 5 5c3-3 3-7 0-10L12 2A7 7 0 1 0 2 12l48 49z"}}`,
     };
 
     /**
@@ -83,9 +91,12 @@
     /**
      * @param {Document | HTMLElement} context
      * @param {string} query
+     * @param {boolean} all
+     * @returns {HTMLElement | NodeListOf<HTMLElement> | null}
      */
-    function find(context, query) {
-        return context.querySelector(query);
+    function find(context, query, all = false) {
+        const property = "querySelector" + (all ? "All" : "");
+        return context[property](query);
     }
 
     /**
@@ -99,15 +110,26 @@
     }
 
     const allowedIds = ["#movie_player", "#shorts-player"];
-    const cachePlayers = new Set();
+    const cachePlayers = new Map();
     const cacheTextQuality = new Set();
+    const query = {
+        m_menu_item: "[role='menuitem'], ytm-menu-service-item-renderer",
+        m_settings_btn: ".player-settings-icon, ytm-bottom-sheet-renderer",
+        m_settings_menu: "player-settings-menu",
+        m_menu_header: "#header-wrapper",
+        m_menu_content: "#content-wrapper",
+        m_item_icon: "c3-icon",
+        m_item_text: "[role='text']",
+    };
     const element = {
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
         quality_menu: $(".ytp-quality-menu", false),
-        movie_player: $(allowedIds[0]),
+        movie_player: $(allowedIds[0], !isMobile),
         short_player: $(allowedIds[1]),
         popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
+        m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
+        m_settings: $(query.m_settings_btn, false),
         // Reserve Element
         premium_menu: document.createElement("div"),
     };
@@ -300,6 +322,14 @@
     }
 
     /**
+     * @param {HTMLElement} element
+     * @returns {DOMRect}
+     */
+    function getRect(element) {
+        return element.getBoundingClientRect();
+    }
+
+    /**
      * @param {HTMLElement} content
      * @param {HTMLElement} player
      */
@@ -318,8 +348,7 @@
         content.append("< ", text, " >");
         content.addEventListener("click", function (ev) {
             const threshold = this.clientWidth / 2;
-            const offset = this.getBoundingClientRect();
-            const clickPos = ev.clientX - offset.left;
+            const clickPos = ev.clientX - getRect(this).left;
             let pos = listQuality.indexOf(options[name]);
 
             if (
@@ -436,23 +465,36 @@
      * @param {HTMLElement} player
      */
     function addVideoListener(player) {
-        if (cachePlayers.has(player)) return;
-        cachePlayers.add(player);
         const video = find(player, "video");
+        if (cachePlayers.get(player) === video) return;
+        cachePlayers.set(player, video);
         const fn = setVideoQuality.bind(player);
         video.addEventListener("play", () => setTimeout(fn, 200));
         video.addEventListener("resize", fn);
     }
 
     /**
-     * @param {CustomEvent} ev
+     * @param {string} type
+     * @returns {boolean}
      */
+    function videoPath(type = "") {
+        const path = win.location.pathname;
+        return (
+            (path.startsWith("/watch") || path.startsWith("/short")) &&
+            path.includes(type)
+        );
+    }
+
+    function resetState() {
+        isUpdated = false;
+        manualOverride = false;
+    }
+
     function playerUpdated(ev) {
-        const target = ev.target;
+        if (!videoPath()) return;
         let player = null;
-        if (allowedIds.some((id) => (player = find(target, id)))) {
-            isUpdated = false;
-            manualOverride = false;
+        if (allowedIds.some((id) => (player = find(ev.target, id)))) {
+            resetState();
             addVideoListener(player);
         }
     }
@@ -463,10 +505,9 @@
             for (const name in options) options[name] = await GM.getValue(name);
             setChecked(element.premium_menu, options.preferred_premium);
             setTextQuality(options.preferred_quality);
-            cachePlayers.forEach((player) => {
-                const video = find(player, "video");
+            for (const [player, video] of cachePlayers) {
                 if (!video.paused) setVideoQuality.call(player);
-            });
+            }
         }
     }
 
@@ -474,8 +515,182 @@
         setTimeout(() => syncOptions().then(checkOptions), 1e3);
     })();
 
+    /**
+     * @param {NodeListOf<Element>[]} elements
+     */
+    function removeOtherElement(elements) {
+        elements.forEach((element) => {
+            for (let i = 1; i < element.length; i++) element[i].remove();
+        });
+    }
+
+    /**
+     * @param {HTMLElement} element
+     * @param {SVGSVGElement | undefined} icon
+     * @param {string} label
+     * @param {Text | string} selectedLabel
+     */
+    function parseItem(element, icon, label, selectedLabel) {
+        element = element.cloneNode(true);
+
+        const mIcons = find(element, query.m_item_icon, true);
+        const mTexts = find(element, query.m_item_text, true);
+
+        if (selectedLabel) {
+            const textSelection = mTexts[0].cloneNode();
+            const newIcon = mIcons[0].cloneNode();
+            textSelection.style.marginLeft = "auto";
+            textSelection.style.color = "#aaa";
+            textSelection.append(selectedLabel);
+            mTexts[0].after(textSelection);
+            newIcon.append(icons.arrow);
+            textSelection.after(newIcon);
+        }
+
+        mIcons[0].textContent = "";
+        if (icon) mIcons[0].append(icon.cloneNode(true));
+        mTexts[0].textContent = label;
+        removeOtherElement([mIcons, mTexts]);
+        return element;
+    }
+
+    /** @type {HTMLElement} */
+    let customMenuItem = null;
+    const customHashId = "custom-bottom-menu";
+
+    /**
+     * @param {HTMLElement} container
+     */
+    function bottomMenu(container) {
+        win.location.replace("#" + customHashId);
+        maybeChangeQuality = false;
+        customMenuItem = container.cloneNode(true);
+
+        const item = find(customMenuItem, query.m_menu_item);
+        const menu = item.parentElement;
+        const header = find(customMenuItem, query.m_menu_header);
+        const content = find(customMenuItem, query.m_menu_content);
+        /** @type {HTMLElement} */
+        let preferredQualityElement = null;
+        const mapQuality = [...listQuality].reverse().map((q) => {
+            const preferred = options.preferred_quality == q;
+            const txt = `${q}p ${q == defaultQuality ? "(Recommended)" : ""}`;
+            const element = parseItem(item, preferred && icons.check_mark, txt);
+            if (preferred) preferredQualityElement = element;
+            return element;
+        });
+
+        menu.textContent = "";
+        menu.append(...mapQuality);
+        header.remove();
+        content.style.maxHeight = "250px";
+        document.body.style.overflow = "hidden";
+        container.parentElement.parentElement.append(customMenuItem);
+
+        const contentTop = getRect(content).top;
+        const qualityRect = getRect(preferredQualityElement);
+        const qualityTop = qualityRect.top - contentTop;
+        content.scrollTo(0, qualityTop - qualityRect.height * 2);
+        customMenuItem.addEventListener("click", (ev) => {
+            const quality = parseQualityLabel(ev.target.textContent);
+            if (listQuality.includes(quality)) {
+                manualOverride = false;
+                const video = element.movie_player();
+                savePreferred("preferred_quality", quality, video);
+            }
+            win.history.back();
+        });
+    }
+
+    const itemMenuText = document.createTextNode("");
+
+    function bottomItem() {
+        const container = element.m_bottom_container();
+
+        if (container) {
+            settingsClicked = false;
+            maybeChangeQuality = true;
+            subMenu = false;
+
+            const item = find(container, query.m_menu_item);
+            const menuItem = parseItem(
+                item,
+                icons.quality,
+                "Preferred Quality",
+                itemMenuText
+            );
+
+            setTextQuality(options.preferred_quality, itemMenuText);
+            item.parentElement.append(menuItem);
+            menuItem.addEventListener("click", () => bottomMenu(container));
+        }
+    }
+
+    /**
+     * @param {MouseEvent} ev
+     */
+    function setSettingsClicked(ev) {
+        if (videoPath()) {
+            const settings = element.m_settings();
+            settingsClicked = settings && settings.contains(ev.target);
+        }
+    }
+
+    /**
+     * @param {MouseEvent} ev
+     */
+    function mobileSetOverride(ev) {
+        if (settingsClicked || !maybeChangeQuality || !subMenu) return;
+        const container = element.m_bottom_container();
+        if (container) {
+            const item = find(container, query.m_menu_item);
+            const quality = parseQualityLabel(ev.target.textContent);
+            if (item && listQuality.includes(quality)) manualOverride = true;
+        }
+        maybeChangeQuality = false;
+    }
+
+    function mobilePlayerUpdated(ev) {
+        if (ev.detail.type == "newdata") resetState();
+    }
+
+    /**
+     * @param {HashChangeEvent} ev
+     */
+    function handlePressBack(ev) {
+        if (customMenuItem && ev.oldURL.includes(customHashId)) {
+            customMenuItem.remove();
+            customMenuItem = null;
+            document.body.style.overflow = "";
+        }
+    }
+
+    if (isMobile) {
+        win.addEventListener("click", setSettingsClicked, true);
+        win.addEventListener("click", mobileSetOverride, true);
+        win.addEventListener("hashchange", handlePressBack);
+        document.addEventListener("video-data-change", mobilePlayerUpdated);
+
+        return observer(() => {
+            const player = element.movie_player();
+
+            if (player) {
+                const unstarted = player.className.includes("unstarted-mode");
+                const video = find(player, "video");
+
+                if (unstarted) player.playVideo();
+                if (cachePlayers.get(player) !== video) {
+                    cachePlayers.clear();
+                    addVideoListener(player);
+                }
+            }
+
+            if (settingsClicked) bottomItem();
+        }, document.body);
+    }
+
     function initShortMenu() {
-        const short = win.location.pathname.startsWith("/short");
+        const short = videoPath("short");
         const menu = element.popup_menu();
 
         if (short && menu) {
