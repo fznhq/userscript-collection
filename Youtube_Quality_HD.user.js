@@ -26,6 +26,7 @@
 
     /** @type {Window} */
     const win = unsafeWindow;
+    const body = document.body;
     const isMobile = win.location.hostname.includes("m.youtube");
 
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
@@ -584,7 +585,7 @@
         menu.append(...mapQuality);
         header.remove();
         content.style.maxHeight = "250px";
-        document.body.style.overflow = "hidden";
+        body.style.overflow = "hidden";
         container.parentElement.parentElement.append(customMenuItem);
 
         const contentTop = getRect(content).top;
@@ -661,7 +662,7 @@
         if (customMenuItem && ev.oldURL.includes(customHashId)) {
             customMenuItem.remove();
             customMenuItem = null;
-            document.body.style.overflow = "";
+            body.style.overflow = "";
         }
     }
 
@@ -686,7 +687,7 @@
             }
 
             if (settingsClicked) bottomItem();
-        }, document.body);
+        }, body);
     }
 
     function initShortMenu() {
@@ -716,5 +717,5 @@
             document.addEventListener("yt-player-updated", playerUpdated);
             observe.disconnect();
         }
-    }, document.body);
+    }, body);
 })();
