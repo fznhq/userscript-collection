@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.4.0
+// @version      1.4.1
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -110,24 +110,25 @@
         return () => (cache && element) || (element = find(document, query));
     }
 
-    const allowedIds = ["#movie_player", "#shorts-player"];
     const cachePlayers = new Map();
     const cacheTextQuality = new Set();
     const query = {
+        movie_player: "#movie_player",
+        short_player: "#shorts-player",
         m_menu_item: "[role='menuitem'], ytm-menu-service-item-renderer",
         m_settings_btn: ".player-settings-icon, ytm-bottom-sheet-renderer",
-        m_settings_menu: "player-settings-menu",
         m_menu_header: "#header-wrapper",
         m_menu_content: "#content-wrapper",
         m_item_icon: "c3-icon",
         m_item_text: "[role='text']",
     };
+    const allowedIds = [query.movie_player, query.short_player];
     const element = {
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
         quality_menu: $(".ytp-quality-menu", false),
-        movie_player: $(allowedIds[0], !isMobile),
-        short_player: $(allowedIds[1]),
+        movie_player: $(query.movie_player, !isMobile),
+        short_player: $(query.short_player),
         popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
         m_settings: $(query.m_settings_btn, false),
