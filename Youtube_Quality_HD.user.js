@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.5.0
+// @version      1.6.0
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -598,14 +598,16 @@
 
         if (container) {
             settingsClicked = false;
-            maybeChangeQuality = true;
+            maybeChangeQuality = false;
 
             const item = find(container, query.m_menu_item);
+            const menu = item.parentElement;
             const label = "Preferred Quality";
             const menuItem = parseItem(item, icons.quality, label, itemText);
 
             setTextQuality(options.preferred_quality, itemText);
-            item.parentElement.append(menuItem);
+            menu.append(menuItem);
+            menu.addEventListener("click", () => (maybeChangeQuality = true));
             menuItem.addEventListener("click", () => bottomMenu(container));
         }
     }
@@ -624,9 +626,9 @@
      * @param {MouseEvent} ev
      */
     function mobileSetOverride(ev) {
+        if (customMenuItem) return (maybeChangeQuality = false);
         if (settingsClicked || !maybeChangeQuality) return;
         const container = element.m_bottom_container();
-        if (!container) return (maybeChangeQuality = false);
         if (container && find(container, query.m_menu_item)) {
             const quality = parseQualityLabel(ev.target.textContent);
             if (listQuality.includes(quality)) manualOverride = true;
