@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.4.1
+// @version      1.5.0
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -36,7 +36,6 @@
     let isUpdated = false;
     let settingsClicked = false;
     let maybeChangeQuality = false;
-    let subMenu = false;
 
     /** @namespace */
     const options = {
@@ -110,7 +109,7 @@
         return () => (cache && element) || (element = find(document, query));
     }
 
-    const cachePlayers = new Map();
+    const cachePlayers = {};
     const cacheTextQuality = new Set();
     const query = {
         movie_player: "#movie_player",
@@ -122,7 +121,7 @@
         m_item_icon: "c3-icon",
         m_item_text: "[role='text']",
     };
-    const allowedIds = [query.movie_player, query.short_player];
+    const allowedPlayerIds = [query.movie_player, query.short_player];
     const element = {
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
@@ -140,12 +139,10 @@
      * @param {MutationCallback} callback
      * @param {Node} target
      * @param {MutationObserverInit | undefined} options
-     * @returns {MutationObserver}
      */
     function observer(callback, target, options) {
         const mutation = new MutationObserver(callback);
         mutation.observe(target, options || { subtree: true, childList: true });
-        return mutation;
     }
 
     /**
@@ -153,7 +150,7 @@
      * @returns {number}
      */
     function parseQualityLabel(label) {
-        return parseInt(label.slice(0, 4), 10);
+        return parseInt(label.replace(/^(\D+)/, "").slice(0, 4), 10);
     }
 
     /**
@@ -172,14 +169,11 @@
      */
 
     /**
-     * @param {QualityData[]} qualityData
+     * @param {number[]} mapQualityData
      * @returns {number}
      */
-    function getPreferredQuality(qualityData) {
-        const currentMaxQuality = Math.max(
-            ...qualityData.map((data) => parseQualityLabel(data.qualityLabel))
-        );
-
+    function getPreferredQuality(mapQualityData) {
+        const currentMaxQuality = Math.max(...mapQualityData);
         return !isFinite(currentMaxQuality) ||
             currentMaxQuality > options.preferred_quality
             ? options.preferred_quality
@@ -187,24 +181,24 @@
     }
 
     /**
-     * @param {HTMLElement} player
-     * @param {QualityData[]} qualityData
-     * @param {number} preferred
-     * @returns {QualityData}
+     * @param {HTMLElement & Player} player
+     * @returns {QualityData | null}
      */
-    function getQuality(player, qualityData, preferred) {
+    function getQuality(player) {
+        const qualityData = player.getAvailableQualityData();
+        if (!qualityData || !qualityData.length) return null;
+
         const q = { premium: null, normal: null };
         const short = player.id.includes("short");
+        const mapQD = qualityData.map((d) => parseQualityLabel(d.qualityLabel));
+        let preferred = getPreferredQuality(mapQD);
         let indexQuality = listQuality.indexOf(preferred);
 
-        while (
-            indexQuality-- &&
-            !qualityData.some((data) => {
-                return parseQualityLabel(data.qualityLabel) == preferred;
-            })
-        ) {
+        while (!mapQD.includes(preferred) && indexQuality-- > 0) {
             preferred = listQuality[indexQuality];
         }
+
+        if (indexQuality < 0) return null;
 
         qualityData.forEach((data) => {
             const label = data.qualityLabel.toLowerCase();
@@ -225,15 +219,13 @@
         const player = this;
         const label = player.getPlaybackQualityLabel();
         const quality = parseQualityLabel(label);
-        const qualityData = player.getAvailableQualityData();
-        const preferred = getPreferredQuality(qualityData);
-        const selected = getQuality(player, qualityData, preferred);
+        const selected = getQuality(player);
 
         if (
             quality &&
             selected &&
             listQuality.includes(quality) &&
-            (isUpdated = quality != preferred || selected.qualityLabel != label)
+            (isUpdated = selected.qualityLabel != label)
         ) {
             player.setPlaybackQualityRange(
                 selected.quality,
@@ -243,14 +235,9 @@
         }
     }
 
-    function generateSimpleId() {
-        const randStr = () => Math.random().toString(36).slice(2, 3);
-        return [...Array(16)].map(randStr).join("");
-    }
-
     function triggerSyncOptions() {
         isUpdated = false;
-        const id = generateSimpleId();
+        const id = (Math.random() * 1e12 + Date.now()).toString(36);
         GM.setValue("updated_id", id).then(() => (options.updated_id = id));
     }
 
@@ -279,11 +266,17 @@
         return el.append(...append), el;
     }
 
+    /**
+     * @param {SVGSVGElement} svgIcon
+     * @param {string} textLabel
+     * @param {boolean} checkbox
+     * @returns {{item: HTMLDivElement, content: HTMLDivElement}}
+     */
     function createMenuItem(svgIcon, textLabel, checkbox = false) {
         const inner = checkbox ? [itemElement("toggle-checkbox")] : [];
         const content = itemElement("content", inner);
         const item = itemElement("", [
-            itemElement("icon", [svgIcon]),
+            itemElement("icon", [svgIcon.cloneNode(true)]),
             itemElement("label", [textLabel]),
             content,
         ]);
@@ -339,11 +332,9 @@
         const name = "preferred_quality";
         const text = document.createTextNode("");
 
-        Object.assign(content.style, {
-            cursor: "pointer",
-            fontWeight: 500,
-            textAlignLast: "justify",
-        });
+        content.style.cursor = "pointer";
+        content.style.fontWeight = 500;
+        content.style.textAlignLast = "justify";
 
         setTextQuality(options[name], text);
 
@@ -385,7 +376,7 @@
         const styleElement = document.createElement("style");
 
         function replaceTag(css) {
-            css = css.replace(/\[system-icons\]|\[use-icons\]/gi, "");
+            css = css.replace(/\[system-icons\]|\[use-icons\]/g, "");
             for (const k in replaceList) {
                 css = css.replaceAll("." + k, "").replaceAll(k, replaceList[k]);
             }
@@ -393,26 +384,20 @@
         }
 
         function replaceSelector(css) {
-            let [selector, content] = css.split("{");
-            selector = selector.split(",").map((query) => {
-                query = query.trim();
+            const selector = css.split(",").map((query) => {
                 const menu = replaceList["ytd-menu-service-item-renderer"];
-                if (!query.startsWith(menu)) query = menu + " " + query;
-                return query;
+                query = query.trim();
+                return query.startsWith(menu) ? query : menu + " " + query;
             });
-            return selector.join(",") + "{" + content;
+            return selector.join(",");
         }
 
         function checkSelector(selector) {
-            return (
-                selector &&
-                tags.some(
-                    (tag) =>
-                        !selector.includes(tag + "-") &&
-                        !selector.includes("." + tag) &&
-                        selector.includes(tag)
-                )
-            );
+            const findTag = (tag) =>
+                !selector.includes(tag + "-") &&
+                !selector.includes("." + tag) &&
+                selector.includes(tag);
+            return selector && tags.some(findTag);
         }
 
         for (const styles of document.styleSheets) {
@@ -467,24 +452,24 @@
      * @param {HTMLElement} player
      */
     function addVideoListener(player) {
+        const cache = cachePlayers[player.id];
         const video = find(player, "video");
-        if (cachePlayers.get(player) === video) return;
-        cachePlayers.set(player, video);
-        const fn = setVideoQuality.bind(player);
-        video.addEventListener("play", () => setTimeout(fn, 200));
-        video.addEventListener("resize", fn);
+        if (!cache || cache[1] !== video) {
+            cachePlayers[player.id] = [player, video];
+            const fn = setVideoQuality.bind(player);
+            video.addEventListener("play", () => setTimeout(fn, 200));
+            video.addEventListener("resize", fn);
+        }
     }
 
     /**
-     * @param {string} type
+     * @param {'watch' | 'short'} type
      * @returns {boolean}
      */
-    function videoPath(type = "") {
+    function isVideoPage(type) {
         const path = win.location.pathname;
-        return (
-            (path.startsWith("/watch") || path.startsWith("/short")) &&
-            path.includes(type)
-        );
+        const types = type ? [type] : ["watch", "short"];
+        return types.some((type) => path.startsWith("/" + type));
     }
 
     function resetState() {
@@ -493,9 +478,11 @@
     }
 
     function playerUpdated(ev) {
-        if (!videoPath()) return;
         let player = null;
-        if (allowedIds.some((id) => (player = find(ev.target, id)))) {
+        if (
+            isVideoPage() &&
+            allowedPlayerIds.some((id) => (player = find(ev.target, id)))
+        ) {
             resetState();
             addVideoListener(player);
         }
@@ -507,7 +494,8 @@
             for (const name in options) options[name] = await GM.getValue(name);
             setChecked(element.premium_menu, options.preferred_premium);
             setTextQuality(options.preferred_quality);
-            for (const [player, video] of cachePlayers) {
+            for (const id in cachePlayers) {
+                const [player, video] = cachePlayers[id];
                 if (!video.paused) setVideoQuality.call(player);
             }
         }
@@ -544,9 +532,8 @@
             textSelection.style.marginLeft = "auto";
             textSelection.style.color = "#aaa";
             textSelection.append(selectedLabel);
-            mTexts[0].after(textSelection);
             newIcon.append(icons.arrow);
-            textSelection.after(newIcon);
+            mTexts[0].after(textSelection, newIcon);
         }
 
         mIcons[0].textContent = "";
@@ -556,7 +543,7 @@
         return element;
     }
 
-    /** @type {HTMLElement} */
+    /** @type {HTMLElement | null} */
     let customMenuItem = null;
     const customHashId = "custom-bottom-menu";
 
@@ -574,7 +561,7 @@
         const content = find(customMenuItem, query.m_menu_content);
         /** @type {HTMLElement} */
         let preferredQualityElement = null;
-        const mapQuality = [...listQuality].reverse().map((q) => {
+        const mapQuality = listQuality.map((q) => {
             const preferred = options.preferred_quality == q;
             const txt = `${q}p ${q == defaultQuality ? "(Recommended)" : ""}`;
             const element = parseItem(item, preferred && icons.check_mark, txt);
@@ -583,7 +570,7 @@
         });
 
         menu.textContent = "";
-        menu.append(...mapQuality);
+        menu.append(...mapQuality.reverse());
         header.remove();
         content.style.maxHeight = "250px";
         body.style.overflow = "hidden";
@@ -604,7 +591,7 @@
         });
     }
 
-    const itemMenuText = document.createTextNode("");
+    const itemText = document.createTextNode("");
 
     function bottomItem() {
         const container = element.m_bottom_container();
@@ -612,17 +599,12 @@
         if (container) {
             settingsClicked = false;
             maybeChangeQuality = true;
-            subMenu = false;
 
             const item = find(container, query.m_menu_item);
-            const menuItem = parseItem(
-                item,
-                icons.quality,
-                "Preferred Quality",
-                itemMenuText
-            );
+            const label = "Preferred Quality";
+            const menuItem = parseItem(item, icons.quality, label, itemText);
 
-            setTextQuality(options.preferred_quality, itemMenuText);
+            setTextQuality(options.preferred_quality, itemText);
             item.parentElement.append(menuItem);
             menuItem.addEventListener("click", () => bottomMenu(container));
         }
@@ -632,7 +614,7 @@
      * @param {MouseEvent} ev
      */
     function setSettingsClicked(ev) {
-        if (videoPath()) {
+        if (isVideoPage()) {
             const settings = element.m_settings();
             settingsClicked = settings && settings.contains(ev.target);
         }
@@ -642,18 +624,17 @@
      * @param {MouseEvent} ev
      */
     function mobileSetOverride(ev) {
-        if (settingsClicked || !maybeChangeQuality || !subMenu) return;
+        if (settingsClicked || !maybeChangeQuality) return;
         const container = element.m_bottom_container();
-        if (container) {
-            const item = find(container, query.m_menu_item);
+        if (!container) return (maybeChangeQuality = false);
+        if (container && find(container, query.m_menu_item)) {
             const quality = parseQualityLabel(ev.target.textContent);
-            if (item && listQuality.includes(quality)) manualOverride = true;
+            if (listQuality.includes(quality)) manualOverride = true;
         }
-        maybeChangeQuality = false;
     }
 
     function mobilePlayerUpdated(ev) {
-        if (ev.detail.type == "newdata") resetState();
+        if (isVideoPage() && ev.detail.type == "newdata") resetState();
     }
 
     /**
@@ -677,14 +658,9 @@
             const player = element.movie_player();
 
             if (player) {
+                addVideoListener(player);
                 const unstarted = player.className.includes("unstarted-mode");
-                const video = find(player, "video");
-
-                if (unstarted) player.playVideo();
-                if (cachePlayers.get(player) !== video) {
-                    cachePlayers.clear();
-                    addVideoListener(player);
-                }
+                if (unstarted && isVideoPage()) player.playVideo();
             }
 
             if (settingsClicked) bottomItem();
@@ -692,13 +668,10 @@
     }
 
     function initShortMenu() {
-        const short = videoPath("short");
-        const menu = element.popup_menu();
-
-        if (short && menu) {
+        let menu = null;
+        if (isVideoPage("short") && (menu = element.popup_menu())) {
             shortQualityMenuStyle();
-            const item = menu.parentElement;
-            item.append(shortQualityMenu());
+            menu.parentElement.append(shortQualityMenu());
             win.removeEventListener("click", initShortMenu);
         }
     }
