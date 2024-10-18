@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.6.0
+// @version      1.6.1
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -552,7 +552,6 @@
      */
     function bottomMenu(container) {
         win.location.replace("#" + customHashId);
-        maybeChangeQuality = false;
         customMenuItem = container.cloneNode(true);
 
         const item = find(customMenuItem, query.m_menu_item);
