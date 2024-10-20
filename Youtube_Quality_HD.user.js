@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.6.1
+// @version      1.6.2
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -115,7 +115,7 @@
         movie_player: "#movie_player",
         short_player: "#shorts-player",
         m_menu_item: "[role='menuitem'], ytm-menu-service-item-renderer",
-        m_settings_btn: ".player-settings-icon, ytm-bottom-sheet-renderer",
+        m_settings_btn: `player-top-controls .player-settings-icon, shorts-video ytm-bottom-sheet-renderer`,
         m_menu_header: "#header-wrapper",
         m_menu_content: "#content-wrapper",
         m_item_icon: "c3-icon",
@@ -443,6 +443,7 @@
      * @param {MouseEvent} ev
      */
     function setOverride(ev) {
+        if (manualOverride) return;
         const menu = element.quality_menu();
         const quality = parseQualityLabel(ev.target.textContent);
         if (menu && listQuality.includes(quality)) manualOverride = true;
@@ -477,6 +478,9 @@
         manualOverride = false;
     }
 
+    /**
+     * @param {CustomEvent} ev
+     */
     function playerUpdated(ev) {
         let player = null;
         if (
@@ -626,14 +630,18 @@
      */
     function mobileSetOverride(ev) {
         if (customMenuItem) return (maybeChangeQuality = false);
-        if (settingsClicked || !maybeChangeQuality) return;
+        if (manualOverride || !maybeChangeQuality) return;
         const container = element.m_bottom_container();
         if (container && find(container, query.m_menu_item)) {
             const quality = parseQualityLabel(ev.target.textContent);
             if (listQuality.includes(quality)) manualOverride = true;
+            maybeChangeQuality = false;
         }
     }
 
+    /**
+     * @param {CustomEvent} ev
+     */
     function mobilePlayerUpdated(ev) {
         if (isVideoPage() && ev.detail.type == "newdata") resetState();
     }
