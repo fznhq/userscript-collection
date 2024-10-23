@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.6.4
+// @version      1.7.0
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -118,10 +118,6 @@
         short_player: "#shorts-player",
         m_menu_item: "[role='menuitem'], ytm-menu-service-item-renderer",
         m_settings_btn: `player-top-controls .player-settings-icon, shorts-video ytm-bottom-sheet-renderer`,
-        m_menu_header: "#header-wrapper",
-        m_menu_content: "#content-wrapper",
-        m_item_icon: "c3-icon",
-        m_item_text: "[role='text']",
     };
     const allowedPlayerIds = [query.movie_player, query.short_player];
     const element = {
@@ -333,12 +329,11 @@
         const name = "preferred_quality";
         const text = document.createTextNode("");
 
+        setTextQuality(options[name], text);
+
         content.style.cursor = "pointer";
         content.style.fontWeight = 500;
         content.style.textAlignLast = "justify";
-
-        setTextQuality(options[name], text);
-
         content.append("< ", text, " >");
         content.addEventListener("click", function (ev) {
             const threshold = this.clientWidth / 2;
@@ -367,86 +362,42 @@
     }
 
     /**
-     * @param {object} replaceList
+     * @param {Element[]} elements
      */
-    function addMenuStyle(replaceList) {
-        const tags = Object.keys(replaceList);
-        const styleElement = document.createElement("style");
-
-        function replaceSelector(css) {
-            css = css.replace(/\[system-icons\]|\[use-icons\]/g, "");
-            for (const k in replaceList) {
-                css = css
-                    .replaceAll("." + k, k == tags[0] ? "" : ".unused")
-                    .replaceAll(k, replaceList[k]);
-            }
-            return css;
-        }
-
-        function scopingSelector(css) {
-            const [selector, content] = css.split("{");
-            const selectors = selector.split(",").map((query) => {
-                const menu = replaceList[tags[0]];
-                query = query.trim();
-                return query.startsWith(menu) ? query : menu + " " + query;
+    function removeAttributes(elements) {
+        elements.forEach((element) => {
+            Array.from(element.attributes).forEach((attr) => {
+                if (attr.name != "class") element.removeAttribute(attr.name);
             });
-            return selectors.join(",") + "{" + content;
-        }
-
-        function findSelector(selector) {
-            return selector.split(",").some((selector) => {
-                return tags.some(
-                    (tag) =>
-                        !selector.includes(tag + "-") &&
-                        !selector.includes("." + tag) &&
-                        selector.includes(tag)
-                );
-            });
-        }
-
-        for (const styles of document.styleSheets) {
-            try {
-                for (const rule of styles.cssRules) {
-                    if (rule.selectorText && findSelector(rule.selectorText)) {
-                        styleElement.textContent += scopingSelector(
-                            replaceSelector(rule.cssText)
-                        );
-                    }
-                }
-            } catch (e) {}
-        }
-
-        document.head.append(styleElement);
+        });
     }
 
     function shortQualityMenu() {
-        addMenuStyle({
-            "ytd-menu-service-item-renderer": ".ytp-menuitem-custom-short",
-            "tp-yt-paper-item": ".item",
-            "yt-icon": ".icon",
-            "yt-formatted-string": ".text",
-        });
-
-        const options = itemElement(" text");
-        const menu = itemElement("custom-short", [
-            itemElement(" item", [
-                itemElement(" icon", [
-                    itemElement(" yt-icon-shape yt-spec-icon-shape", [
-                        icons.quality.cloneNode(true),
-                    ]),
-                ]),
-                itemElement(" text", ["Preferred Quality"]),
-                options,
-            ]),
+        const itemName = "ytd-menu-service-item-renderer";
+        const menu = body.appendChild(document.createElement(itemName));
+        const item = find(menu, "tp-yt-paper-item");
+        const icon = find(menu, "yt-icon");
+        const text = find(menu, "yt-formatted-string");
+        const option = text.cloneNode();
+        const iconWrapper = itemElement(" yt-icon-shape yt-spec-icon-shape", [
+            icons.quality.cloneNode(true),
         ]);
+
+        removeAttributes([icon, text, option]);
+
+        menu.setAttribute("use-icons", "");
+        item.textContent = "";
+        item.append(icon, text, option);
+        icon.append(iconWrapper);
+        text.append("Preferred Quality");
 
         menu.style.userSelect = "none";
         menu.style.cursor = "default";
-        options.style.paddingInline = "24px";
-        options.style.margin = 0;
-        options.style.minWidth = "100px";
+        option.style.paddingInline = "24px";
+        option.style.margin = 0;
+        option.style.minWidth = "100px";
 
-        qualityOption(options, element.short_player());
+        qualityOption(option, element.short_player());
         return menu;
     }
 
@@ -537,8 +488,8 @@
      */
     function parseItem(element, icon, label, selectedLabel) {
         const item = element.cloneNode(true);
-        const mIcons = find(item, query.m_item_icon, true);
-        const mTexts = find(item, query.m_item_text, true);
+        const mIcons = find(item, "c3-icon", true);
+        const mTexts = find(item, "[role='text']", true);
 
         if (selectedLabel) {
             const textSelection = mTexts[0].cloneNode();
@@ -570,8 +521,8 @@
 
         const item = find(customMenuItem, query.m_menu_item);
         const menu = item.parentElement;
-        const header = find(customMenuItem, query.m_menu_header);
-        const content = find(customMenuItem, query.m_menu_content);
+        const header = find(customMenuItem, "#header-wrapper");
+        const content = find(customMenuItem, "#content-wrapper");
         const preferredPos = listQuality.indexOf(options.preferred_quality);
         const mapQuality = listQuality.map((quality, i) => {
             const note = quality == defaultQuality ? "(Recommended)" : "";
