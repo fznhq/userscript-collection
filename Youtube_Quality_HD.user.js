@@ -27,7 +27,9 @@
     /** @type {Window} */
     const win = unsafeWindow;
     const body = document.body;
-    const isMobile = win.location.hostname.includes("m.youtube");
+
+    const $host = win.location.hostname;
+    const isMobile = $host.includes("m.youtube");
 
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
     const defaultQuality = 1080;
@@ -191,14 +193,15 @@
         const q = { premium: null, normal: null };
         const short = player.id.includes("short");
         const mapQD = qualityData.map((d) => parseQualityLabel(d.qualityLabel));
+
+        if (!mapQD.some((quality) => quality)) return null;
+
         let preferred = getPreferredQuality(mapQD);
         let indexQuality = listQuality.indexOf(preferred);
 
         while (!mapQD.includes(preferred) && indexQuality-- > 0) {
             preferred = listQuality[indexQuality];
         }
-
-        if (indexQuality < 0) return null;
 
         qualityData.forEach((data) => {
             const label = data.qualityLabel.toLowerCase();
@@ -363,13 +366,10 @@
         return menu.item;
     }
 
-    function shortQualityMenuStyle() {
-        const replaceList = {
-            "ytd-menu-service-item-renderer": ".ytp-menuitem-custom-element",
-            "tp-yt-paper-item": ".item",
-            "yt-icon": ".icon",
-            "yt-formatted-string": ".message",
-        };
+    /**
+     * @param {object} replaceList
+     */
+    function addMenuStyle(replaceList) {
         const tags = Object.keys(replaceList);
         const styleElement = document.createElement("style");
 
@@ -384,7 +384,7 @@
         }
 
         function scopingSelector(css) {
-            let [selector, content] = css.split("{");
+            const [selector, content] = css.split("{");
             const selectors = selector.split(",").map((query) => {
                 const menu = replaceList[tags[0]];
                 query = query.trim();
@@ -420,15 +420,22 @@
     }
 
     function shortQualityMenu() {
-        const options = itemElement(" message");
-        const menu = itemElement("custom-element", [
+        addMenuStyle({
+            "ytd-menu-service-item-renderer": ".ytp-menuitem-custom-short",
+            "tp-yt-paper-item": ".item",
+            "yt-icon": ".icon",
+            "yt-formatted-string": ".text",
+        });
+
+        const options = itemElement(" text");
+        const menu = itemElement("custom-short", [
             itemElement(" item", [
                 itemElement(" icon", [
                     itemElement(" yt-icon-shape yt-spec-icon-shape", [
                         icons.quality.cloneNode(true),
                     ]),
                 ]),
-                itemElement(" message", ["Preferred Quality"]),
+                itemElement(" text", ["Preferred Quality"]),
                 options,
             ]),
         ]);
@@ -550,7 +557,7 @@
         return item;
     }
 
-    /** @type {HTMLElement | null} */
+    /** @type {HTMLElement} */
     let customMenuItem = null;
     const customHashId = "custom-bottom-menu";
 
@@ -565,15 +572,13 @@
         const menu = item.parentElement;
         const header = find(customMenuItem, query.m_menu_header);
         const content = find(customMenuItem, query.m_menu_content);
-        /** @type {HTMLElement} */
-        let preferredQualityElement = null;
-        const mapQuality = listQuality.map((q) => {
-            const preferred = options.preferred_quality == q;
-            const txt = `${q}p ${q == defaultQuality ? "(Recommended)" : ""}`;
-            const element = parseItem(item, preferred && icons.check_mark, txt);
-            if (preferred) preferredQualityElement = element;
-            return element;
+        const preferredPos = listQuality.indexOf(options.preferred_quality);
+        const mapQuality = listQuality.map((quality, i) => {
+            const note = quality == defaultQuality ? "(Recommended)" : "";
+            const icon = preferredPos == i && icons.check_mark;
+            return parseItem(item, icon, `${quality}p ${note}`);
         });
+        const preferredQualityElement = mapQuality[preferredPos];
 
         menu.textContent = "";
         menu.append(...mapQuality.reverse());
@@ -583,9 +588,9 @@
         container.parentElement.parentElement.append(customMenuItem);
 
         const contentTop = getRect(content).top;
-        const qualityRect = getRect(preferredQualityElement);
-        const qualityTop = qualityRect.top - contentTop;
-        content.scrollTo(0, qualityTop - qualityRect.height * 2);
+        const preferredQualityRect = getRect(preferredQualityElement);
+        const realTop = preferredQualityRect.top - contentTop;
+        content.scrollTo(0, realTop - preferredQualityRect.height * 2);
         customMenuItem.addEventListener("click", (ev) => {
             const quality = parseQualityLabel(ev.target.textContent);
             if (listQuality.includes(quality)) {
@@ -654,8 +659,7 @@
      */
     function handlePressBack(ev) {
         if (customMenuItem && ev.oldURL.includes(customHashId)) {
-            customMenuItem.remove();
-            customMenuItem = null;
+            customMenuItem = customMenuItem.remove();
             body.style.overflow = "";
         }
     }
@@ -682,7 +686,6 @@
     function initShortMenu() {
         let menu = null;
         if (isVideoPage("short") && (menu = element.popup_menu())) {
-            shortQualityMenuStyle();
             menu.parentElement.append(shortQualityMenu());
             win.removeEventListener("click", initShortMenu);
         }
