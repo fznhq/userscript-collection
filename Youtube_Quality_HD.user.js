@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.7.0
+// @version      1.7.1
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -385,6 +385,7 @@
 
         removeAttributes([icon, text, option]);
 
+        menu.data = {};
         menu.setAttribute("use-icons", "");
         item.textContent = "";
         item.append(icon, text, option);
