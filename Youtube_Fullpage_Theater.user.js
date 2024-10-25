@@ -186,11 +186,11 @@
 
         html[no-scroll]::-webkit-scrollbar,
         html[no-scroll] body::-webkit-scrollbar,
-        html[hide-card] #ytd-player .ytp-paid-content-overlay,
-        html[hide-card] #ytd-player .iv-branding,
-        html[hide-card] #ytd-player .ytp-ce-element,
-        html[hide-card] #ytd-player .ytp-chrome-top,
-        html[hide-card] #ytd-player .ytp-suggested-action {
+        html[hide-card] ytd-player .ytp-paid-content-overlay,
+        html[hide-card] ytd-player .iv-branding,
+        html[hide-card] ytd-player .ytp-ce-element,
+        html[hide-card] ytd-player .ytp-chrome-top,
+        html[hide-card] ytd-player .ytp-suggested-action {
             display: none !important;
         }
 
