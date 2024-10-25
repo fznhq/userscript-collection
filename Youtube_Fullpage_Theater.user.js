@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      1.9.1
+// @version      2.0.0
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -36,7 +36,7 @@
      */
     const options = {
         auto_theater_mode: {
-            icon: `{"svg":{"fill-rule":"evenodd","clip-rule":"evenodd"},"path":{"d":"M24 22h-24v-20h24v20zm-1-19h-22v18h22v-18zm-4 7h-1v-3.241l-11.241 11.241h3.241v1h-5v-5h1v3.241l11.241-11.241h-3.241v-1h5v5z"}}`,
+            icon: `{"svg":{"fill-rule":"evenodd","clip-rule":"evenodd"},"path":{"d":"M24 22H0V2h24zm-7-1V6H1v15zm1 0h5V3H1v2h17zm-6-6h-1v-3l-7 7-1-1 7-7H7v-1h5z"}}`,
             label: "Auto Open Theater",
             value: false,
             onUpdate() {
@@ -44,7 +44,7 @@
             },
         },
         hide_scrollbar: {
-            icon: `{"path":{"d":"M14 12c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2zm-3-3.858c.321-.083.653-.142 1-.142s.679.059 1 .142v-2.142h4l-5-6-5 6h4v2.142zm2 7.716c-.321.083-.653.142-1 .142s-.679-.059-1-.142v2.142h-4l5 6 5-6h-4v-2.142z"}}`,
+            icon: `{"path":{"d":"M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0m-3-4h2V6h4l-5-6-5 6h4zm2 8h-2v2H7l5 6 5-6h-4z"}}`,
             label: "Theater Hide Scrollbar",
             value: true,
             onUpdate() {
@@ -55,12 +55,12 @@
             },
         },
         close_theater_with_esc: {
-            icon: `{"svg":{"clip-rule":"evenodd","fill-rule":"evenodd","stroke-linejoin":"round","stroke-miterlimit":2},"path":{"d":"m21 3.998c0-.478-.379-1-1-1h-16c-.62 0-1 .519-1 1v16c0 .621.52 1 1 1h16c.478 0 1-.379 1-1zm-16.5.5h15v15h-15zm7.491 6.432 2.717-2.718c.146-.146.338-.219.53-.219.404 0 .751.325.751.75 0 .193-.073.384-.22.531l-2.717 2.717 2.728 2.728c.147.147.22.339.22.531 0 .427-.349.75-.75.75-.192 0-.385-.073-.531-.219l-2.728-2.728-2.728 2.728c-.147.146-.339.219-.531.219-.401 0-.75-.323-.75-.75 0-.192.073-.384.22-.531l2.728-2.728-2.722-2.722c-.146-.147-.219-.338-.219-.531 0-.425.346-.749.75-.749.192 0 .384.073.53.219z","fill-rule":"nonzero"}}`,
+            icon: `{"svg":{"clip-rule":"evenodd","fill-rule":"evenodd","stroke-linejoin":"round","stroke-miterlimit":2},"path":{"d":"M21 4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1zm-16.5.5h15v15h-15zm7.5 6.43 2.7-2.72a.75.75 0 0 1 1.07 1.06L13.05 12l2.73 2.73a.75.75 0 1 1-1.06 1.06l-2.73-2.73-2.73 2.73a.75.75 0 0 1-1.06-1.06L10.93 12 8.21 9.28A.75.75 0 0 1 9.27 8.2z","fill-rule":"nonzero"}}`,
             label: "Close Theater With Esc",
             value: true,
         },
         hide_card: {
-            icon: `{"path":{"d":"M22 6v16H6V6h16zm2-2H4v20h20V4zM0 0v20h2V2h18V0H0zm14.007 11.225C10.853 11.225 9 13.822 9 13.822s2.015 2.953 5.007 2.953c3.222 0 4.993-2.953 4.993-2.953s-1.788-2.597-4.993-2.597zm.042 4.717a1.942 1.942 0 1 1 .002-3.884 1.942 1.942 0 0 1-.002 3.884zM15.141 14a1.092 1.092 0 1 1-2.184 0l.02-.211a.68.68 0 0 0 .875-.863l.197-.019c.603 0 1.092.489 1.092 1.093z"}}`,
+            icon: `{"path":{"d":"M22 6v16H6V6zm2-2H4v20h20zM0 0v20h2V2h18V0zm14 11.22c-3.15 0-5 2.6-5 2.6s2.02 2.95 5 2.95c3.23 0 5-2.95 5-2.95s-1.79-2.6-5-2.6m.05 4.72a1.94 1.94 0 1 1 0-3.88 1.94 1.94 0 0 1 0 3.88m1.1-1.94a1.1 1.1 0 1 1-2.2 0l.03-.21a.68.68 0 0 0 .87-.86l.2-.02c.6 0 1.1.49 1.1 1.09"}}`,
             label: "Hide Card Outside Theater Mode",
             value: false,
             onUpdate() {
@@ -68,7 +68,7 @@
             },
         },
         show_header_near: {
-            icon: `{"path":{"d":"M5 4.27 15.476 13H8.934L5 18.117V4.27zM3 0v24l6.919-9H21L3 0z"}}`,
+            icon: `{"path":{"d":"m5 4 10 9H9l-4 5zM3 0v24l7-9h11z"}}`,
             label: "Show Header When Mouse is Near",
             value: false,
         },
@@ -118,24 +118,22 @@
      */
     function createDiv(className, append = []) {
         const el = document.createElement("div");
-        el.className = className;
+        el.className = "ytp-menuitem" + (className ? "-" + className : "");
         return el.append(...append), el;
     }
 
     const popup = {
         show: false,
         menu: (() => {
-            const menu = createDiv("ytc-menu ytp-panel-menu");
-            const container = createDiv("ytc-popup-container", [menu]);
+            const menu = createDiv(" ytc-menu ytp-panel-menu");
+            const container = createDiv(" ytc-popup-container", [menu]);
 
             for (const name in options) {
                 const option = options[name];
-                const item = createDiv("ytp-menuitem", [
-                    createDiv("ytp-menuitem-icon", [option.icon]),
-                    createDiv("ytp-menuitem-label", [option.label]),
-                    createDiv("ytp-menuitem-content", [
-                        createDiv("ytp-menuitem-toggle-checkbox"),
-                    ]),
+                const item = createDiv("", [
+                    createDiv("icon", [option.icon]),
+                    createDiv("label", [option.label]),
+                    createDiv("content", [createDiv("toggle-checkbox")]),
                 ]);
 
                 menu.append(item);
@@ -179,40 +177,29 @@
         return () => element || (element = document.querySelector(query));
     }
 
-    /**
-     * @param {string} css
-     */
-    function addStyle(css) {
-        const style = document.createElement("style");
-        style.textContent = css;
-        document.head.append(style);
-    }
-
-    let style = /*css*/ `
+    const style = document.head.appendChild(document.createElement("style"));
+    style.textContent = /*css*/ `
         html[no-scroll],
         html[no-scroll] body {
             scrollbar-width: none !important;
         }
 
         html[no-scroll]::-webkit-scrollbar,
-        html[no-scroll] body::-webkit-scrollbar {
-            display: none !important;
-        }
-        
-        html[masthead-hidden] ytd-watch-flexy[fixed-panels] #chat {
-            top: 0 !important;
-        }
-
-        html[hide-card] ytd-player .ytp-paid-content-overlay,
-        html[hide-card] ytd-player .iv-branding,
-        html[hide-card] ytd-player .ytp-ce-element,
-        html[hide-card] ytd-player .ytp-chrome-top,
-        html[hide-card] ytd-player .ytp-suggested-action {
+        html[no-scroll] body::-webkit-scrollbar,
+        html[hide-card] #ytd-player .ytp-paid-content-overlay,
+        html[hide-card] #ytd-player .iv-branding,
+        html[hide-card] #ytd-player .ytp-ce-element,
+        html[hide-card] #ytd-player .ytp-chrome-top,
+        html[hide-card] #ytd-player .ytp-suggested-action {
             display: none !important;
         }
 
         html[theater][masthead-hidden] #masthead-container {
             transform: translateY(-100%) !important;
+        }
+
+        html[theater][masthead-hidden] ytd-watch-flexy[fixed-panels] #chat {
+            top: 0 !important;
         }
 
         html[theater] #page-manager {
@@ -241,29 +228,23 @@
             width: 400px;
             font-size: 120%;
             padding: 10px;
-        }
-
-        .ytc-menu svg {
             fill: #eee;
         }
     `;
 
+    const simpleKey = Date.now().toString(36);
     const customAttr = {
         hidden_header: "masthead-hidden",
         no_scroll: "no-scroll",
         hide_card: "hide-card",
     };
 
-    const simpleId = Date.now().toString(36);
-
     for (const key in customAttr) {
-        style = style.replaceAll(
+        style.textContent = style.textContent.replaceAll(
             "[" + customAttr[key],
-            "[" + (customAttr[key] = customAttr[key] + "-" + simpleId)
+            "[" + (customAttr[key] = customAttr[key] + "-" + simpleKey)
         );
     }
-
-    addStyle(style);
 
     const attr = {
         video_id: "video-id",
@@ -333,19 +314,20 @@
 
     /**
      * @param {boolean} state
-     * @param {boolean} skipActive
+     * @param {number} timeout
+     * @returns {number | boolean}
      */
-    function toggleHeader(state, skipActive) {
-        if (
-            theater &&
-            (skipActive || document.activeElement != element.search())
-        ) {
-            const scroll = !options.show_header_near.value && win.scrollY;
-            setHtmlAttr(attr.hidden_header, !(state || scroll));
-        }
+    function toggleHeader(state, timeout) {
+        const toggle = () => {
+            if (state || document.activeElement != element.search()) {
+                const scroll = !options.show_header_near.value && win.scrollY;
+                setHtmlAttr(attr.hidden_header, !(state || scroll));
+            }
+        };
+        return theater && setTimeout(toggle, timeout || 1);
     }
 
-    let showHeaderTimer = 0;
+    let showHeaderTimerId = 0;
 
     /**
      * @param {MouseEvent} ev
@@ -354,8 +336,8 @@
         if (options.show_header_near.value && theater) {
             const state = ev.clientY < 200;
             if (state) {
-                clearTimeout(showHeaderTimer);
-                showHeaderTimer = setTimeout(() => toggleHeader(false), 1500);
+                clearTimeout(showHeaderTimerId);
+                showHeaderTimerId = toggleHeader(false, 1500);
             }
             toggleHeader(!popup.show && state);
         }
@@ -398,12 +380,8 @@
     }
 
     function registerEventListener() {
-        element.search().addEventListener("focus", () => {
-            setTimeout(() => toggleHeader(true, true), 1);
-        });
-        element.search().addEventListener("blur", () => {
-            setTimeout(() => toggleHeader(false), 1);
-        });
+        element.search().addEventListener("focus", () => toggleHeader(true));
+        element.search().addEventListener("blur", () => toggleHeader(false));
         win.addEventListener("scroll", () => {
             if (!options.show_header_near.value) toggleHeader();
         });
