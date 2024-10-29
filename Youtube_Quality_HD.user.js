@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.7.1
+// @version      1.7.2
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -366,40 +366,70 @@
      */
     function removeAttributes(elements) {
         elements.forEach((element) => {
+            element.textContent = "";
             Array.from(element.attributes).forEach((attr) => {
                 if (attr.name != "class") element.removeAttribute(attr.name);
             });
         });
     }
 
+    /**
+     * @param {NodeListOf<Element>} element
+     * @returns {HTMLElement}
+     */
+    function firstOnly(element) {
+        for (let i = 1; i < element.length; i++) element[i].remove();
+        return element[0];
+    }
+
+    /**
+     * @param {HTMLElement} element
+     * @param {SVGSVGElement | undefined} icon
+     * @param {string} label
+     * @param {Text | string} selectedLabel
+     */
+    function parseItem(element, icon, label, selectedLabel) {
+        const item = body.appendChild(element.cloneNode(true));
+        const iIcon = firstOnly(find(item, "c3-icon, yt-icon", true));
+        const iText = firstOnly(
+            find(item, "[role='text'], yt-formatted-string", true)
+        );
+        const optionLabel = iText.cloneNode();
+        const optionIcon = iIcon.cloneNode();
+        const wrapperIcon = (icon) => {
+            return itemElement(" yt-icon-shape yt-spec-icon-shape", [icon]);
+        };
+
+        item.data = {};
+        iText.after(optionLabel, optionIcon);
+        removeAttributes([iIcon, iText, optionIcon, optionLabel]);
+
+        if (selectedLabel) {
+            optionIcon.append(wrapperIcon(icons.arrow));
+            optionLabel.style.marginLeft = "auto";
+            optionLabel.style.color = "#aaa";
+            optionLabel.append(selectedLabel);
+        } else optionIcon.remove();
+
+        if (icon) iIcon.append(wrapperIcon(icon.cloneNode(true)));
+        iText.textContent = label;
+        return item;
+    }
+
     function shortQualityMenu() {
-        const itemName = "ytd-menu-service-item-renderer";
-        const menu = body.appendChild(document.createElement(itemName));
-        const item = find(menu, "tp-yt-paper-item");
-        const icon = find(menu, "yt-icon");
-        const text = find(menu, "yt-formatted-string");
-        const option = text.cloneNode();
-        const iconWrapper = itemElement(" yt-icon-shape yt-spec-icon-shape", [
-            icons.quality.cloneNode(true),
-        ]);
+        const elem = document.createElement("ytd-menu-service-item-renderer");
+        const item = parseItem(elem, icons.quality, "Preferred Quality");
+        const option = find(item, "yt-formatted-string:last-of-type");
 
-        removeAttributes([icon, text, option]);
-
-        menu.data = {};
-        menu.setAttribute("use-icons", "");
-        item.textContent = "";
-        item.append(icon, text, option);
-        icon.append(iconWrapper);
-        text.append("Preferred Quality");
-
-        menu.style.userSelect = "none";
-        menu.style.cursor = "default";
+        item.setAttribute("use-icons", "");
+        item.style.userSelect = "none";
+        item.style.cursor = "default";
         option.style.paddingInline = "24px";
         option.style.margin = 0;
         option.style.minWidth = "100px";
 
         qualityOption(option, element.short_player());
-        return menu;
+        return item;
     }
 
     /**
@@ -471,43 +501,6 @@
     (function checkOptions() {
         setTimeout(() => syncOptions().then(checkOptions), 1e3);
     })();
-
-    /**
-     * @param {NodeListOf<Element>[]} elements
-     */
-    function removeOtherElement(elements) {
-        elements.forEach((element) => {
-            for (let i = 1; i < element.length; i++) element[i].remove();
-        });
-    }
-
-    /**
-     * @param {HTMLElement} element
-     * @param {SVGSVGElement | undefined} icon
-     * @param {string} label
-     * @param {Text | string} selectedLabel
-     */
-    function parseItem(element, icon, label, selectedLabel) {
-        const item = element.cloneNode(true);
-        const mIcons = find(item, "c3-icon", true);
-        const mTexts = find(item, "[role='text']", true);
-
-        if (selectedLabel) {
-            const textSelection = mTexts[0].cloneNode();
-            const newIcon = mIcons[0].cloneNode();
-            textSelection.style.marginLeft = "auto";
-            textSelection.style.color = "#aaa";
-            textSelection.append(selectedLabel);
-            newIcon.append(icons.arrow);
-            mTexts[0].after(textSelection, newIcon);
-        }
-
-        mIcons[0].textContent = "";
-        if (icon) mIcons[0].append(icon.cloneNode(true));
-        mTexts[0].textContent = label;
-        removeOtherElement([mIcons, mTexts]);
-        return item;
-    }
 
     /** @type {HTMLElement} */
     let customMenuItem = null;
