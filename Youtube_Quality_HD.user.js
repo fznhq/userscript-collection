@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.7.3
+// @version      1.7.4
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -503,7 +503,7 @@
 
     /**
      * @param {HTMLElement} menuItem
-     * @param {String} noteText
+     * @param {string} noteText
      * @returns {{preferred: HTMLElement, items: HTMLElement[]}}
      */
     function listQualityToItem(menuItem, noteText = "") {
