@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.7.4
+// @version      1.7.5
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -512,7 +512,7 @@
         const items = listQuality.map((quality, i) => {
             const note = quality == defaultQuality ? noteText : "";
             const icon = preferredIndex == i && icons.check_mark;
-            const item = parseItem(menuItem, icon, `${quality} ${note}`);
+            const item = parseItem(menuItem, icon, `${quality}p ${note}`);
             item.addEventListener("click", () => {
                 manualOverride = false;
                 savePreferred("preferred_quality", quality, video);
