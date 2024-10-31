@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.7.2
+// @version      1.7.3
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -167,11 +167,11 @@
      */
 
     /**
-     * @param {number[]} mapQualityData
+     * @param {number[]} numberQualityData
      * @returns {number}
      */
-    function getPreferredQuality(mapQualityData) {
-        const currentMaxQuality = Math.max(...mapQualityData);
+    function getPreferredQuality(numberQualityData) {
+        const currentMaxQuality = Math.max(...numberQualityData);
         return !isFinite(currentMaxQuality) ||
             currentMaxQuality > options.preferred_quality
             ? options.preferred_quality
@@ -188,14 +188,14 @@
 
         const q = { premium: null, normal: null };
         const short = player.id.includes("short");
-        const mapQD = qualityData.map((d) => parseQualityLabel(d.qualityLabel));
+        const numQD = qualityData.map((d) => parseQualityLabel(d.qualityLabel));
 
-        if (!mapQD.some((quality) => quality)) return null;
+        if (!numQD.some((quality) => quality)) return null;
 
-        let preferred = getPreferredQuality(mapQD);
+        let preferred = getPreferredQuality(numQD);
         let indexQuality = listQuality.indexOf(preferred);
 
-        while (!mapQD.includes(preferred) && indexQuality-- > 0) {
+        while (!numQD.includes(preferred) && indexQuality-- > 0) {
             preferred = listQuality[indexQuality];
         }
 
@@ -235,7 +235,6 @@
     }
 
     function triggerSyncOptions() {
-        isUpdated = false;
         const id = (Math.random() * 1e12 + Date.now()).toString(36);
         GM.setValue("updated_id", id).then(() => (options.updated_id = id));
     }
@@ -250,7 +249,7 @@
     function savePreferred(optionName, newValue, player) {
         saveOption(optionName, newValue);
         triggerSyncOptions();
-        setVideoQuality.call(player);
+        setVideoQuality.call(player, (isUpdated = false));
         return newValue;
     }
 
@@ -502,54 +501,61 @@
         setTimeout(() => syncOptions().then(checkOptions), 1e3);
     })();
 
+    /**
+     * @param {HTMLElement} menuItem
+     * @param {String} noteText
+     * @returns {{preferred: HTMLElement, items: HTMLElement[]}}
+     */
+    function listQualityToItem(menuItem, noteText = "") {
+        const preferredIndex = listQuality.indexOf(options.preferred_quality);
+        const video = element.movie_player();
+        const items = listQuality.map((quality, i) => {
+            const note = quality == defaultQuality ? noteText : "";
+            const icon = preferredIndex == i && icons.check_mark;
+            const item = parseItem(menuItem, icon, `${quality} ${note}`);
+            item.addEventListener("click", () => {
+                manualOverride = false;
+                savePreferred("preferred_quality", quality, video);
+            });
+            return item;
+        });
+        return { preferred: items[preferredIndex], items: items.reverse() };
+    }
+
     /** @type {HTMLElement} */
-    let customMenuItem = null;
-    const customHashId = "custom-bottom-menu";
+    let listCustomMenuItem = null;
+    const customMenuHashId = "custom-bottom-menu";
 
     /**
      * @param {HTMLElement} container
      */
-    function bottomMenu(container) {
-        win.location.replace("#" + customHashId);
-        customMenuItem = container.cloneNode(true);
+    function listCustomMenu(container) {
+        win.location.replace("#" + customMenuHashId);
+        listCustomMenuItem = container.cloneNode(true);
 
-        const item = find(customMenuItem, query.m_menu_item);
+        const item = find(listCustomMenuItem, query.m_menu_item);
         const menu = item.parentElement;
-        const header = find(customMenuItem, "#header-wrapper");
-        const content = find(customMenuItem, "#content-wrapper");
-        const preferredPos = listQuality.indexOf(options.preferred_quality);
-        const mapQuality = listQuality.map((quality, i) => {
-            const note = quality == defaultQuality ? "(Recommended)" : "";
-            const icon = preferredPos == i && icons.check_mark;
-            return parseItem(item, icon, `${quality}p ${note}`);
-        });
-        const preferredQualityElement = mapQuality[preferredPos];
+        const header = find(listCustomMenuItem, "#header-wrapper");
+        const content = find(listCustomMenuItem, "#content-wrapper");
+        const listQualityItems = listQualityToItem(item, "(Recommended)");
 
         menu.textContent = "";
-        menu.append(...mapQuality.reverse());
+        menu.append(...listQualityItems.items);
         header.remove();
         content.style.maxHeight = "250px";
         body.style.overflow = "hidden";
-        container.parentElement.parentElement.append(customMenuItem);
+        container.parentElement.parentElement.append(listCustomMenuItem);
 
         const contentTop = getRect(content).top;
-        const preferredQualityRect = getRect(preferredQualityElement);
+        const preferredQualityRect = getRect(listQualityItems.preferred);
         const realTop = preferredQualityRect.top - contentTop;
         content.scrollTo(0, realTop - preferredQualityRect.height * 2);
-        customMenuItem.addEventListener("click", (ev) => {
-            const quality = parseQualityLabel(ev.target.textContent);
-            if (listQuality.includes(quality)) {
-                manualOverride = false;
-                const video = element.movie_player();
-                savePreferred("preferred_quality", quality, video);
-            }
-            win.history.back();
-        });
+        listCustomMenuItem.addEventListener("click", () => win.history.back());
     }
 
     const itemText = document.createTextNode("");
 
-    function bottomItem() {
+    function mobileQualityMenu() {
         const container = element.m_bottom_container();
 
         if (container) {
@@ -564,14 +570,14 @@
             setTextQuality(options.preferred_quality, itemText);
             menu.append(menuItem);
             menu.addEventListener("click", () => (maybeChangeQuality = true));
-            menuItem.addEventListener("click", () => bottomMenu(container));
+            menuItem.addEventListener("click", () => listCustomMenu(container));
         }
     }
 
     /**
      * @param {MouseEvent} ev
      */
-    function setSettingsClicked(ev) {
+    function mobileSetSettingsClicked(ev) {
         if (isVideoPage()) {
             const settings = element.m_settings();
             settingsClicked = settings && settings.contains(ev.target);
@@ -582,7 +588,7 @@
      * @param {MouseEvent} ev
      */
     function mobileSetOverride(ev) {
-        if (customMenuItem) return (maybeChangeQuality = false);
+        if (listCustomMenuItem) return (maybeChangeQuality = false);
         if (manualOverride || !maybeChangeQuality) return;
         const container = element.m_bottom_container();
         if (container && find(container, query.m_menu_item)) {
@@ -602,17 +608,17 @@
     /**
      * @param {HashChangeEvent} ev
      */
-    function handlePressBack(ev) {
-        if (customMenuItem && ev.oldURL.includes(customHashId)) {
-            customMenuItem = customMenuItem.remove();
+    function mobileHandlePressBack(ev) {
+        if (listCustomMenuItem && ev.oldURL.includes(customMenuHashId)) {
+            listCustomMenuItem = listCustomMenuItem.remove();
             body.style.overflow = "";
         }
     }
 
     if (isMobile) {
-        win.addEventListener("click", setSettingsClicked, true);
+        win.addEventListener("click", mobileSetSettingsClicked, true);
         win.addEventListener("click", mobileSetOverride, true);
-        win.addEventListener("hashchange", handlePressBack);
+        win.addEventListener("hashchange", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
         return observer(() => {
@@ -624,7 +630,7 @@
                 if (unstarted && isVideoPage()) player.playVideo();
             }
 
-            if (settingsClicked) bottomItem();
+            if (settingsClicked) mobileQualityMenu();
         }, body);
     }
 
