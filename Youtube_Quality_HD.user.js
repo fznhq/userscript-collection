@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.7.6
+// @version      1.8.0
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
 // @match        https://m.youtube.com/*
+// @match        https://music.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/tv*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
@@ -30,6 +31,7 @@
 
     const $host = win.location.hostname;
     const isMobile = $host.includes("m.youtube");
+    const isMusic = $host.includes("music.youtube");
 
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
     const defaultQuality = 1080;
@@ -129,8 +131,10 @@
         popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
         m_settings: $(query.m_settings_btn, false),
+        music_popup: $("ytmusic-menu-popup-renderer"),
         // Reserve Element
         premium_menu: document.createElement("div"),
+        option_text: document.createTextNode(""),
     };
 
     const style = document.head.appendChild(document.createElement("style"));
@@ -142,10 +146,12 @@
 
     /**
      * @param {MutationCallback} callback
+     * @param {Node} target
+     * @param {MutationObserverInit | undefined} options
      */
-    function observer(callback) {
+    function observer(callback, target = body, options) {
         const mutation = new MutationObserver(callback);
-        mutation.observe(body, { subtree: true, childList: true });
+        mutation.observe(target, options || { subtree: true, childList: true });
     }
 
     /**
@@ -421,8 +427,11 @@
     }
 
     function shortQualityMenu() {
-        const elem = document.createElement("ytd-menu-service-item-renderer");
-        const item = parseItem(elem, icons.quality, "Preferred Quality");
+        const item = parseItem(
+            document.createElement("ytd-menu-service-item-renderer"),
+            icons.quality,
+            "Preferred Quality"
+        );
         const option = find(item, "yt-formatted-string:last-of-type");
 
         item.setAttribute("use-icons", "");
@@ -519,12 +528,70 @@
             const icon = preferredIndex == i && icons.check_mark;
             const item = parseItem(menuItem, icon, `${quality}p ${note}`);
             item.addEventListener("click", () => {
-                manualOverride = false;
+                body.click(), (manualOverride = false);
                 savePreferred("preferred_quality", quality, video);
             });
             return item;
         });
         return { preferred: items[preferredIndex], items: items.reverse() };
+    }
+
+    function musicPopupStyle() {
+        style.textContent += /*css*/ `
+            ytmusic-menu-popup-renderer {
+                max-width: none !important;
+                width: calc(100% + 16.1px) !important;
+            }
+            
+            #items.ytmusic-menu-popup-renderer {
+                width: 250px !important;
+            }
+        `;
+    }
+
+    /**
+     * @param {HTMLElement} popup
+     */
+    function musicPopupObserver(popup) {
+        const dropdown = popup.closest("tp-yt-iron-dropdown");
+        const menu = find(popup, "#items");
+        const item = parseItem(
+            document.createElement("ytmusic-menu-service-item-renderer"),
+            icons.quality,
+            "Preferred Quality",
+            element.option_text
+        );
+        const optionIcon = find(item, "yt-formatted-string + yt-icon");
+        optionIcon.style.marginInline = 0;
+        item.className = "ytmusic-menu-popup-renderer";
+        item.addEventListener("click", () => {
+            menu.textContent = "";
+            menu.append(...listQualityToItem(item).items);
+            win.dispatchEvent(new Event("resize"));
+        });
+
+        function addMenuItem() {
+            if (dropdown.getAttribute("aria-hidden") !== "true") {
+                menu.append(item);
+                setTextQuality(options.preferred_quality, element.option_text);
+            }
+        }
+
+        observer(addMenuItem, dropdown, { attributeFilter: ["aria-hidden"] });
+    }
+
+    if (isMusic) {
+        return observer((_, observe) => {
+            const player = element.movie_player();
+            const popup = element.music_popup();
+
+            if (player && !cachePlayers[player.id]) addVideoListener(player);
+            if (popup) {
+                musicPopupStyle();
+                musicPopupObserver(popup);
+                observe.disconnect();
+            }
+        });
     }
 
     /** @type {HTMLElement} */
@@ -558,8 +625,6 @@
         listCustomMenuItem.addEventListener("click", () => win.history.back());
     }
 
-    const itemText = document.createTextNode("");
-
     function mobileQualityMenu() {
         const container = element.m_bottom_container();
 
@@ -569,10 +634,14 @@
 
             const item = find(container, query.m_menu_item);
             const menu = item.parentElement;
-            const label = "Preferred Quality";
-            const menuItem = parseItem(item, icons.quality, label, itemText);
+            const menuItem = parseItem(
+                item,
+                icons.quality,
+                "Preferred Quality",
+                element.option_text
+            );
 
-            setTextQuality(options.preferred_quality, itemText);
+            setTextQuality(options.preferred_quality, element.option_text);
             menu.append(menuItem);
             menu.addEventListener("click", () => (maybeChangeQuality = true));
             menuItem.addEventListener("click", () => listCustomMenu(container));
