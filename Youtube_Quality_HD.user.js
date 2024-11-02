@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Youtube Quality HD
 // @version      1.8.0
-// @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop & Mobile)
+// @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
 // @match        https://m.youtube.com/*
