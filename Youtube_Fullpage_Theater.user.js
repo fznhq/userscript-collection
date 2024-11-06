@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      2.0.1
+// @version      2.0.2
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @match        https://www.youtube.com/*
@@ -27,6 +27,7 @@
     /** @type {Window} */
     const win = unsafeWindow;
     const body = document.body;
+    const attrId = "-" + Date.now().toString(36);
 
     let theater = false;
 
@@ -232,27 +233,22 @@
         }
     `;
 
-    const simpleKey = Date.now().toString(36);
-    const customAttr = {
-        hidden_header: "masthead-hidden",
-        no_scroll: "no-scroll",
-        hide_card: "hide-card",
-    };
-
-    for (const key in customAttr) {
-        style.textContent = style.textContent.replaceAll(
-            "[" + customAttr[key],
-            "[" + (customAttr[key] = customAttr[key] + "-" + simpleKey)
-        );
-    }
-
     const attr = {
         video_id: "video-id",
         role: "role",
         theater: "theater",
         fullscreen: "fullscreen",
-        ...customAttr,
+        hidden_header: "masthead-hidden",
+        no_scroll: "no-scroll",
+        hide_card: "hide-card",
     };
+
+    for (const key in attr) {
+        style.textContent = style.textContent.replaceAll(
+            "[" + attr[key],
+            "[" + attr[key] + attrId
+        );
+    }
 
     const element = {
         watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid == trash
@@ -274,7 +270,7 @@
      * @param {boolean} state
      */
     function setHtmlAttr(attr, state) {
-        document.documentElement.toggleAttribute(attr, state);
+        document.documentElement.toggleAttribute(attr + attrId, state);
     }
 
     /**
