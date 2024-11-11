@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         Youtube Fullpage Theater
-// @version      2.0.3
+// @version      2.0.4
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
+// @inject-into  content
 // @match        https://www.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/embed*
@@ -25,7 +26,7 @@
     "use strict";
 
     /** @type {Window} */
-    const win = unsafeWindow;
+    const win = unsafeWindow ? unsafeWindow.window : window;
     const body = document.body;
 
     let theater = false;
