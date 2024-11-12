@@ -263,7 +263,6 @@
         keyCode: 84,
         bubbles: true,
         cancelable: true,
-        view: win,
     });
 
     /**
