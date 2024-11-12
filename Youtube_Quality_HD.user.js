@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.8.0
+// @version      1.8.1
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
+// @inject-into  content
 // @match        https://www.youtube.com/*
 // @match        https://m.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -25,8 +26,9 @@
 (async function () {
     "use strict";
 
+    const unsafeWindowExists = typeof unsafeWindow != "undefined";
     /** @type {Window} */
-    const win = unsafeWindow;
+    const win = unsafeWindowExists ? unsafeWindow.window : window;
     const body = document.body;
 
     const $host = win.location.hostname;
