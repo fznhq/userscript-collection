@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Fullpage Theater
-// @version      2.0.5
+// @version      2.0.6
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @inject-into  content
@@ -25,12 +25,16 @@
 (async function () {
     "use strict";
 
-    const unsafeWindowExists = typeof unsafeWindow != "undefined";
-    /** @type {Window} */
-    const win = unsafeWindowExists ? unsafeWindow.window : window;
     const body = document.body;
-
     let theater = false;
+
+    /**
+     * @param {Event} event
+     */
+    function dispatchEvent(event) {
+        const context = window.dispatchEvent ? window : unsafeWindow;
+        context.dispatchEvent(event);
+    }
 
     /**
      * Options must be changed via popup menu,
@@ -52,7 +56,7 @@
             onUpdate() {
                 if (theater) {
                     setHtmlAttr(attr.no_scroll, this.value);
-                    win.dispatchEvent(new Event("resize"));
+                    dispatchEvent(new Event("resize"));
                 }
             },
         },
@@ -147,7 +151,7 @@
                 });
             }
 
-            win.addEventListener("click", (ev) => {
+            window.addEventListener("click", (ev) => {
                 if (popup.show && !menu.contains(ev.target)) {
                     popup.show = !!container.remove();
                 }
@@ -157,7 +161,7 @@
         })(),
     };
 
-    win.addEventListener("keydown", (ev) => {
+    window.addEventListener("keydown", (ev) => {
         const isV = ev.key.toLowerCase() == "v" || ev.code == "KeyV";
 
         if (
@@ -264,7 +268,6 @@
         keyCode: 84,
         bubbles: true,
         cancelable: true,
-        view: win,
     });
 
     /**
@@ -318,7 +321,8 @@
     function toggleHeader(state, timeout) {
         const toggle = () => {
             if (state || document.activeElement != element.search()) {
-                const scroll = !options.show_header_near.value && win.scrollY;
+                const scroll =
+                    !options.show_header_near.value && window.scrollY;
                 setHtmlAttr(attr.hidden_header, !(state || scroll));
             }
         };
@@ -380,11 +384,11 @@
     function registerEventListener() {
         element.search().addEventListener("focus", () => toggleHeader(true));
         element.search().addEventListener("blur", () => toggleHeader(false));
-        win.addEventListener("scroll", () => {
+        window.addEventListener("scroll", () => {
             if (!options.show_header_near.value) toggleHeader();
         });
-        win.addEventListener("mousemove", mouseShowHeader);
-        win.addEventListener("keydown", onEscapePress, true);
+        window.addEventListener("mousemove", mouseShowHeader);
+        window.addEventListener("keydown", onEscapePress, true);
     }
 
     function applyTheaterMode() {
