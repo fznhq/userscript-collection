@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.9.0
+// @version      1.9.1
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -26,13 +26,12 @@
 (async function () {
     "use strict";
 
-    const unsafeWindowExists = typeof unsafeWindow != "undefined";
-    /** @type {Window} */
-    const win = unsafeWindowExists ? unsafeWindow.window : window;
+    const history = window.history || unsafeWindow.history;
+    const location = window.location || unsafeWindow.location;
     const body = document.body;
     const head = document.head;
 
-    const $host = win.location.hostname;
+    const $host = location.hostname;
     const isMobile = $host.includes("m.youtube");
     const isMusic = $host.includes("music.youtube");
 
@@ -124,6 +123,14 @@
     script.textContent = `(${bridgeMain.replace("bridgeName", bridgeName)})();`;
 
     /**
+     * @param {Event} event
+     */
+    function dispatchEvent(event) {
+        const context = window.dispatchEvent ? window : unsafeWindow;
+        context.dispatchEvent(event);
+    }
+
+    /**
      * @returns {Promise<any>}
      */
     function sendToMain() {
@@ -132,10 +139,10 @@
         return new Promise((resolve) => {
             function callback(ev) {
                 resolve(ev.detail);
-                win.removeEventListener(uniqueId, callback);
+                window.removeEventListener(uniqueId, callback);
             }
-            win.addEventListener(uniqueId, callback);
-            win.dispatchEvent(new CustomEvent(bridgeName, { detail }));
+            window.addEventListener(uniqueId, callback);
+            dispatchEvent(new CustomEvent(bridgeName, { detail }));
         });
     }
 
@@ -553,7 +560,7 @@
      * @returns {boolean}
      */
     function isVideoPage(type) {
-        const path = win.location.pathname;
+        const path = location.pathname;
         const types = type ? [type] : ["watch", "short"];
         return types.some((type) => path.startsWith("/" + type));
     }
@@ -646,7 +653,7 @@
         item.addEventListener("click", () => {
             menu.textContent = "";
             menu.append(...listQualityToItem(item).items);
-            win.dispatchEvent(new Event("resize"));
+            dispatchEvent(new Event("resize"));
         });
 
         function addMenuItem() {
@@ -686,7 +693,7 @@
      * @param {HTMLElement} container
      */
     function listCustomMenu(container) {
-        win.location.replace("#" + customMenuHashId);
+        location.replace("#" + customMenuHashId);
         listCustomMenuItem = container.cloneNode(true);
 
         const item = find(listCustomMenuItem, query.m_menu_item);
@@ -706,7 +713,7 @@
         const preferredQualityRect = getRect(listQualityItems.preferred);
         const realTop = preferredQualityRect.top - contentTop;
         content.scrollTo(0, realTop - preferredQualityRect.height * 2);
-        listCustomMenuItem.addEventListener("click", () => win.history.back());
+        listCustomMenuItem.addEventListener("click", () => history.back());
     }
 
     function mobileQualityMenu() {
@@ -774,9 +781,9 @@
     }
 
     if (isMobile) {
-        win.addEventListener("click", mobileSetSettingsClicked, true);
-        win.addEventListener("click", mobileSetOverride, true);
-        win.addEventListener("hashchange", mobileHandlePressBack);
+        window.addEventListener("click", mobileSetSettingsClicked, true);
+        window.addEventListener("click", mobileSetOverride, true);
+        window.addEventListener("hashchange", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
         return observer(() => {
@@ -795,14 +802,14 @@
     function initShortMenu() {
         let menu = null;
         if (isVideoPage("short") && (menu = element.popup_menu())) {
-            win.removeEventListener("click", initShortMenu);
+            window.removeEventListener("click", initShortMenu);
             createInMain("ytd-menu-service-item-renderer").then((element) => {
                 menu.parentElement.append(shortQualityMenu(element));
             });
         }
     }
 
-    win.addEventListener("click", initShortMenu);
+    window.addEventListener("click", initShortMenu);
 
     observer((_, observe) => {
         const movie_player = element.movie_player();
