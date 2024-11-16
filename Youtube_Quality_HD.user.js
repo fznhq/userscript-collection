@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.8.2
+// @version      1.9.0
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
+// @inject-into  content
 // @match        https://www.youtube.com/*
 // @match        https://m.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -25,9 +26,11 @@
 (async function () {
     "use strict";
 
+    const unsafeWindowExists = typeof unsafeWindow != "undefined";
     /** @type {Window} */
-    const win = unsafeWindow;
+    const win = unsafeWindowExists ? unsafeWindow.window : window;
     const body = document.body;
+    const head = document.head;
 
     const $host = win.location.hostname;
     const isMobile = $host.includes("m.youtube");
@@ -76,6 +79,87 @@
     }
 
     /**
+     * @param {number} length
+     * @returns {string}
+     */
+    function generateId(length = 12) {
+        let out = "id";
+        while (--length > 1) out += Math.floor(Math.random() * 36).toString(36);
+        return out;
+    }
+
+    const bridgeName = "main-bridge-" + generateId();
+    const bridgeMain = function () {
+        function handleBridge(ev) {
+            const data = ev.detail.split("|");
+            const [uniqueId, type] = data.splice(0, 2);
+            const handlers = {
+                api() {
+                    const [id, fnName, ...args] = data;
+                    const player = document.getElementById(id);
+                    return player ? player[fnName](...args) : "";
+                },
+                create() {
+                    const [tagName, id] = data;
+                    const element = document.createElement(tagName);
+                    element.id = id;
+                    element.setAttribute("data-custom-item-bridge", "");
+                    return document.body.append(element), id;
+                },
+            };
+            const detail = handlers[type]();
+            window.dispatchEvent(new CustomEvent(uniqueId, { detail }));
+        }
+
+        function spoofData(ev) {
+            const item = ev.target.closest("[data-custom-item-bridge]");
+            if (item) item.data = {};
+        }
+
+        window.addEventListener("bridgeName", handleBridge);
+        window.addEventListener("click", spoofData, true);
+    }.toString();
+
+    const script = head.appendChild(document.createElement("script"));
+    script.textContent = `(${bridgeMain.replace("bridgeName", bridgeName)})();`;
+
+    /**
+     * @returns {Promise<any>}
+     */
+    function sendToMain() {
+        const uniqueId = generateId(64);
+        const detail = [uniqueId, ...arguments].join("|");
+        return new Promise((resolve) => {
+            function callback(ev) {
+                resolve(ev.detail);
+                win.removeEventListener(uniqueId, callback);
+            }
+            win.addEventListener(uniqueId, callback);
+            win.dispatchEvent(new CustomEvent(bridgeName, { detail }));
+        });
+    }
+
+    /**
+     * @param {string} id
+     * @param {'getPlaybackQualityLabel' | 'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo'} name
+     * @param  {string[]} args
+     * @returns {Promise<string>}
+     */
+    function API(id, name, ...args) {
+        return sendToMain("api", id, name, ...args);
+    }
+
+    /**
+     * @param {string} tagName
+     * @returns {Promise<HTMLElement>}
+     */
+    async function createInMain(tagName) {
+        const id = await sendToMain("create", tagName, generateId());
+        const element = find(document, tagName + "#" + id);
+        return element.removeAttribute("id"), element.remove(), element;
+    }
+
+    /**
      * @param {string} name
      * @param {object} attributes
      * @param {Array} append
@@ -89,6 +173,7 @@
 
     for (const name in icons) {
         const icon = JSON.parse(icons[name]);
+        icon.svg = { ...icon.svg, width: "100%", height: "100%" };
         icons[name] = createNS("svg", icon.svg, [createNS("path", icon.path)]);
     }
 
@@ -137,7 +222,7 @@
         option_text: document.createTextNode(""),
     };
 
-    const style = document.head.appendChild(document.createElement("style"));
+    const style = head.appendChild(document.createElement("style"));
     style.textContent = /*css*/ `
         [dir='rtl'] svg.transform-icon-svg {
             transform: scale(-1, 1);
@@ -171,13 +256,6 @@
      */
 
     /**
-     * @typedef {object} Player
-     * @property {() => string} getPlaybackQualityLabel
-     * @property {() => QualityData[]} getAvailableQualityData
-     * @property {Function} setPlaybackQualityRange
-     */
-
-    /**
      * @param {number[]} numberQualityData
      * @returns {number}
      */
@@ -190,15 +268,13 @@
     }
 
     /**
-     * @param {HTMLElement & Player} player
+     * @param {string} id
+     * @param {QualityData[]} qualityData
      * @returns {QualityData | null}
      */
-    function getQuality(player) {
-        const qualityData = player.getAvailableQualityData();
-        if (!qualityData || !qualityData.length) return null;
-
+    function getQuality(id, qualityData) {
         const q = { premium: null, normal: null };
-        const short = player.id.includes("short");
+        const short = id.includes("short");
         const numQD = qualityData.map((d) => parseQualityLabel(d.qualityLabel));
 
         if (!numQD.some((quality) => quality)) return null;
@@ -221,15 +297,15 @@
         return (options.preferred_premium && !short && q.premium) || q.normal;
     }
 
-    function setVideoQuality() {
+    async function setVideoQuality() {
         if (manualOverride) return;
         if (isUpdated) return (isUpdated = false);
 
-        /** @type {Player} */
-        const player = this;
-        const label = player.getPlaybackQualityLabel();
+        const id = this.id;
+        const label = await API(id, "getPlaybackQualityLabel");
         const quality = parseQualityLabel(label);
-        const selected = getQuality(player);
+        const qualityData = await API(id, "getAvailableQualityData");
+        const selected = getQuality(id, qualityData || []);
 
         if (
             quality &&
@@ -237,7 +313,9 @@
             listQuality.includes(quality) &&
             (isUpdated = selected.qualityLabel != label)
         ) {
-            player.setPlaybackQualityRange(
+            API(
+                id,
+                "setPlaybackQualityRange",
                 selected.quality,
                 selected.quality,
                 selected.formatId
@@ -246,7 +324,7 @@
     }
 
     function triggerSyncOptions() {
-        const id = (Math.random() * 1e12 + Date.now()).toString(36);
+        const id = generateId();
         GM.setValue("updated_id", id).then(() => (options.updated_id = id));
     }
 
@@ -343,7 +421,7 @@
 
         content.style.cursor = "pointer";
         content.style.fontWeight = 500;
-        content.style.textAlignLast = "justify";
+        content.style.wordSpacing = "2rem";
         content.append("< ", text, " >");
         content.addEventListener("click", function (ev) {
             const threshold = this.clientWidth / 2;
@@ -365,7 +443,6 @@
 
         menu.item.style.cursor = "default";
         menu.content.style.fontSize = "130%";
-        menu.content.style.wordSpacing = "2rem";
 
         qualityOption(menu.content, element.movie_player());
         return menu.item;
@@ -410,7 +487,6 @@
             return itemElement(" yt-icon-shape yt-spec-icon-shape", [icon]);
         };
 
-        item.data = {};
         iText.after(optionLabel, optionIcon);
         removeAttributes([iIcon, iText, optionIcon, optionLabel]);
 
@@ -426,20 +502,23 @@
         return item;
     }
 
-    function shortQualityMenu() {
-        const item = parseItem(
-            document.createElement("ytd-menu-service-item-renderer"),
-            icons.quality,
-            "Preferred Quality"
-        );
-        const option = find(item, "yt-formatted-string:last-of-type");
+    /**
+     * @param {HTMLElement} itemElement
+     * @returns {HTMLElement}
+     */
+    function shortQualityMenu(itemElement) {
+        const item = parseItem(itemElement, icons.quality, "Preferred Quality");
+        const container = find(item, "yt-formatted-string:last-of-type");
+        const option = document.createElement("div");
 
         item.setAttribute("use-icons", "");
         item.style.userSelect = "none";
         item.style.cursor = "default";
-        option.style.paddingInline = "24px";
-        option.style.margin = 0;
-        option.style.minWidth = "100px";
+        container.append(option);
+        container.style.minWidth = "130px";
+        option.style.margin = container.style.margin = "0 auto";
+        option.style.width = "fit-content";
+        option.style.paddingInline = "12px";
 
         qualityOption(option, element.short_player());
         return item;
@@ -539,8 +618,7 @@
     function musicPopupStyle() {
         style.textContent += /*css*/ `
             ytmusic-menu-popup-renderer {
-                max-width: none !important;
-                width: calc(100% + 16.1px) !important;
+                min-width: 268.5px !important;
             }
             
             #items.ytmusic-menu-popup-renderer {
@@ -550,13 +628,14 @@
     }
 
     /**
+     * @param {HTMLElement} itemElement
      * @param {HTMLElement} popup
      */
-    function musicPopupObserver(popup) {
+    function musicPopupObserver(itemElement, popup) {
         const dropdown = popup.closest("tp-yt-iron-dropdown");
         const menu = find(popup, "#items");
         const item = parseItem(
-            document.createElement("ytmusic-menu-service-item-renderer"),
+            itemElement,
             icons.quality,
             "Preferred Quality",
             element.option_text
@@ -578,6 +657,7 @@
         }
 
         observer(addMenuItem, dropdown, { attributeFilter: ["aria-hidden"] });
+        dropdown.setAttribute("aria-hidden", false);
     }
 
     if (isMusic) {
@@ -587,9 +667,13 @@
 
             if (player && !cachePlayers[player.id]) addVideoListener(player);
             if (popup) {
-                musicPopupStyle();
-                musicPopupObserver(popup);
                 observe.disconnect();
+                createInMain("ytmusic-menu-service-item-renderer").then(
+                    (element) => {
+                        musicPopupStyle();
+                        musicPopupObserver(element, popup);
+                    }
+                );
             }
         });
     }
@@ -701,7 +785,7 @@
             if (player) {
                 addVideoListener(player);
                 const unstarted = player.className.includes("unstarted-mode");
-                if (unstarted && isVideoPage()) player.playVideo();
+                if (unstarted && isVideoPage()) API(player.id, "playVideo");
             }
 
             if (settingsClicked) mobileQualityMenu();
@@ -711,8 +795,10 @@
     function initShortMenu() {
         let menu = null;
         if (isVideoPage("short") && (menu = element.popup_menu())) {
-            menu.parentElement.append(shortQualityMenu());
             win.removeEventListener("click", initShortMenu);
+            createInMain("ytd-menu-service-item-renderer").then((element) => {
+                menu.parentElement.append(shortQualityMenu(element));
+            });
         }
     }
 
