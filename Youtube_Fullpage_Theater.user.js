@@ -11,7 +11,6 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
 // @grant        GM.setValue
-// @grant        unsafeWindow
 // @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
 // @author       Fznhq
@@ -27,14 +26,6 @@
 
     const body = document.body;
     let theater = false;
-
-    /**
-     * @param {Event} event
-     */
-    function dispatchEvent(event) {
-        const context = window.dispatchEvent ? window : unsafeWindow;
-        context.dispatchEvent(event);
-    }
 
     /**
      * Options must be changed via popup menu,
@@ -56,7 +47,9 @@
             onUpdate() {
                 if (theater) {
                     setHtmlAttr(attr.no_scroll, this.value);
-                    dispatchEvent(new Event("resize"));
+                    document.dispatchEvent(
+                        new Event("resize", { bubbles: true })
+                    );
                 }
             },
         },
