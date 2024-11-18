@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.9.1
+// @version      1.9.2
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -12,7 +12,6 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
 // @grant        GM.setValue
-// @grant        unsafeWindow
 // @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Quality_HD.user.js
 // @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Quality_HD.user.js
 // @author       Fznhq
@@ -26,8 +25,6 @@
 (async function () {
     "use strict";
 
-    const history = window.history || unsafeWindow.history;
-    const location = window.location || unsafeWindow.location;
     const body = document.body;
     const head = document.head;
 
@@ -107,7 +104,7 @@
                 },
             };
             const detail = handlers[type]();
-            window.dispatchEvent(new CustomEvent(uniqueId, { detail }));
+            document.dispatchEvent(new CustomEvent(uniqueId, { detail }));
         }
 
         function spoofData(ev) {
@@ -115,20 +112,12 @@
             if (item) item.data = {};
         }
 
-        window.addEventListener("bridgeName", handleBridge);
+        document.addEventListener("bridgeName", handleBridge);
         window.addEventListener("click", spoofData, true);
     }.toString();
 
     const script = head.appendChild(document.createElement("script"));
     script.textContent = `(${bridgeMain.replace("bridgeName", bridgeName)})();`;
-
-    /**
-     * @param {Event} event
-     */
-    function dispatchEvent(event) {
-        const context = window.dispatchEvent ? window : unsafeWindow;
-        context.dispatchEvent(event);
-    }
 
     /**
      * @returns {Promise<any>}
@@ -139,10 +128,10 @@
         return new Promise((resolve) => {
             function callback(ev) {
                 resolve(ev.detail);
-                window.removeEventListener(uniqueId, callback);
+                document.removeEventListener(uniqueId, callback);
             }
-            window.addEventListener(uniqueId, callback);
-            dispatchEvent(new CustomEvent(bridgeName, { detail }));
+            document.addEventListener(uniqueId, callback);
+            document.dispatchEvent(new CustomEvent(bridgeName, { detail }));
         });
     }
 
@@ -653,7 +642,7 @@
         item.addEventListener("click", () => {
             menu.textContent = "";
             menu.append(...listQualityToItem(item).items);
-            dispatchEvent(new Event("resize"));
+            document.dispatchEvent(new Event("resize", { bubbles: true }));
         });
 
         function addMenuItem() {
