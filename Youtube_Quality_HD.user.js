@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.9.2
+// @version      1.9.3
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -99,7 +99,6 @@
                     const [tagName, id] = data;
                     const element = document.createElement(tagName);
                     element.id = id;
-                    element.setAttribute("data-custom-item-bridge", "");
                     return document.body.append(element), id;
                 },
             };
@@ -116,8 +115,15 @@
         window.addEventListener("click", spoofData, true);
     }.toString();
 
+    const policyOptions = { createScript: (script) => script };
+    const bridgePolicy =
+        window.trustedTypes && window.trustedTypes.createPolicy
+            ? window.trustedTypes.createPolicy(bridgeName, policyOptions)
+            : policyOptions;
     const script = head.appendChild(document.createElement("script"));
-    script.textContent = `(${bridgeMain.replace("bridgeName", bridgeName)})();`;
+    script.textContent = bridgePolicy.createScript(
+        `(${bridgeMain.replace("bridgeName", bridgeName)})();`
+    );
 
     /**
      * @returns {Promise<any>}
@@ -483,6 +489,7 @@
             return itemElement(" yt-icon-shape yt-spec-icon-shape", [icon]);
         };
 
+        item.setAttribute("data-custom-item-bridge", "");
         iText.after(optionLabel, optionIcon);
         removeAttributes([iIcon, iText, optionIcon, optionLabel]);
 
