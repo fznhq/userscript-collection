@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Fullpage Theater
-// @version      2.0.7
+// @version      2.1.0
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @inject-into  content
@@ -8,6 +8,7 @@
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/embed*
 // @exclude      https://*.youtube.com/tv*
+// @exclude      https:/tv.youtube.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
 // @grant        GM.setValue
@@ -34,7 +35,7 @@
     const options = {
         auto_theater_mode: {
             icon: `{"svg":{"fill-rule":"evenodd","clip-rule":"evenodd"},"path":{"d":"M24 22H0V2h24zm-7-1V6H1v15zm1 0h5V3H1v2h17zm-6-6h-1v-3l-7 7-1-1 7-7H7v-1h5z"}}`,
-            label: "Auto Open Theater",
+            label: "Auto Open Theater;", // Remove ";" and change the label to customize your own label.
             value: false,
             onUpdate() {
                 if (this.value && !theater) toggleTheater();
@@ -42,7 +43,7 @@
         },
         hide_scrollbar: {
             icon: `{"path":{"d":"M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0m-3-4h2V6h4l-5-6-5 6h4zm2 8h-2v2H7l5 6 5-6h-4z"}}`,
-            label: "Theater Hide Scrollbar",
+            label: "Theater Hide Scrollbar;", // Remove ";" and change the label to customize your own label.
             value: true,
             onUpdate() {
                 if (theater) {
@@ -55,12 +56,12 @@
         },
         close_theater_with_esc: {
             icon: `{"svg":{"clip-rule":"evenodd","fill-rule":"evenodd","stroke-linejoin":"round","stroke-miterlimit":2},"path":{"d":"M21 4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1zm-16.5.5h15v15h-15zm7.5 6.43 2.7-2.72a.75.75 0 0 1 1.07 1.06L13.05 12l2.73 2.73a.75.75 0 1 1-1.06 1.06l-2.73-2.73-2.73 2.73a.75.75 0 0 1-1.06-1.06L10.93 12 8.21 9.28A.75.75 0 0 1 9.27 8.2z","fill-rule":"nonzero"}}`,
-            label: "Close Theater With Esc",
+            label: "Close Theater With Esc;", // Remove ";" and change the label to customize your own label.
             value: true,
         },
         hide_card: {
             icon: `{"path":{"d":"M22 6v16H6V6zm2-2H4v20h20zM0 0v20h2V2h18V0zm14 11.22c-3.15 0-5 2.6-5 2.6s2.02 2.95 5 2.95c3.23 0 5-2.95 5-2.95s-1.79-2.6-5-2.6m.05 4.72a1.94 1.94 0 1 1 0-3.88 1.94 1.94 0 0 1 0 3.88m1.1-1.94a1.1 1.1 0 1 1-2.2 0l.03-.21a.68.68 0 0 0 .87-.86l.2-.02c.6 0 1.1.49 1.1 1.09"}}`,
-            label: "Hide Card Outside Theater Mode",
+            label: "Hide Card Outside Theater Mode;", // Remove ";" and change the label to customize your own label.
             value: false,
             onUpdate() {
                 if (!theater) setHtmlAttr(attr.hide_card, this.value);
@@ -68,7 +69,7 @@
         },
         show_header_near: {
             icon: `{"path":{"d":"m5 4 10 9H9l-4 5zM3 0v24l7-9h11z"}}`,
-            label: "Show Header When Mouse is Near",
+            label: "Show Header When Mouse is Near;", // Remove ";" and change the label to customize your own label.
             value: false,
         },
     };
@@ -89,7 +90,7 @@
      * @param {Array} append
      * @returns {SVGElement}
      */
-    function createNS(name, attributes = {}, append = []) {
+    function createSVG(name, attributes = {}, append = []) {
         const el = document.createElementNS("http://www.w3.org/2000/svg", name);
         for (const k in attributes) el.setAttributeNS(null, k, attributes[k]);
         return el.append(...append), el;
@@ -97,7 +98,9 @@
 
     for (const name in options) {
         const saved_option = await GM.getValue(name);
+        const saved_label = await GM.getValue("label_" + name);
         const icon = JSON.parse(options[name].icon);
+        let label = options[name].label;
 
         if (saved_option === undefined) {
             saveOption(name, options[name].value);
@@ -105,8 +108,15 @@
             options[name].value = saved_option;
         }
 
-        options[name].icon = createNS("svg", icon.svg, [
-            createNS("path", icon.path),
+        if (!label.endsWith(";")) {
+            GM.setValue("label_" + name, label);
+        } else if (saved_label !== undefined) {
+            label = saved_label;
+        }
+
+        options[name].label = label.replace(/;$/, "");
+        options[name].icon = createSVG("svg", icon.svg, [
+            createSVG("path", icon.path),
         ]);
     }
 
@@ -155,10 +165,10 @@
     };
 
     window.addEventListener("keydown", (ev) => {
-        const isV = ev.key.toLowerCase() == "v" || ev.code == "KeyV";
+        const isPressV = ev.key.toLowerCase() == "v" || ev.code == "KeyV";
 
         if (
-            (isV && !ev.ctrlKey && !isActiveEditable()) ||
+            (isPressV && !ev.ctrlKey && !isActiveEditable()) ||
             (ev.code == "Escape" && popup.show)
         ) {
             popup.show = popup.show
@@ -329,12 +339,12 @@
      */
     function mouseShowHeader(ev) {
         if (options.show_header_near.value && theater) {
-            const state = ev.clientY < 200;
+            const state = !popup.show && ev.clientY < 200;
             if (state) {
                 clearTimeout(showHeaderTimerId);
                 showHeaderTimerId = toggleHeader(false, 1500);
             }
-            toggleHeader(!popup.show && state);
+            toggleHeader(state);
         }
     }
 
