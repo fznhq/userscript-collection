@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.9.3
+// @version      1.9.4
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -9,6 +9,7 @@
 // @match        https://music.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/tv*
+// @exclude      https:/tv.youtube.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
 // @grant        GM.setValue
@@ -98,8 +99,7 @@
                 create() {
                     const [tagName, id] = data;
                     const element = document.createElement(tagName);
-                    element.id = id;
-                    return document.body.append(element), id;
+                    return document.body.append(element), (element.id = id);
                 },
             };
             const detail = handlers[type]();
@@ -116,10 +116,9 @@
     }.toString();
 
     const policyOptions = { createScript: (script) => script };
-    const bridgePolicy =
-        window.trustedTypes && window.trustedTypes.createPolicy
-            ? window.trustedTypes.createPolicy(bridgeName, policyOptions)
-            : policyOptions;
+    const bridgePolicy = window.trustedTypes
+        ? window.trustedTypes.createPolicy(bridgeName, policyOptions)
+        : policyOptions;
     const script = head.appendChild(document.createElement("script"));
     script.textContent = bridgePolicy.createScript(
         `(${bridgeMain.replace("bridgeName", bridgeName)})();`
@@ -258,15 +257,15 @@
      */
 
     /**
-     * @param {number[]} numberQualityData
+     * @param {number[]} availableQuality
      * @returns {number}
      */
-    function getPreferredQuality(numberQualityData) {
-        const currentMaxQuality = Math.max(...numberQualityData);
-        return !isFinite(currentMaxQuality) ||
-            currentMaxQuality > options.preferred_quality
-            ? options.preferred_quality
-            : currentMaxQuality;
+    function getPreferredQuality(availableQuality) {
+        return Math.max(
+            ...availableQuality.filter(
+                (quality) => quality <= options.preferred_quality
+            )
+        );
     }
 
     /**
@@ -277,17 +276,13 @@
     function getQuality(id, qualityData) {
         const q = { premium: null, normal: null };
         const short = id.includes("short");
-        const numQD = qualityData.map((d) => parseQualityLabel(d.qualityLabel));
+        const availableQuality = qualityData.map((data) =>
+            parseQualityLabel(data.qualityLabel)
+        );
 
-        if (!numQD.some((quality) => quality)) return null;
+        if (!availableQuality.some((quality) => quality)) return null;
 
-        let preferred = getPreferredQuality(numQD);
-        let indexQuality = listQuality.indexOf(preferred);
-
-        while (!numQD.includes(preferred) && indexQuality-- > 0) {
-            preferred = listQuality[indexQuality];
-        }
-
+        const preferred = getPreferredQuality(availableQuality);
         qualityData.forEach((data) => {
             const label = data.qualityLabel.toLowerCase();
             if (parseQualityLabel(label) == preferred && data.isPlayable) {
@@ -306,22 +301,20 @@
         const id = this.id;
         const label = await API(id, "getPlaybackQualityLabel");
         const quality = parseQualityLabel(label);
-        const qualityData = await API(id, "getAvailableQualityData");
-        const selected = getQuality(id, qualityData || []);
 
-        if (
-            quality &&
-            selected &&
-            listQuality.includes(quality) &&
-            (isUpdated = selected.qualityLabel != label)
-        ) {
-            API(
-                id,
-                "setPlaybackQualityRange",
-                selected.quality,
-                selected.quality,
-                selected.formatId
-            );
+        if (quality) {
+            const qualityData = await API(id, "getAvailableQualityData");
+            const selected = getQuality(id, qualityData || []);
+
+            if (selected && (isUpdated = selected.qualityLabel != label)) {
+                API(
+                    id,
+                    "setPlaybackQualityRange",
+                    selected.quality,
+                    selected.quality,
+                    selected.formatId
+                );
+            }
         }
     }
 
@@ -371,24 +364,24 @@
     }
 
     /**
-     * @param {HTMLElement} element
      * @param {boolean} state
      */
-    function setChecked(element, state) {
-        element.setAttribute("aria-checked", state);
+    function setPremiumToggle(state) {
+        element.premium_menu.setAttribute("aria-checked", state);
     }
 
     function premiumMenu() {
         const menu = createMenuItem(icons.premium, "Preferred Premium", true);
         const name = "preferred_premium";
 
-        setChecked(menu.item, options[name]);
-        menu.item.addEventListener("click", function () {
+        element.premium_menu = menu.item;
+        setPremiumToggle(options[name]);
+        menu.item.addEventListener("click", () => {
             const player = element.movie_player();
-            setChecked(this, savePreferred(name, !options[name], player));
+            setPremiumToggle(savePreferred(name, !options[name], player));
         });
 
-        return (element.premium_menu = menu.item);
+        return menu.item;
     }
 
     /**
@@ -584,7 +577,7 @@
         if ((await GM.getValue("updated_id")) != options.updated_id) {
             isUpdated = false;
             for (const name in options) options[name] = await GM.getValue(name);
-            setChecked(element.premium_menu, options.preferred_premium);
+            setPremiumToggle(options.preferred_premium);
             setTextQuality(options.preferred_quality);
             for (const id in cachePlayers) {
                 const [player, video] = cachePlayers[id];
