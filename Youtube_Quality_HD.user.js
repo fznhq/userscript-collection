@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.9.4
+// @version      1.9.5
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -166,7 +166,7 @@
      * @param {Array} append
      * @returns {SVGElement}
      */
-    function createNS(name, attributes = {}, append = []) {
+    function createSVG(name, attributes = {}, append = []) {
         const el = document.createElementNS("http://www.w3.org/2000/svg", name);
         for (const k in attributes) el.setAttributeNS(null, k, attributes[k]);
         return el.append(...append), el;
@@ -175,7 +175,9 @@
     for (const name in icons) {
         const icon = JSON.parse(icons[name]);
         icon.svg = { ...icon.svg, width: "100%", height: "100%" };
-        icons[name] = createNS("svg", icon.svg, [createNS("path", icon.path)]);
+        icons[name] = createSVG("svg", icon.svg, [
+            createSVG("path", icon.path),
+        ]);
     }
 
     /**
@@ -219,7 +221,7 @@
         m_settings: $(query.m_settings_btn, false),
         music_popup: $("ytmusic-menu-popup-renderer"),
         // Reserve Element
-        premium_menu: document.createElement("div"),
+        premium: document.createElement("div"),
         option_text: document.createTextNode(""),
     };
 
@@ -227,6 +229,14 @@
     style.textContent = /*css*/ `
         [dir='rtl'] svg.transform-icon-svg {
             transform: scale(-1, 1);
+        }
+
+        ytmusic-menu-popup-renderer {
+            min-width: 268.5px !important;
+        }
+        
+        #items.ytmusic-menu-popup-renderer {
+            width: 250px !important;
         }
     `;
 
@@ -257,32 +267,29 @@
      */
 
     /**
-     * @param {number[]} availableQuality
+     * @param {QualityData[]} qualityData
      * @returns {number}
      */
-    function getPreferredQuality(availableQuality) {
+    function getPreferredQuality(qualityData) {
         return Math.max(
-            ...availableQuality.filter(
-                (quality) => quality <= options.preferred_quality
-            )
+            ...qualityData
+                .map((data) => parseQualityLabel(data.qualityLabel))
+                .filter((quality) => quality <= options.preferred_quality)
         );
     }
 
     /**
      * @param {string} id
      * @param {QualityData[]} qualityData
-     * @returns {QualityData | null}
+     * @returns {QualityData | undefined}
      */
     function getQuality(id, qualityData) {
-        const q = { premium: null, normal: null };
+        const q = { premium: undefined, normal: undefined };
         const short = id.includes("short");
-        const availableQuality = qualityData.map((data) =>
-            parseQualityLabel(data.qualityLabel)
-        );
+        const preferred = getPreferredQuality(qualityData);
 
-        if (!availableQuality.some((quality) => quality)) return null;
+        if (!isFinite(preferred)) return;
 
-        const preferred = getPreferredQuality(availableQuality);
         qualityData.forEach((data) => {
             const label = data.qualityLabel.toLowerCase();
             if (parseQualityLabel(label) == preferred && data.isPlayable) {
@@ -363,36 +370,32 @@
         return (icon.style.fill = "currentColor"), { item, content };
     }
 
-    /**
-     * @param {boolean} state
-     */
-    function setPremiumToggle(state) {
-        element.premium_menu.setAttribute("aria-checked", state);
+    function setPremiumToggle() {
+        element.premium.setAttribute("aria-checked", options.preferred_premium);
     }
 
     function premiumMenu() {
         const menu = createMenuItem(icons.premium, "Preferred Premium", true);
         const name = "preferred_premium";
 
-        element.premium_menu = menu.item;
-        setPremiumToggle(options[name]);
+        element.premium = menu.item;
+        setPremiumToggle();
         menu.item.addEventListener("click", () => {
-            const player = element.movie_player();
-            setPremiumToggle(savePreferred(name, !options[name], player));
+            savePreferred(name, !options[name], element.movie_player());
+            setPremiumToggle();
         });
 
         return menu.item;
     }
 
     /**
-     * @param {string} value
-     * @param {Text | undefined} text
+     * @param {Text | undefined} nodeText
      */
-    function setTextQuality(value, text) {
-        if (text) cacheTextQuality.add(text);
+    function setTextQuality(nodeText) {
+        if (nodeText) cacheTextQuality.add(nodeText);
 
         cacheTextQuality.forEach((qualityText) => {
-            qualityText.textContent = value + "p";
+            qualityText.textContent = options.preferred_quality + "p";
         });
     }
 
@@ -412,7 +415,7 @@
         const name = "preferred_quality";
         const text = document.createTextNode("");
 
-        setTextQuality(options[name], text);
+        setTextQuality(text);
 
         content.style.cursor = "pointer";
         content.style.fontWeight = 500;
@@ -428,7 +431,8 @@
                 (clickPos > threshold && pos < listQuality.length - 1 && ++pos)
             ) {
                 manualOverride = false;
-                setTextQuality(savePreferred(name, listQuality[pos], player));
+                savePreferred(name, listQuality[pos], player);
+                setTextQuality();
             }
         });
     }
@@ -549,9 +553,8 @@
      * @returns {boolean}
      */
     function isVideoPage(type) {
-        const path = location.pathname;
         const types = type ? [type] : ["watch", "short"];
-        return types.some((type) => path.startsWith("/" + type));
+        return types.some((type) => location.pathname.startsWith("/" + type));
     }
 
     function resetState() {
@@ -577,8 +580,8 @@
         if ((await GM.getValue("updated_id")) != options.updated_id) {
             isUpdated = false;
             for (const name in options) options[name] = await GM.getValue(name);
-            setPremiumToggle(options.preferred_premium);
-            setTextQuality(options.preferred_quality);
+            setPremiumToggle();
+            setTextQuality();
             for (const id in cachePlayers) {
                 const [player, video] = cachePlayers[id];
                 if (!video.paused) setVideoQuality.call(player);
@@ -596,31 +599,19 @@
      * @returns {{preferred: HTMLElement, items: HTMLElement[]}}
      */
     function listQualityToItem(menuItem, noteText = "") {
-        const preferredIndex = listQuality.indexOf(options.preferred_quality);
-        const video = element.movie_player();
+        const name = "preferred_quality";
+        const preferredIndex = listQuality.indexOf(options[name]);
         const items = listQuality.map((quality, i) => {
             const note = quality == defaultQuality ? noteText : "";
             const icon = preferredIndex == i && icons.check_mark;
             const item = parseItem(menuItem, icon, `${quality}p ${note}`);
             item.addEventListener("click", () => {
-                body.click(), (manualOverride = false);
-                savePreferred("preferred_quality", quality, video);
+                body.click((manualOverride = false));
+                savePreferred(name, quality, element.movie_player());
             });
             return item;
         });
         return { preferred: items[preferredIndex], items: items.reverse() };
-    }
-
-    function musicPopupStyle() {
-        style.textContent += /*css*/ `
-            ytmusic-menu-popup-renderer {
-                min-width: 268.5px !important;
-            }
-            
-            #items.ytmusic-menu-popup-renderer {
-                width: 250px !important;
-            }
-        `;
     }
 
     /**
@@ -648,7 +639,7 @@
         function addMenuItem() {
             if (dropdown.getAttribute("aria-hidden") !== "true") {
                 menu.append(item);
-                setTextQuality(options.preferred_quality, element.option_text);
+                setTextQuality(element.option_text);
             }
         }
 
@@ -665,10 +656,7 @@
             if (popup) {
                 observe.disconnect();
                 createInMain("ytmusic-menu-service-item-renderer").then(
-                    (element) => {
-                        musicPopupStyle();
-                        musicPopupObserver(element, popup);
-                    }
+                    (element) => musicPopupObserver(element, popup)
                 );
             }
         });
@@ -721,7 +709,7 @@
                 element.option_text
             );
 
-            setTextQuality(options.preferred_quality, element.option_text);
+            setTextQuality(element.option_text);
             menu.append(menuItem);
             menu.addEventListener("click", () => (maybeChangeQuality = true));
             menuItem.addEventListener("click", () => listCustomMenu(container));
@@ -788,12 +776,15 @@
         });
     }
 
+    let shortMenuItem = itemElement("dummy");
+
     function initShortMenu() {
-        let menu = null;
-        if (isVideoPage("short") && (menu = element.popup_menu())) {
-            window.removeEventListener("click", initShortMenu);
+        const menu = isVideoPage("short") && element.popup_menu();
+        if (menu && !menu.closest("[aria-hidden='true']")) {
+            shortMenuItem.remove();
             createInMain("ytd-menu-service-item-renderer").then((element) => {
-                menu.parentElement.append(shortQualityMenu(element));
+                shortMenuItem = shortQualityMenu(element);
+                menu.parentElement.append(shortMenuItem);
             });
         }
     }
