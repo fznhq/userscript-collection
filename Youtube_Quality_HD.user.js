@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      1.9.5
+// @version      1.9.6
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -112,7 +112,8 @@
         }
 
         document.addEventListener("bridgeName", handleBridge);
-        window.addEventListener("click", spoofData, true);
+        window.addEventListener("touchstart", spoofData, true);
+        window.addEventListener("mousedown", spoofData, true);
     }.toString();
 
     const policyOptions = { createScript: (script) => script };
@@ -607,6 +608,7 @@
             const item = parseItem(menuItem, icon, `${quality}p ${note}`);
             item.addEventListener("click", () => {
                 body.click((manualOverride = false));
+                body.dispatchEvent(new Event("tap"));
                 savePreferred(name, quality, element.movie_player());
             });
             return item;
