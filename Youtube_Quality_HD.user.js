@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Quality HD
-// @version      2.0.0
+// @version      2.0.1
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -485,7 +485,9 @@
             const dropdown = menuItem.closest("tp-yt-iron-dropdown");
             const menu = menuItem.closest("#items");
             const item = parseItem({ menuItem });
-            const addItem = () => settingsClicked && menu.append(item);
+            const addItem = () => {
+                if (settingsClicked) menu.append(item), setTextQuality();
+            };
             item.addEventListener("click", () => {
                 menu.textContent = "";
                 menu.append(...listQualityToItem(item).items);
