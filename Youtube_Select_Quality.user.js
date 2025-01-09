@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Youtube Quality HD
-// @version      2.0.2
+// @name         Youtube Select Quality
+// @version      2.0.3
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content

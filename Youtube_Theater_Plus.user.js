@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         YouTube Fullpage Theater
-// @version      2.1.0
+// @name         YouTube Theater Plus
+// @version      2.1.1
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @inject-into  content
@@ -90,7 +90,7 @@
      * @param {Array} append
      * @returns {SVGElement}
      */
-    function createSVG(name, attributes = {}, append = []) {
+    function createNS(name, attributes = {}, append = []) {
         const el = document.createElementNS("http://www.w3.org/2000/svg", name);
         for (const k in attributes) el.setAttributeNS(null, k, attributes[k]);
         return el.append(...append), el;
@@ -115,8 +115,8 @@
         }
 
         options[name].label = label.replace(/;$/, "");
-        options[name].icon = createSVG("svg", icon.svg, [
-            createSVG("path", icon.path),
+        options[name].icon = createNS("svg", icon.svg, [
+            createNS("path", icon.path),
         ]);
     }
 
