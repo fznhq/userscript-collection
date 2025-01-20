@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.0.4
+// @version      2.0.5
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -530,7 +530,7 @@
         /**
          * @param {HTMLElement} container
          */
-        function listCustomMenu(container) {
+        function customMenu(container) {
             location.replace("#" + customMenuHashId);
             listCustomMenuItem = container.cloneNode(true);
             listCustomMenuItem.addEventListener("click", () => history.back());
@@ -560,11 +560,13 @@
             if (container) {
                 settingsClicked = false;
 
-                const menuItem = find(container, query.m_menu_item);
-                const menu = menuItem.parentElement;
-                const item = parseItem({ menuItem });
-                item.addEventListener("click", () => listCustomMenu(container));
-                menu.append(item);
+                if (!find(container, "[data-custom-item-bridge]")) {
+                    const menuItem = find(container, query.m_menu_item);
+                    const menu = menuItem.parentElement;
+                    const item = parseItem({ menuItem });
+                    item.addEventListener("click", () => customMenu(container));
+                    menu.append(item);
+                }
             }
         }
 
