@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.1.1
+// @version      2.1.2
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @inject-into  content
@@ -179,11 +179,12 @@
 
     /**
      * @param {string} query
+     * @param {boolean} cache
      * @returns {() => HTMLElement | null}
      */
-    function $(query) {
-        let element = null;
-        return () => element || (element = document.querySelector(query));
+    function $(query, cache = true) {
+        let elem = null;
+        return () => (cache && elem) || (elem = document.querySelector(query));
     }
 
     const style = document.head.appendChild(document.createElement("style"));
@@ -199,7 +200,8 @@
         html[hide-card] ytd-player .iv-branding,
         html[hide-card] ytd-player .ytp-ce-element,
         html[hide-card] ytd-player .ytp-chrome-top,
-        html[hide-card] ytd-player .ytp-suggested-action {
+        html[hide-card] ytd-player .ytp-suggested-action,
+        html:not([fixed-panels]) #panels-full-bleed-container {
             display: none !important;
         }
 
@@ -207,7 +209,7 @@
             transform: translateY(-100%) !important;
         }
 
-        html[theater][masthead-hidden] ytd-watch-flexy[fixed-panels] #chat {
+        html[theater][masthead-hidden][fixed-panels] #chat {
             top: 0 !important;
         }
 
@@ -250,6 +252,7 @@
         hidden_header: "masthead-hidden",
         no_scroll: "no-scroll",
         hide_card: "hide-card",
+        fixed_panels: "fixed-panels",
     };
 
     for (const key in attr) {
@@ -262,6 +265,7 @@
     const element = {
         watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid == trash
         search: $("input#search"),
+        chat: $("#chat #chatframe", false),
     };
 
     const keyToggleTheater = new KeyboardEvent("keydown", {
@@ -367,6 +371,16 @@
         }
     }
 
+    function registerEventListener() {
+        element.search().addEventListener("focus", () => toggleHeader(true));
+        element.search().addEventListener("blur", () => toggleHeader(false));
+        window.addEventListener("scroll", () => {
+            if (!options.show_header_near.value) toggleHeader();
+        });
+        window.addEventListener("mousemove", mouseShowHeader);
+        window.addEventListener("keydown", onEscapePress, true);
+    }
+
     /**
      * @param {MutationRecord[]} mutations
      */
@@ -384,16 +398,6 @@
         }
     }
 
-    function registerEventListener() {
-        element.search().addEventListener("focus", () => toggleHeader(true));
-        element.search().addEventListener("blur", () => toggleHeader(false));
-        window.addEventListener("scroll", () => {
-            if (!options.show_header_near.value) toggleHeader();
-        });
-        window.addEventListener("mousemove", mouseShowHeader);
-        window.addEventListener("keydown", onEscapePress, true);
-    }
-
     function applyTheaterMode() {
         const state = isTheater();
 
@@ -406,6 +410,16 @@
         setHtmlAttr(attr.hide_card, state || options.hide_card.value);
     }
 
+    function checkLiveChat() {
+        const chat = theater && element.chat();
+        const watch = element.watch();
+
+        setHtmlAttr(
+            attr.fixed_panels,
+            chat && chat.offsetHeight && watch.hasAttribute(attr.fixed_panels)
+        );
+    }
+
     observer((_, observe) => {
         const watch = element.watch();
         if (!watch) return;
@@ -414,6 +428,7 @@
             (mutations) => {
                 applyTheaterMode();
                 autoOpenTheater(mutations);
+                checkLiveChat();
             },
             watch,
             { attributes: true }
