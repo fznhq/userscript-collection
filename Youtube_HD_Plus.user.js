@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.0.6
+// @version      2.0.7
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -398,20 +398,19 @@
 
     /**
      * @param {HTMLElement} menuItem
-     * @param {string} note
      * @returns {{preferred: HTMLElement, items: HTMLElement[]}}
      */
-    function listQualityToItem(menuItem, note = "") {
+    function listQualityToItem(menuItem) {
         const name = "preferred_quality";
         const preferredIndex = listQuality.indexOf(options[name]);
-        const items = listQuality.map((q, i) => {
+        const items = listQuality.map((quality, i) => {
             const icon = preferredIndex == i && icons.check_mark;
-            const label = `${q}p ${q == defaultQuality ? note : ""}`;
+            const label = quality + "p";
             const item = parseItem({ menuItem, icon, label, selected: false });
             item.addEventListener("click", () => {
                 body.click();
                 body.dispatchEvent(new Event("tap"));
-                savePreferred(name, q, element.movie_player(), true);
+                savePreferred(name, quality, element.movie_player(), true);
             });
             return item;
         });
@@ -528,7 +527,7 @@
             const menu = item.parentElement;
             const header = find(listCustomMenuItem, "#header-wrapper");
             const content = find(listCustomMenuItem, "#content-wrapper");
-            const listQualityItems = listQualityToItem(item, "(Recommended)");
+            const listQualityItems = listQualityToItem(item);
 
             menu.textContent = "";
             menu.append(...listQualityItems.items);
