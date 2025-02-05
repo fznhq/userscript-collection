@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.0.5
+// @version      2.0.6
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -36,6 +36,7 @@
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
     const defaultQuality = 1080;
 
+    let firstSet = true;
     let manualOverride = false;
     let isUpdated = false;
     let settingsClicked = false;
@@ -80,26 +81,21 @@
 
     const bridgeName = "main-bridge-" + generateId();
     const bridgeMain = function () {
-        function handleBridge(ev) {
+        function handleAPI(ev) {
             const data = ev.detail.split("|");
-            const [uniqueId, type] = data.splice(0, 2);
-            const handlers = {
-                api() {
-                    const [id, fn, ...args] = data;
-                    const player = document.getElementById(id);
-                    return player && player[fn] ? player[fn](...args) : "";
-                },
-            };
-            const detail = handlers[type]();
+            const uniqueId = data.shift();
+            const [id, fn, ...args] = data;
+            const player = document.getElementById(id);
+            const detail = player && player[fn] ? player[fn](...args) : "";
             document.dispatchEvent(new CustomEvent(uniqueId, { detail }));
         }
 
         function spoofData(ev) {
-            const item = ev.target.closest("[data-custom-item-bridge]");
+            const item = ev.target.closest("[item-bridge]");
             if (item) item.data = {};
         }
 
-        document.addEventListener("bridgeName", handleBridge);
+        document.addEventListener("bridgeName", handleAPI);
         window.addEventListener("touchstart", spoofData, true);
         window.addEventListener("mousedown", spoofData, true);
     }.toString();
@@ -114,29 +110,21 @@
     );
 
     /**
-     * @returns {Promise<any>}
-     */
-    function sendToMain() {
-        const uniqueId = generateId(64);
-        const detail = [uniqueId, ...arguments].join("|");
-        return new Promise((resolve) => {
-            function callback(ev) {
-                resolve(ev.detail);
-                document.removeEventListener(uniqueId, callback);
-            }
-            document.addEventListener(uniqueId, callback);
-            document.dispatchEvent(new CustomEvent(bridgeName, { detail }));
-        });
-    }
-
-    /**
      * @param {string} id
      * @param {'getPlaybackQualityLabel' | 'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo'} name
      * @param  {string[]} args
      * @returns {Promise<string>}
      */
     function API(id, name, ...args) {
-        return sendToMain("api", id, name, ...args);
+        const uniqueId = generateId(64);
+        const detail = [uniqueId, id, name, ...args].join("|");
+        return new Promise((resolve) => {
+            document.addEventListener(uniqueId, function callback(ev) {
+                resolve(ev.detail);
+                document.removeEventListener(uniqueId, callback);
+            });
+            document.dispatchEvent(new CustomEvent(bridgeName, { detail }));
+        });
     }
 
     /**
@@ -181,16 +169,13 @@
     const cachePlayers = {};
     const cacheTextQuality = new Set();
     const query = {
-        movie_player: "#movie_player",
-        short_player: "#shorts-player",
         m_menu_item: "[role=menuitem], ytm-menu-service-item-renderer",
     };
-    const allowedPlayerIds = [query.movie_player, query.short_player];
     const element = {
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
-        movie_player: $(query.movie_player, !isMobile),
-        short_player: $(query.short_player),
+        movie_player: $("#movie_player", !isMobile),
+        short_player: $("#shorts-player"),
         popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
         music_menu_item: $("ytmusic-menu-service-item-renderer[class*=popup]"),
@@ -265,9 +250,9 @@
         if (!isFinite(preferred)) return;
 
         qualityData.forEach((data) => {
-            const label = data.qualityLabel.toLowerCase();
+            const label = data.qualityLabel;
             if (parseQualityLabel(label) == preferred && data.isPlayable) {
-                if (label.includes("premium")) q.premium = data;
+                if (/premium/i.test(label)) q.premium = data;
                 else q.normal = data;
             }
         });
@@ -287,8 +272,11 @@
             const qualityData = await API(id, "getAvailableQualityData");
             const selected = getQuality(id, qualityData || []);
 
-            if (selected && (isUpdated = selected.qualityLabel != label)) {
-                API(
+            if (
+                selected &&
+                (firstSet || (isUpdated = selected.qualityLabel != label))
+            ) {
+                firstSet = !API(
                     id,
                     "setPlaybackQualityRange",
                     selected.quality,
@@ -323,7 +311,7 @@
         return el.append(...append), el;
     }
 
-    function setPremiumToggle() {
+    function togglePremium() {
         element.premium.setAttribute("aria-checked", options.preferred_premium);
     }
 
@@ -391,7 +379,7 @@
             return itemElement(" yt-icon-shape yt-spec-icon-shape", [icon]);
         };
 
-        item.setAttribute("data-custom-item-bridge", "");
+        item.setAttribute("item-bridge", "");
         iText.after(optionLabel, optionIcon);
         removeAttributes([iIcon, iText, optionIcon, optionLabel]);
 
@@ -454,6 +442,7 @@
     }
 
     function resetState() {
+        firstSet = true;
         isUpdated = false;
         manualOverride = false;
     }
@@ -462,7 +451,7 @@
         if ((await GM.getValue("updated_id")) != options.updated_id) {
             isUpdated = false;
             for (const name in options) options[name] = await GM.getValue(name);
-            setPremiumToggle();
+            togglePremium();
             setTextQuality();
             for (const id in cachePlayers) {
                 const [player, video] = cachePlayers[id];
@@ -501,14 +490,14 @@
 
         function musicSetSettingsClicked(/** @type {MouseEvent} */ ev) {
             settingsClicked = !!ev.target.closest(
-                "#main-panel [class*=menu], .middle-controls [class*=menu]"
+                "#main-panel [class*=menu], .middle-controls-buttons [class*=menu]"
             );
         }
 
         window.addEventListener("tap", musicSetSettingsClicked, true);
         window.addEventListener("click", musicSetSettingsClicked, true);
 
-        return observer((_, observe) => {
+        observer((_, observe) => {
             const player = element.movie_player();
             const menuItem = element.music_menu_item();
 
@@ -560,18 +549,16 @@
             if (container) {
                 settingsClicked = false;
 
-                if (!find(container, "[data-custom-item-bridge]")) {
-                    const menuItem = find(container, query.m_menu_item);
-                    const menu = menuItem.parentElement;
-                    const item = parseItem({ menuItem });
-                    item.addEventListener("click", () => customMenu(container));
-                    menu.append(item);
-                }
+                const menuItem = find(container, query.m_menu_item);
+                const menu = menuItem.parentElement;
+                const item = parseItem({ menuItem });
+                item.addEventListener("click", () => customMenu(container));
+                menu.append(item);
             }
         }
 
         function mobileSetSettingsClicked(/** @type {MouseEvent} */ ev) {
-            if (isVideoPage()) {
+            if (isVideoPage() && !element.m_bottom_container()) {
                 settingsClicked = !!ev.target.closest(
                     "player-top-controls .player-settings-icon, shorts-video ytm-bottom-sheet-renderer"
                 );
@@ -584,8 +571,7 @@
             if (manualOverride || listCustomMenuItem) return;
             if (!element.m_bottom_container()) menuStep = 0;
             if (menuStep++ == 2) {
-                const quality = parseQualityLabel(ev.target.textContent);
-                manualOverride = listQuality.includes(quality);
+                manualOverride = !!ev.target.closest("[role=menuitem]");
             }
         }
 
@@ -605,7 +591,7 @@
         window.addEventListener("hashchange", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
-        return observer(() => {
+        observer(() => {
             const player = element.movie_player();
 
             if (player) {
@@ -637,15 +623,19 @@
         }
 
         function premiumMenu() {
-            const menu = createMenuItem(icons.premium, "Preferred Premium", !0);
             const name = "preferred_premium";
-            element.premium = menu.item;
-            setPremiumToggle();
-            menu.item.addEventListener("click", () => {
+            const menu = (element.premium = createMenuItem(
+                icons.premium,
+                "Preferred Premium",
+                true
+            ).item);
+
+            menu.addEventListener("click", () => {
                 savePreferred(name, !options[name], element.movie_player());
-                setPremiumToggle();
+                togglePremium();
             });
-            return menu.item;
+
+            return togglePremium(), menu;
         }
 
         /**
@@ -710,18 +700,18 @@
         }
 
         function setOverride(/** @type {MouseEvent} */ ev) {
-            if (!manualOverride && ev.target.closest(".ytp-quality-menu")) {
-                const quality = parseQualityLabel(ev.target.textContent);
-                manualOverride = listQuality.includes(quality);
-            }
+            manualOverride =
+                !manualOverride &&
+                !!ev.target.closest(".ytp-settings-menu [role=menuitemradio]");
         }
 
         function playerUpdated(/** @type {CustomEvent} */ ev) {
-            let player = null;
-            if (
-                isVideoPage() &&
-                allowedPlayerIds.some((id) => (player = find(ev.target, id)))
-            ) {
+            if (!isVideoPage()) return;
+
+            const allowed = [element.movie_player(), element.short_player()];
+            const player = allowed.find((player) => ev.target.contains(player));
+
+            if (player) {
                 resetState();
                 addVideoListener(player);
             }
