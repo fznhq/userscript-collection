@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.0.7
+// @version      2.0.8
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -36,7 +36,7 @@
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
     const defaultQuality = 1080;
 
-    let firstSet = true;
+    let firstSetQuality = true;
     let manualOverride = false;
     let isUpdated = false;
     let settingsClicked = false;
@@ -274,9 +274,9 @@
 
             if (
                 selected &&
-                (firstSet || (isUpdated = selected.qualityLabel != label))
+                (isUpdated = firstSetQuality || selected.qualityLabel != label)
             ) {
-                firstSet = !API(
+                firstSetQuality = !API(
                     id,
                     "setPlaybackQualityRange",
                     selected.quality,
@@ -441,7 +441,7 @@
     }
 
     function resetState() {
-        firstSet = true;
+        firstSetQuality = true;
         isUpdated = false;
         manualOverride = false;
     }
