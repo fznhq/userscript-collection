@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.1.4
+// @version      2.1.5
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @inject-into  content
@@ -265,7 +265,6 @@
     const element = {
         watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid == trash
         search: $("#masthead input"),
-        chat: $("#chat #chatframe", false),
     };
 
     const keyToggleTheater = new KeyboardEvent("keydown", {
@@ -381,23 +380,6 @@
         window.addEventListener("keydown", onEscapePress, true);
     }
 
-    /**
-     * @param {MutationRecord[]} mutations
-     */
-    function autoOpenTheater(mutations) {
-        const attrs = [attr.role, attr.video_id];
-        const watch = element.watch();
-
-        if (
-            options.auto_theater_mode.value &&
-            !watch.hasAttribute(attr.theater) &&
-            !watch.hasAttribute(attr.fullscreen) &&
-            mutations.some((m) => attrs.includes(m.attributeName))
-        ) {
-            setTimeout(toggleTheater, 1);
-        }
-    }
-
     function applyTheaterMode() {
         const state = isTheater();
 
@@ -408,6 +390,23 @@
         setHtmlAttr(attr.hidden_header, state);
         setHtmlAttr(attr.no_scroll, state && options.hide_scrollbar.value);
         setHtmlAttr(attr.hide_card, state || options.hide_card.value);
+    }
+
+    /**
+     * @param {MutationRecord[]} mutations
+     */
+    function autoOpenTheater(mutations) {
+        const attrs = [attr.role, attr.video_id];
+        const watch = element.watch();
+
+        if (
+            !theater &&
+            options.auto_theater_mode.value &&
+            !watch.hasAttribute(attr.fullscreen) &&
+            mutations.some((m) => attrs.includes(m.attributeName))
+        ) {
+            setTimeout(toggleTheater, 1);
+        }
     }
 
     observer((_, observe) => {
