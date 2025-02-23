@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.1.2
+// @version      2.1.3
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @inject-into  content
@@ -48,9 +48,7 @@
             onUpdate() {
                 if (theater) {
                     setHtmlAttr(attr.no_scroll, this.value);
-                    document.dispatchEvent(
-                        new Event("resize", { bubbles: true })
-                    );
+                    resizeWindow();
                 }
             },
         },
@@ -73,6 +71,10 @@
             value: false,
         },
     };
+
+    function resizeWindow() {
+        document.dispatchEvent(new Event("resize", { bubbles: true }));
+    }
 
     /**
      * @param {string} name
@@ -200,8 +202,7 @@
         html[hide-card] ytd-player .iv-branding,
         html[hide-card] ytd-player .ytp-ce-element,
         html[hide-card] ytd-player .ytp-chrome-top,
-        html[hide-card] ytd-player .ytp-suggested-action,
-        html:not([fixed-panels]) #panels-full-bleed-container {
+        html[hide-card] ytd-player .ytp-suggested-action {
             display: none !important;
         }
 
@@ -209,7 +210,7 @@
             transform: translateY(-100%) !important;
         }
 
-        html[theater][masthead-hidden][fixed-panels] #chat {
+        html[theater][masthead-hidden] [fixed-panels] #chat {
             top: 0 !important;
         }
 
@@ -252,7 +253,6 @@
         hidden_header: "masthead-hidden",
         no_scroll: "no-scroll",
         hide_card: "hide-card",
-        fixed_panels: "fixed-panels",
     };
 
     for (const key in attr) {
@@ -264,7 +264,7 @@
 
     const element = {
         watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid == trash
-        search: $("input#search"),
+        search: $("#masthead input"),
         chat: $("#chat #chatframe", false),
     };
 
@@ -410,16 +410,6 @@
         setHtmlAttr(attr.hide_card, state || options.hide_card.value);
     }
 
-    function checkLiveChat() {
-        const chat = theater && element.chat();
-        const watch = element.watch();
-
-        setHtmlAttr(
-            attr.fixed_panels,
-            chat && chat.offsetHeight && watch.hasAttribute(attr.fixed_panels)
-        );
-    }
-
     observer((_, observe) => {
         const watch = element.watch();
         if (!watch) return;
@@ -428,7 +418,6 @@
             (mutations) => {
                 applyTheaterMode();
                 autoOpenTheater(mutations);
-                checkLiveChat();
             },
             watch,
             { attributes: true }
