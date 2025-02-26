@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.1.5
+// @version      2.1.6
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @inject-into  content
@@ -264,7 +264,7 @@
 
     const element = {
         watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid == trash
-        search: $("#masthead input"),
+        search: $("form[action*=result] input"),
     };
 
     const keyToggleTheater = new KeyboardEvent("keydown", {
@@ -371,13 +371,13 @@
     }
 
     function registerEventListener() {
-        element.search().addEventListener("focus", () => toggleHeader(true));
-        element.search().addEventListener("blur", () => toggleHeader(false));
+        window.addEventListener("mousemove", mouseShowHeader);
+        window.addEventListener("keydown", onEscapePress, true);
         window.addEventListener("scroll", () => {
             if (!options.show_header_near.value) toggleHeader();
         });
-        window.addEventListener("mousemove", mouseShowHeader);
-        window.addEventListener("keydown", onEscapePress, true);
+        element.search().addEventListener("focus", () => toggleHeader(true));
+        element.search().addEventListener("blur", () => toggleHeader(false));
     }
 
     function applyTheaterMode() {
@@ -413,6 +413,7 @@
         const watch = element.watch();
         if (!watch) return;
 
+        observe.disconnect();
         observer(
             (mutations) => {
                 applyTheaterMode();
@@ -421,8 +422,6 @@
             watch,
             { attributes: true }
         );
-
         registerEventListener();
-        observe.disconnect();
     }, body);
 })();
