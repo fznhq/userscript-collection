@@ -403,7 +403,7 @@
 
         setHtmlAttr(attr.theater, state);
         setHtmlAttr(attr.hidden_header, state);
-        setHtmlAttr(attr.no_scroll, state && options.hide_scrollbar.value);
+        setHtmlAttr(attr.no_scroll, theater && options.hide_scrollbar.value);
         setHtmlAttr(attr.hide_card, options.hide_card.value);
     }
 
