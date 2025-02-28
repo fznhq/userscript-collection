@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.1.6
+// @version      2.2.0
 // @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
 // @run-at       document-body
 // @inject-into  content
@@ -27,12 +27,22 @@
 
     const body = document.body;
     let theater = false;
+    let fullpage = true;
 
     /**
      * Options must be changed via popup menu,
      * just press (v) to open the menu
      */
     const options = {
+        fullpage_theater: {
+            icon: `{"path":{"d":"M22 4v12H2V4zm1-1H1v14h22zm-6 17H7v1h10z"}}`,
+            label: "Fullpage Theater;", // Remove ";" and change the label to customize your own label.
+            value: true,
+            onUpdate() {
+                applyTheaterMode(true);
+                resizeWindow();
+            },
+        },
         auto_theater_mode: {
             icon: `{"svg":{"fill-rule":"evenodd","clip-rule":"evenodd"},"path":{"d":"M24 22H0V2h24zm-7-1V6H1v15zm1 0h5V3H1v2h17zm-6-6h-1v-3l-7 7-1-1 7-7H7v-1h5z"}}`,
             label: "Auto Open Theater;", // Remove ";" and change the label to customize your own label.
@@ -53,20 +63,20 @@
             },
         },
         close_theater_with_esc: {
-            icon: `{"svg":{"clip-rule":"evenodd","fill-rule":"evenodd","stroke-linejoin":"round","stroke-miterlimit":2},"path":{"d":"M21 4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1zm-16.5.5h15v15h-15zm7.5 6.43 2.7-2.72a.75.75 0 0 1 1.07 1.06L13.05 12l2.73 2.73a.75.75 0 1 1-1.06 1.06l-2.73-2.73-2.73 2.73a.75.75 0 0 1-1.06-1.06L10.93 12 8.21 9.28A.75.75 0 0 1 9.27 8.2z","fill-rule":"nonzero"}}`,
+            icon: `{"svg":{"clip-rule":"evenodd","fill-rule":"evenodd","stroke-linejoin":"round","stroke-miterlimit":2},"path":{"d":"M21 3.998c0-.478-.379-1-1-1H5c-.62 0-1 .519-1 1v15c0 .621.52 1 1 1h15c.478 0 1-.379 1-1zm-16 0h15v15H5zm7.491 6.432 2.717-2.718a.75.75 0 0 1 1.061 1.062l-2.717 2.717 2.728 2.728a.75.75 0 1 1-1.061 1.062l-2.728-2.728-2.728 2.728a.751.751 0 0 1-1.061-1.062l2.728-2.728-2.722-2.722a.75.75 0 0 1 1.061-1.061z","fill-rule":"nonzero"}}`,
             label: "Close Theater With Esc;", // Remove ";" and change the label to customize your own label.
             value: true,
         },
         hide_card: {
-            icon: `{"path":{"d":"M22 6v16H6V6zm2-2H4v20h20zM0 0v20h2V2h18V0zm14 11.22c-3.15 0-5 2.6-5 2.6s2.02 2.95 5 2.95c3.23 0 5-2.95 5-2.95s-1.79-2.6-5-2.6m.05 4.72a1.94 1.94 0 1 1 0-3.88 1.94 1.94 0 0 1 0 3.88m1.1-1.94a1.1 1.1 0 1 1-2.2 0l.03-.21a.68.68 0 0 0 .87-.86l.2-.02c.6 0 1.1.49 1.1 1.09"}}`,
-            label: "Hide Card Outside Theater Mode;", // Remove ";" and change the label to customize your own label.
+            icon: `{"path":{"d":"M22 6v16H6V6zm1-1H5v18h18zM2 2v20h1V3h18V2zm12 9c-3 0-5 3-5 3s2 3 5 3 5-3 5-3-2-3-5-3m0 5a2 2 0 1 1 0-4 2 2 0 0 1 0 4m1-2a1 1 0 1 1-2 0 1 1 0 0 0 1-1l1 1"}}`,
+            label: "Hide End Cards", // Remove ";" and change the label to customize your own label.
             value: false,
             onUpdate() {
-                if (!theater) setHtmlAttr(attr.hide_card, this.value);
+                setHtmlAttr(attr.hide_card, this.value);
             },
         },
         show_header_near: {
-            icon: `{"path":{"d":"m5 4 10 9H9l-4 5zM3 0v24l7-9h11z"}}`,
+            icon: `{"path":{"d":"M5 4.27 15.476 13H8.934L5 18.117zm-1 0v17l5.5-7h9L4 1.77z"}}`,
             label: "Show Header When Mouse is Near;", // Remove ";" and change the label to customize your own label.
             value: false,
         },
@@ -332,7 +342,7 @@
                 setHtmlAttr(attr.hidden_header, !(state || scroll));
             }
         };
-        return theater && setTimeout(toggle, timeout || 1);
+        return fullpage && theater && setTimeout(toggle, timeout || 1);
     }
 
     let showHeaderTimerId = 0;
@@ -341,7 +351,7 @@
      * @param {MouseEvent} ev
      */
     function mouseShowHeader(ev) {
-        if (options.show_header_near.value && theater) {
+        if (options.show_header_near.value && fullpage && theater) {
             const state = !popup.show && ev.clientY < 200;
             if (state) {
                 clearTimeout(showHeaderTimerId);
@@ -380,16 +390,21 @@
         element.search().addEventListener("blur", () => toggleHeader(false));
     }
 
-    function applyTheaterMode() {
-        const state = isTheater();
+    /**
+     * @param {boolean} force
+     */
+    function applyTheaterMode(force) {
+        let state = isTheater();
 
-        if (theater == state) return;
+        if (theater == state && !(state && force)) return;
         theater = state;
+        fullpage = options.fullpage_theater.value;
+        state = state && fullpage;
 
         setHtmlAttr(attr.theater, state);
         setHtmlAttr(attr.hidden_header, state);
         setHtmlAttr(attr.no_scroll, state && options.hide_scrollbar.value);
-        setHtmlAttr(attr.hide_card, state || options.hide_card.value);
+        setHtmlAttr(attr.hide_card, options.hide_card.value);
     }
 
     /**
