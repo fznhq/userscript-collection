@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.2.1
-// @description  Make theater mode fill the entire page view with a hidden navbar and auto theater mode (Support new UI)
+// @version      2.2.2
+// @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
 // @match        https://www.youtube.com/*
@@ -67,10 +67,10 @@
             label: "Close Theater With Esc;", // Remove ";" and change the label to customize your own label.
             value: true,
         },
-        hide_card: {
+        hide_end_cards: {
             icon: `{"path":{"d":"M22 6v16H6V6zm1-1H5v18h18zM2 2v20h1V3h18V2zm12 9c-3 0-5 3-5 3s2 3 5 3 5-3 5-3-2-3-5-3m0 5a2 2 0 1 1 0-4 2 2 0 0 1 0 4m1-2a1 1 0 1 1-2 0 1 1 0 0 0 1-1l1 1"}}`,
-            label: "Hide End Cards", // Remove ";" and change the label to customize your own label.
-            value: false,
+            label: "Hide End Cards;", // Remove ";" and change the label to customize your own label.
+            value: true,
             onUpdate() {
                 setHtmlAttr(attr.hide_card, this.value);
             },
@@ -391,7 +391,7 @@
     }
 
     /**
-     * @param {boolean} force
+     * @param {true | undefined} force
      */
     function applyTheaterMode(force) {
         let state = isTheater();
@@ -404,7 +404,7 @@
         setHtmlAttr(attr.theater, state);
         setHtmlAttr(attr.hidden_header, state);
         setHtmlAttr(attr.no_scroll, theater && options.hide_scrollbar.value);
-        setHtmlAttr(attr.hide_card, options.hide_card.value);
+        setHtmlAttr(attr.hide_card, options.hide_end_cards.value);
     }
 
     /**
