@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.0.8
+// @version      2.0.9
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -70,16 +70,13 @@
     }
 
     /**
-     * @param {number} length
      * @returns {string}
      */
-    function generateId(length = 12) {
-        let out = "id";
-        while (--length > 1) out += Math.floor(Math.random() * 36).toString(36);
-        return out;
+    function generateId() {
+        return "id" + (Date.now() + Math.random() * 10e20).toString(36);
     }
 
-    const bridgeName = "main-bridge-" + generateId();
+    const bridgeName = "bridge-" + generateId();
     const bridgeMain = function () {
         function handleAPI(ev) {
             const data = ev.detail.split("|");
@@ -91,7 +88,7 @@
         }
 
         function spoofData(ev) {
-            const item = ev.target.closest("[item-bridge]");
+            const item = ev.target.closest("[bridgeName]");
             if (item) item.data = {};
         }
 
@@ -106,7 +103,7 @@
         : policyOptions;
     const script = head.appendChild(document.createElement("script"));
     script.textContent = bridgePolicy.createScript(
-        `(${bridgeMain.replace("bridgeName", bridgeName)})();`
+        `(${bridgeMain.replace(/bridgeName/g, bridgeName)})();`
     );
 
     /**
@@ -116,7 +113,7 @@
      * @returns {Promise<string>}
      */
     function API(id, name, ...args) {
-        const uniqueId = generateId(64);
+        const uniqueId = name + generateId();
         const detail = [uniqueId, id, name, ...args].join("|");
         return new Promise((resolve) => {
             document.addEventListener(uniqueId, function callback(ev) {
@@ -168,9 +165,6 @@
 
     const cachePlayers = {};
     const cacheTextQuality = new Set();
-    const query = {
-        m_menu_item: "[role=menuitem], ytm-menu-service-item-renderer",
-    };
     const element = {
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
@@ -379,7 +373,7 @@
             return itemElement(" yt-icon-shape yt-spec-icon-shape", [icon]);
         };
 
-        item.setAttribute("item-bridge", "");
+        item.setAttribute(bridgeName, "");
         iText.after(optionLabel, optionIcon);
         removeAttributes([iIcon, iText, optionIcon, optionLabel]);
 
@@ -514,6 +508,7 @@
         /** @type {HTMLElement} */
         let listCustomMenuItem = null;
         const customMenuHashId = "custom-bottom-menu";
+        const queryItem = "[role=menuitem], ytm-menu-service-item-renderer";
 
         /**
          * @param {HTMLElement} container
@@ -523,7 +518,7 @@
             listCustomMenuItem = container.cloneNode(true);
             listCustomMenuItem.addEventListener("click", () => history.back());
 
-            const item = find(listCustomMenuItem, query.m_menu_item);
+            const item = find(listCustomMenuItem, queryItem);
             const menu = item.parentElement;
             const header = find(listCustomMenuItem, "#header-wrapper");
             const content = find(listCustomMenuItem, "#content-wrapper");
@@ -548,11 +543,10 @@
             if (container) {
                 settingsClicked = false;
 
-                const menuItem = find(container, query.m_menu_item);
-                const menu = menuItem.parentElement;
+                const menuItem = find(container, queryItem);
                 const item = parseItem({ menuItem });
                 item.addEventListener("click", () => customMenu(container));
-                menu.append(item);
+                menuItem.parentElement.append(item);
             }
         }
 
