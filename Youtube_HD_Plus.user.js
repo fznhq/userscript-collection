@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.0.9
+// @version      2.1.0
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -108,7 +108,7 @@
 
     /**
      * @param {string} id
-     * @param {'getPlaybackQualityLabel' | 'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo'} name
+     * @param {'getPlaybackQualityLabel' | 'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo' | 'loadVideoById'} name
      * @param  {string[]} args
      * @returns {Promise<string>}
      */
@@ -173,6 +173,7 @@
         popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
         music_menu_item: $("ytmusic-menu-service-item-renderer[class*=popup]"),
+        link: $("link[rel=canonical]"),
         // Reserve Element
         premium: document.createElement("div"),
         option_text: document.createTextNode(""),
@@ -579,18 +580,40 @@
             }
         }
 
+        const videoIdRegex = /(?:shorts\/|watch\?v=)([^#\&\?]*)/;
+
+        /**
+         * @returns {number | false}
+         */
+        function getVideoId() {
+            const playerId = element.link().href.match(videoIdRegex)[1];
+            const currentId = location.href.match(videoIdRegex)[1];
+            return playerId == currentId && currentId;
+        }
+
         window.addEventListener("click", mobileSetSettingsClicked, true);
         window.addEventListener("click", mobileSetOverride, true);
         window.addEventListener("hashchange", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
+        let loadId = "";
+
         observer(() => {
             const player = element.movie_player();
 
-            if (player) {
+            if (player && isVideoPage()) {
                 addVideoListener(player);
+
+                const id = getVideoId();
+                const elId = player.id;
                 const unstarted = player.className.includes("unstarted-mode");
-                if (unstarted && isVideoPage()) API(player.id, "playVideo");
+                const playable = player.closest("[playable=true]");
+
+                if (!id) loadId = "";
+                if (unstarted && playable && id) {
+                    if (loadId != id) API(elId, "loadVideoById", (loadId = id));
+                    API(elId, "playVideo");
+                }
             }
 
             if (settingsClicked) mobileQualityMenu();
