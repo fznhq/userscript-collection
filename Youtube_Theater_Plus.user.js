@@ -396,7 +396,7 @@
     function applyTheaterMode(force) {
         let state = isTheater();
 
-        if (theater == state && !(state && force)) return;
+        if (theater == state && (!state || !force)) return;
         theater = state;
         fullpage = options.fullpage_theater.value;
         state = state && fullpage;
