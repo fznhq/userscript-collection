@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.1.1
+// @version      2.1.2
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -610,8 +610,10 @@
                 if (!id) loadId = "";
                 if (unstarted && id) {
                     if (loadId != (loadId = id)) {
-                        const cvId = (await API(elId, "getVideoData")).video_id;
-                        if (cvId != id) API(elId, "loadVideoById", id);
+                        const cvId = await API(elId, "getVideoData");
+                        if (cvId && cvId.video_id != id) {
+                            API(elId, "loadVideoById", id);
+                        }
                     }
                     API(elId, "playVideo");
                 }
