@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.1.0
+// @version      2.1.1
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -108,7 +108,7 @@
 
     /**
      * @param {string} id
-     * @param {'getPlaybackQualityLabel' | 'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo' | 'loadVideoById'} name
+     * @param {'getPlaybackQualityLabel' | 'getAvailableQualityData' | 'getVideoData' | 'setPlaybackQualityRange' | 'playVideo' | 'loadVideoById'} name
      * @param  {string[]} args
      * @returns {Promise<string>}
      */
@@ -292,6 +292,7 @@
         if (override) manualOverride = false;
         saveOption(optionName, newValue);
         saveOption("updated_id", generateId());
+        togglePremium(), setTextQuality();
         setVideoQuality.call(player, (isUpdated = false));
     }
 
@@ -468,9 +469,7 @@
             const dropdown = menuItem.closest("tp-yt-iron-dropdown");
             const menu = menuItem.closest("#items");
             const item = parseItem({ menuItem });
-            const addItem = () => {
-                if (settingsClicked) menu.append(item), setTextQuality();
-            };
+            const addItem = () => settingsClicked && menu.append(item);
             item.addEventListener("click", () => {
                 menu.textContent = "";
                 menu.append(...listQualityToItem(item).items);
@@ -598,20 +597,22 @@
 
         let loadId = "";
 
-        observer(() => {
+        observer(async () => {
             const player = element.movie_player();
 
-            if (player && isVideoPage()) {
+            if (player && isVideoPage() && player.closest("[playable=true]")) {
                 addVideoListener(player);
 
                 const id = getVideoId();
                 const elId = player.id;
                 const unstarted = player.className.includes("unstarted-mode");
-                const playable = player.closest("[playable=true]");
 
                 if (!id) loadId = "";
-                if (unstarted && playable && id) {
-                    if (loadId != id) API(elId, "loadVideoById", (loadId = id));
+                if (unstarted && id) {
+                    if (loadId != (loadId = id)) {
+                        const cvId = (await API(elId, "getVideoData")).video_id;
+                        if (cvId != id) API(elId, "loadVideoById", id);
+                    }
                     API(elId, "playVideo");
                 }
             }
@@ -648,7 +649,6 @@
 
             menu.addEventListener("click", () => {
                 savePreferred(name, !options[name], element.movie_player());
-                togglePremium();
             });
 
             return togglePremium(), menu;
@@ -679,7 +679,6 @@
                     (clickPos > threshold && pos < length && ++pos)
                 ) {
                     savePreferred(name, listQuality[pos], player, true);
-                    setTextQuality();
                 }
             });
         }
