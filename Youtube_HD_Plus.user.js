@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.1.2
+// @version      2.1.3
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -108,7 +108,7 @@
 
     /**
      * @param {string} id
-     * @param {'getPlaybackQualityLabel' | 'getAvailableQualityData' | 'getVideoData' | 'setPlaybackQualityRange' | 'playVideo' | 'loadVideoById'} name
+     * @param {'getPlaybackQualityLabel' | 'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo' | 'loadVideoById'} name
      * @param  {string[]} args
      * @returns {Promise<string>}
      */
@@ -174,6 +174,7 @@
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
         music_menu_item: $("ytmusic-menu-service-item-renderer[class*=popup]"),
         link: $("link[rel=canonical]"),
+        offline: $("[class*=offline][style*='v=']", false),
         // Reserve Element
         premium: document.createElement("div"),
         option_text: document.createTextNode(""),
@@ -595,8 +596,6 @@
         window.addEventListener("hashchange", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
-        let loadId = "";
-
         observer(async () => {
             const player = element.movie_player();
 
@@ -607,14 +606,8 @@
                 const elId = player.id;
                 const unstarted = player.className.includes("unstarted-mode");
 
-                if (!id) loadId = "";
                 if (unstarted && id) {
-                    if (loadId != (loadId = id)) {
-                        const cvId = await API(elId, "getVideoData");
-                        if (cvId && cvId.video_id != id) {
-                            API(elId, "loadVideoById", id);
-                        }
-                    }
+                    if (element.offline()) API(elId, "loadVideoById", id);
                     API(elId, "playVideo");
                 }
             }
