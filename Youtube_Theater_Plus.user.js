@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.2.4
+// @version      2.2.5
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -26,6 +26,7 @@
     "use strict";
 
     const body = document.body;
+
     let theater = false;
     let fullpage = true;
 
@@ -160,8 +161,8 @@
                 menu.append(item);
                 item.setAttribute("aria-checked", option.value);
                 item.addEventListener("click", () => {
-                    const newValue = saveOption(name, !option.value);
-                    item.setAttribute("aria-checked", newValue);
+                    const checked = saveOption(name, !option.value);
+                    item.setAttribute("aria-checked", checked);
                     if (option.onUpdate) option.onUpdate();
                 });
             }
@@ -191,12 +192,11 @@
 
     /**
      * @param {string} query
-     * @param {boolean} cache
      * @returns {() => HTMLElement | null}
      */
-    function $(query, cache = true) {
-        let elem = null;
-        return () => (cache && elem) || (elem = document.querySelector(query));
+    function $(query) {
+        let element = null;
+        return () => element || (element = document.querySelector(query));
     }
 
     const style = document.head.appendChild(document.createElement("style"));
