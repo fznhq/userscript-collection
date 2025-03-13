@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.1.3
+// @version      2.1.4
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -174,6 +174,7 @@
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
         music_menu_item: $("ytmusic-menu-service-item-renderer[class*=popup]"),
         link: $("link[rel=canonical]"),
+        layout: $("ytmusic-app-layout, #layout"),
         offline: $("[class*=offline][style*='v=']", false),
         // Reserve Element
         premium: document.createElement("div"),
@@ -186,7 +187,7 @@
             transform: scale(-1, 1);
         }
 
-        ytmusic-menu-popup-renderer {
+        body:not([is-mobile-page]) ytmusic-menu-popup-renderer {
             min-width: 268.5px !important;
         }
         
@@ -488,6 +489,13 @@
             );
         }
 
+        function setMobile() {
+            const layout = element.layout();
+            const check = (attr) => /is-mobile|is-mweb/.test(attr.nodeName);
+            const isMobile = Array.from(layout.attributes).some(check);
+            body.toggleAttribute("is-mobile-page", isMobile);
+        }
+
         window.addEventListener("tap", musicSetSettingsClicked, true);
         window.addEventListener("click", musicSetSettingsClicked, true);
 
@@ -495,10 +503,15 @@
             const player = element.movie_player();
             const menuItem = element.music_menu_item();
 
-            if (player && !cachePlayers[player.id]) addVideoListener(player);
+            if (player && !cachePlayers[player.id]) {
+                addVideoListener(player);
+                observer(setMobile, element.layout(), { attributes: true });
+            }
+
             if (menuItem) {
                 observe.disconnect();
                 musicPopupObserver(menuItem);
+                setMobile();
             }
         });
     })();
@@ -583,7 +596,7 @@
         const videoIdRegex = /(?:shorts\/|watch\?v=)([^#\&\?]*)/;
 
         /**
-         * @returns {number | false}
+         * @returns {string | false}
          */
         function getVideoId() {
             const playerId = element.link().href.match(videoIdRegex)[1];
@@ -596,7 +609,7 @@
         window.addEventListener("hashchange", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
-        observer(async () => {
+        observer(() => {
             const player = element.movie_player();
 
             if (player && isVideoPage() && player.closest("[playable=true]")) {
