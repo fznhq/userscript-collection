@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.1.4
+// @version      2.1.5
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -187,7 +187,7 @@
             transform: scale(-1, 1);
         }
 
-        body:not([is-mobile-page]) ytmusic-menu-popup-renderer {
+        body:not([ythdp_is-mobile-page]) ytmusic-menu-popup-renderer {
             min-width: 268.5px !important;
         }
         
@@ -489,11 +489,18 @@
             );
         }
 
-        function setMobile() {
+        function checkIsMobile() {
             const layout = element.layout();
-            const check = (attr) => /is-mobile|is-mweb/.test(attr.nodeName);
-            const isMobile = Array.from(layout.attributes).some(check);
-            body.toggleAttribute("is-mobile-page", isMobile);
+            const regexMobile = /is-mobile|is-mweb/;
+            const checkAttr = (attr) => regexMobile.test(attr.nodeName);
+
+            function setMobile() {
+                const isMobile = Array.from(layout.attributes).some(checkAttr);
+                body.toggleAttribute("ythdp_is-mobile-page", isMobile);
+            }
+
+            setMobile();
+            observer(setMobile, layout, { attributes: true });
         }
 
         window.addEventListener("tap", musicSetSettingsClicked, true);
@@ -503,15 +510,11 @@
             const player = element.movie_player();
             const menuItem = element.music_menu_item();
 
-            if (player && !cachePlayers[player.id]) {
-                addVideoListener(player);
-                observer(setMobile, element.layout(), { attributes: true });
-            }
-
+            if (player && !cachePlayers[player.id]) addVideoListener(player);
             if (menuItem) {
                 observe.disconnect();
                 musicPopupObserver(menuItem);
-                setMobile();
+                checkIsMobile();
             }
         });
     })();
