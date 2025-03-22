@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.2.5
+// @version      2.2.6
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -254,6 +254,7 @@
         }
     `;
 
+    const prefix = "yttp_";
     const attrId = "-" + Date.now().toString(36);
     const attr = {
         video_id: "video-id",
@@ -268,7 +269,7 @@
     for (const key in attr) {
         style.textContent = style.textContent.replaceAll(
             "[" + attr[key] + "]",
-            "[" + attr[key] + attrId + "]"
+            "[" + prefix + attr[key] + attrId + "]"
         );
     }
 
@@ -291,7 +292,7 @@
      * @param {boolean} state
      */
     function setHtmlAttr(attr, state) {
-        document.documentElement.toggleAttribute(attr + attrId, state);
+        document.documentElement.toggleAttribute(prefix + attr + attrId, state);
     }
 
     /**
@@ -342,7 +343,7 @@
                 setHtmlAttr(attr.hidden_header, !(state || scroll));
             }
         };
-        return fullpage && theater && setTimeout(toggle, timeout || 1);
+        return fullpage && setTimeout(toggle, timeout || 1);
     }
 
     let showHeaderTimerId = 0;
@@ -351,7 +352,7 @@
      * @param {MouseEvent} ev
      */
     function mouseShowHeader(ev) {
-        if (options.show_header_near.value && fullpage && theater) {
+        if (options.show_header_near.value && fullpage) {
             const state = !popup.show && ev.clientY < 200;
             if (state) {
                 clearTimeout(showHeaderTimerId);
@@ -394,15 +395,14 @@
      * @param {true | undefined} force
      */
     function applyTheaterMode(force) {
-        let state = isTheater();
+        const state = isTheater();
 
         if (theater == state && (!state || !force)) return;
         theater = state;
-        fullpage = options.fullpage_theater.value;
-        state = state && fullpage;
+        fullpage = theater && options.fullpage_theater.value;
 
-        setHtmlAttr(attr.theater, state);
-        setHtmlAttr(attr.hidden_header, state);
+        setHtmlAttr(attr.theater, fullpage);
+        setHtmlAttr(attr.hidden_header, fullpage);
         setHtmlAttr(attr.no_scroll, theater && options.hide_scrollbar.value);
         setHtmlAttr(attr.hide_card, options.hide_cards.value);
     }
