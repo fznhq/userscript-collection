@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.1.5
+// @version      2.1.6
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -63,11 +63,15 @@
         GM.setValue(name, (options[name] = value));
     }
 
-    for (const name in options) {
-        const saved_option = await GM.getValue(name);
-        if (saved_option === undefined) saveOption(name, options[name]);
-        else options[name] = saved_option;
+    async function loadOptions() {
+        for (const name in options) {
+            const saved_option = await GM.getValue(name);
+            if (saved_option === undefined) saveOption(name, options[name]);
+            else options[name] = saved_option;
+        }
     }
+
+    await loadOptions();
 
     /**
      * @returns {string}
@@ -79,11 +83,9 @@
     const bridgeName = "bridge-" + generateId();
     const bridgeMain = function () {
         function handleAPI(ev) {
-            const data = ev.detail.split("|");
-            const uniqueId = data.shift();
-            const [id, fn, ...args] = data;
+            const [uniqueId, id, fn, ...args] = ev.detail.split("|");
             const player = document.getElementById(id);
-            const detail = player && player[fn] ? player[fn](...args) : "";
+            const detail = player[fn] ? player[fn](...args) : "";
             document.dispatchEvent(new CustomEvent(uniqueId, { detail }));
         }
 
@@ -149,8 +151,7 @@
      * @returns {HTMLElement | NodeListOf<HTMLElement> | null}
      */
     function find(context, query, all = false) {
-        const property = "querySelector" + (all ? "All" : "");
-        return context[property](query);
+        return context[all ? "querySelectorAll" : "querySelector"](query);
     }
 
     /**
@@ -240,25 +241,29 @@
      * @returns {QualityData | null | undefined}
      */
     function getQuality(id, qualityData) {
-        const q = { premium: null, normal: null };
-        const short = id.includes("short");
+        const quality = { premium: null, normal: null };
         const preferred = getPreferredQuality(qualityData);
+        const isPremium = options.preferred_premium && !id.includes("short");
 
         if (!isFinite(preferred)) return;
 
         qualityData.forEach((data) => {
             const label = data.qualityLabel;
             if (parseQualityLabel(label) == preferred && data.isPlayable) {
-                if (/premium/i.test(label)) q.premium = data;
-                else q.normal = data;
+                if (/premium/i.test(label)) quality.premium = data;
+                else quality.normal = data;
             }
         });
 
-        return (options.preferred_premium && !short && q.premium) || q.normal;
+        return (isPremium && quality.premium) || quality.normal;
     }
 
-    async function setVideoQuality() {
+    /**
+     * @param {boolean} clearIsUpdated
+     */
+    async function setVideoQuality(clearIsUpdated) {
         if (manualOverride) return;
+        if (clearIsUpdated) isUpdated = false;
         if (isUpdated) return (isUpdated = false);
 
         const id = this.id;
@@ -295,7 +300,7 @@
         saveOption(optionName, newValue);
         saveOption("updated_id", generateId());
         togglePremium(), setTextQuality();
-        setVideoQuality.call(player, (isUpdated = false));
+        setVideoQuality.call(player, true);
     }
 
     /**
@@ -423,8 +428,8 @@
         const video = find(player, "video");
         if (!cache || cache[1] !== video) {
             cachePlayers[player.id] = [player, video];
-            const fn = setVideoQuality.bind(player);
-            video.addEventListener("play", () => setTimeout(fn, 200));
+            const fn = setVideoQuality.bind(player, false);
+            video.addEventListener("play", () => setTimeout(fn, 10));
             video.addEventListener("resize", fn);
         }
     }
@@ -433,9 +438,9 @@
      * @param {'watch' | 'short'} type
      * @returns {boolean}
      */
-    function isVideoPage(type) {
-        const types = type ? [type] : ["watch", "short"];
-        return types.some((type) => location.pathname.startsWith("/" + type));
+    function isVideoPage(type = "watch") {
+        const path = location.pathname;
+        return path.startsWith("/" + type) || path.startsWith("/short");
     }
 
     function resetState() {
@@ -446,13 +451,10 @@
 
     async function syncOptions() {
         if ((await GM.getValue("updated_id")) != options.updated_id) {
-            isUpdated = false;
-            for (const name in options) options[name] = await GM.getValue(name);
-            togglePremium();
-            setTextQuality();
+            await loadOptions(), togglePremium(), setTextQuality();
             for (const id in cachePlayers) {
                 const [player, video] = cachePlayers[id];
-                if (!video.paused) setVideoQuality.call(player);
+                if (!video.paused) setVideoQuality.call(player, true);
             }
         }
     }
@@ -618,13 +620,13 @@
             if (player && isVideoPage() && player.closest("[playable=true]")) {
                 addVideoListener(player);
 
-                const id = getVideoId();
-                const elId = player.id;
-                const unstarted = player.className.includes("unstarted-mode");
-
-                if (unstarted && id) {
-                    if (element.offline()) API(elId, "loadVideoById", id);
-                    API(elId, "playVideo");
+                if (player.className.includes("unstarted-mode")) {
+                    const id = getVideoId();
+                    const elemId = player.id;
+                    if (id) {
+                        if (element.offline()) API(elemId, "loadVideoById", id);
+                        API(elemId, "playVideo");
+                    }
                 }
             }
 
@@ -673,10 +675,7 @@
             const name = "preferred_quality";
             const text = document.createTextNode("");
 
-            setTextQuality(text);
-
             content.style.cursor = "pointer";
-            content.style.fontWeight = 500;
             content.style.wordSpacing = "2rem";
             content.append("< ", text, " >");
             content.addEventListener("click", (ev) => {
@@ -692,6 +691,8 @@
                     savePreferred(name, listQuality[pos], player, true);
                 }
             });
+
+            setTextQuality(text);
         }
 
         function qualityMenu() {
@@ -734,8 +735,10 @@
         function playerUpdated(/** @type {CustomEvent} */ ev) {
             if (!isVideoPage()) return;
 
-            const allowed = [element.movie_player(), element.short_player()];
-            const player = allowed.find((player) => ev.target.contains(player));
+            const player = [
+                element.movie_player(),
+                element.short_player(),
+            ].find((player) => ev.target.contains(player));
 
             if (player) {
                 resetState();
