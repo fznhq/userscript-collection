@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.2.6
+// @version      2.2.7
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -41,7 +41,6 @@
             value: true,
             onUpdate() {
                 applyTheaterMode(true);
-                resizeWindow();
             },
         },
         auto_theater_mode: {
@@ -264,6 +263,7 @@
         hidden_header: "masthead-hidden",
         no_scroll: "no-scroll",
         hide_card: "hide-card",
+        trigger: prefix + "trigger" + attrId, // Internal only
     };
 
     for (const key in attr) {
@@ -405,18 +405,20 @@
         setHtmlAttr(attr.hidden_header, fullpage);
         setHtmlAttr(attr.no_scroll, theater && options.hide_scrollbar.value);
         setHtmlAttr(attr.hide_card, options.hide_cards.value);
+        resizeWindow();
     }
 
     /**
      * @param {MutationRecord[]} mutations
      */
     function autoOpenTheater(mutations) {
-        const attrs = [attr.role, attr.video_id];
+        const attrs = [attr.role, attr.video_id, attr.trigger];
         const watch = element.watch();
 
         if (
             !theater &&
             options.auto_theater_mode.value &&
+            watch.getAttribute(attr.video_id) &&
             !watch.hasAttribute(attr.fullscreen) &&
             mutations.some((m) => attrs.includes(m.attributeName))
         ) {
@@ -437,6 +439,7 @@
             watch,
             { attributes: true }
         );
+        watch.setAttribute(attr.trigger, "");
         registerEventListener();
     }, body);
 })();
