@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.1.6
+// @version      2.1.7
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
 // @match        https://www.youtube.com/*
+// @match        https://www.youtube-nocookie.com/*
 // @match        https://m.youtube.com/*
 // @match        https://music.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
@@ -74,13 +75,14 @@
     await loadOptions();
 
     /**
+     * @param {string} prefix
      * @returns {string}
      */
-    function generateId() {
-        return "id" + (Date.now() + Math.random() * 10e20).toString(36);
+    function generateId(prefix = "id") {
+        return prefix + (Date.now() + Math.random() * 10e20).toString(36);
     }
 
-    const bridgeName = "bridge-" + generateId();
+    const bridgeName = generateId("bridge");
     const bridgeMain = function () {
         function handleAPI(ev) {
             const [uniqueId, id, fn, ...args] = ev.detail.split("|");
@@ -115,7 +117,7 @@
      * @returns {Promise<string>}
      */
     function API(id, name, ...args) {
-        const uniqueId = name + generateId();
+        const uniqueId = generateId(name);
         const detail = [uniqueId, id, name, ...args].join("|");
         return new Promise((resolve) => {
             document.addEventListener(uniqueId, function callback(ev) {
@@ -491,18 +493,11 @@
             );
         }
 
-        function checkIsMobile() {
+        function setIsMobile() {
             const layout = element.layout();
-            const regexMobile = /is-mobile|is-mweb/;
-            const checkAttr = (attr) => regexMobile.test(attr.nodeName);
-
-            function setMobile() {
-                const isMobile = Array.from(layout.attributes).some(checkAttr);
-                body.toggleAttribute("ythdp_is-mobile-page", isMobile);
-            }
-
-            setMobile();
-            observer(setMobile, layout, { attributes: true });
+            const checkAttr = (attr) => /is-mobile|is-mweb/.test(attr.nodeName);
+            const isMobile = Array.from(layout.attributes).some(checkAttr);
+            body.toggleAttribute("ythdp_is-mobile-page", isMobile);
         }
 
         window.addEventListener("tap", musicSetSettingsClicked, true);
@@ -515,8 +510,8 @@
             if (player && !cachePlayers[player.id]) addVideoListener(player);
             if (menuItem) {
                 observe.disconnect();
+                setIsMobile();
                 musicPopupObserver(menuItem);
-                checkIsMobile();
             }
         });
     })();
