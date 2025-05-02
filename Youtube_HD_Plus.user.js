@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.1.7
+// @version      2.1.8
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -440,9 +440,10 @@
      * @param {'watch' | 'short'} type
      * @returns {boolean}
      */
-    function isVideoPage(type = "watch") {
+    function isVideoPage(type) {
         const path = location.pathname;
-        return path.startsWith("/" + type) || path.startsWith("/short");
+        const types = type ? [type] : ["watch", "short", "clip"];
+        return types.some((type) => path.startsWith("/" + type));
     }
 
     function resetState() {
@@ -521,14 +522,14 @@
 
         /** @type {HTMLElement} */
         let listCustomMenuItem = null;
-        const customMenuHashId = "custom-bottom-menu";
+        const customMenuHashId = "#custom-q-bottom-menu";
         const queryItem = "[role=menuitem], ytm-menu-service-item-renderer";
 
         /**
          * @param {HTMLElement} container
          */
         function customMenu(container) {
-            location.replace("#" + customMenuHashId);
+            location.replace(customMenuHashId);
             listCustomMenuItem = container.cloneNode(true);
             listCustomMenuItem.addEventListener("click", () => history.back());
 
@@ -586,27 +587,39 @@
             if (isVideoPage() && ev.detail.type == "newdata") resetState();
         }
 
-        function mobileHandlePressBack(/** @type {HashChangeEvent} */ ev) {
-            if (listCustomMenuItem && ev.oldURL.includes(customMenuHashId)) {
+        let oldHash = "";
+
+        function mobileHandlePressBack() {
+            if (listCustomMenuItem && oldHash == customMenuHashId) {
                 listCustomMenuItem = listCustomMenuItem.remove();
                 body.style.overflow = "";
             }
+            oldHash = location.hash;
         }
 
-        const videoIdRegex = /(?:shorts\/|watch\?v=)([^#\&\?]*)/;
+        const videoIdRegex = /(?:shorts\/|watch\?v=|clip\/)([^#\&\?]*)/;
 
         /**
-         * @returns {string | false}
+         * @param {HTMLElement | Location} context
+         * @returns {null | string}
+         */
+        function parseLink(context) {
+            const link = context.href.match(videoIdRegex);
+            return link && link[1];
+        }
+
+        /**
+         * @returns {boolean | null | string}
          */
         function getVideoId() {
-            const playerId = element.link().href.match(videoIdRegex)[1];
-            const currentId = location.href.match(videoIdRegex)[1];
+            const playerId = parseLink(element.link());
+            const currentId = parseLink(location);
             return playerId == currentId && currentId;
         }
 
         window.addEventListener("click", mobileSetSettingsClicked, true);
         window.addEventListener("click", mobileSetOverride, true);
-        window.addEventListener("hashchange", mobileHandlePressBack);
+        window.addEventListener("popstate", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
         observer(() => {
