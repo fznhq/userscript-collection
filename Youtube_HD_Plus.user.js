@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.1.8
+// @version      2.1.9
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -33,6 +33,7 @@
     const $host = location.hostname;
     const isMobile = $host.includes("m.youtube");
     const isMusic = $host.includes("music.youtube");
+    const isEmbed = isVideoPage("embed");
 
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
     const defaultQuality = 1080;
@@ -41,6 +42,8 @@
     let manualOverride = false;
     let isUpdated = false;
     let settingsClicked = false;
+
+    const $shared = {};
 
     /** @namespace */
     const options = {
@@ -203,10 +206,12 @@
      * @param {MutationCallback} callback
      * @param {Node} target
      * @param {MutationObserverInit | undefined} options
+     * @returns {MutationObserver}
      */
     function observer(callback, target = body, options) {
         const mutation = new MutationObserver(callback);
         mutation.observe(target, options || { subtree: true, childList: true });
+        return mutation;
     }
 
     /**
@@ -375,9 +380,9 @@
     }) {
         const item = body.appendChild(menuItem.cloneNode(true));
         const iIcon = firstOnly(find(item, "c3-icon, yt-icon", true));
-        const iText = firstOnly(
-            find(item, "[role=text], yt-formatted-string", true)
-        );
+        const iTexts = find(item, "[role=text], yt-formatted-string", true);
+        const optionClass = iTexts[iTexts.length - 1].className;
+        const iText = firstOnly(iTexts);
         const optionLabel = iText.cloneNode();
         const optionIcon = iIcon.cloneNode();
         const wrapperIcon = (icon) => {
@@ -390,8 +395,9 @@
 
         if (selected) {
             optionIcon.append(wrapperIcon(icons.arrow));
+            optionLabel.className = optionClass;
             optionLabel.style.marginInline = "auto 0";
-            optionLabel.style.color = "#aaa";
+            optionLabel.style.color = iTexts.length == 1 ? "#aaa" : "";
             optionLabel.append(element.option_text);
             setTextQuality(element.option_text);
         } else optionIcon.remove();
@@ -403,13 +409,14 @@
 
     /**
      * @param {HTMLElement} menuItem
-     * @returns {{preferred: HTMLElement, items: HTMLElement[]}}
+     * @returns {{items: HTMLElement[], preferredIndex: number}}
      */
     function listQualityToItem(menuItem) {
         const name = "preferred_quality";
-        const preferredIndex = listQuality.indexOf(options[name]);
+        const tempIndex = listQuality.indexOf(options[name]);
+        const preferredIndex = listQuality.length - 1 - tempIndex;
         const items = listQuality.map((quality, i) => {
-            const icon = preferredIndex == i && icons.check_mark;
+            const icon = tempIndex == i && icons.check_mark;
             const label = quality + "p";
             const item = parseItem({ menuItem, icon, label, selected: false });
             item.addEventListener("click", () => {
@@ -419,7 +426,7 @@
             });
             return item;
         });
-        return { preferred: items[preferredIndex], items: items.reverse() };
+        return { items: items.reverse(), preferredIndex };
     }
 
     /**
@@ -437,12 +444,12 @@
     }
 
     /**
-     * @param {'watch' | 'short'} type
+     * @param {'watch' | 'short' | 'embed'} type
      * @returns {boolean}
      */
     function isVideoPage(type) {
         const path = location.pathname;
-        const types = type ? [type] : ["watch", "short", "clip"];
+        const types = type ? [type] : ["watch", "short", "clip", "embed"];
         return types.some((type) => path.startsWith("/" + type));
     }
 
@@ -518,7 +525,7 @@
     })();
 
     (function mobile() {
-        if (!isMobile) return;
+        if (!isMobile && !isEmbed) return;
 
         /** @type {HTMLElement} */
         let listCustomMenuItem = null;
@@ -531,7 +538,10 @@
         function customMenu(container) {
             location.replace(customMenuHashId);
             listCustomMenuItem = container.cloneNode(true);
-            listCustomMenuItem.addEventListener("click", () => history.back());
+            listCustomMenuItem.addEventListener("click", () => {
+                if (isEmbed) location.hash = "";
+                else history.back();
+            });
 
             const item = find(listCustomMenuItem, queryItem);
             const menu = item.parentElement;
@@ -539,17 +549,24 @@
             const content = find(listCustomMenuItem, "#content-wrapper");
             const listQualityItems = listQualityToItem(item);
 
+            let contentHeight = parseInt(content.style.maxHeight || 150) + 20;
+            contentHeight = contentHeight > 250 ? 250 : contentHeight;
+
             menu.textContent = "";
             menu.append(...listQualityItems.items);
             header.remove();
-            content.style.maxHeight = "250px";
+            content.style.maxHeight = contentHeight + "px";
             body.style.overflow = "hidden";
             container.parentElement.parentElement.append(listCustomMenuItem);
 
-            const contentTop = getRect(content).top;
-            const preferredQualityRect = getRect(listQualityItems.preferred);
-            const realTop = preferredQualityRect.top - contentTop;
-            content.scrollTo(0, realTop - preferredQualityRect.height * 2);
+            const preferredIndex = listQualityItems.preferredIndex;
+            const preferred = listQualityItems.items[preferredIndex];
+            const preferredHeight = getRect(preferred).height;
+            const scrollTarget =
+                preferredHeight * preferredIndex -
+                contentHeight / 2 +
+                preferredHeight / 2;
+            content.scrollTo(0, scrollTarget);
         }
 
         function mobileQualityMenu() {
@@ -587,14 +604,14 @@
             if (isVideoPage() && ev.detail.type == "newdata") resetState();
         }
 
-        let oldHash = "";
+        let prevHash = "";
 
         function mobileHandlePressBack() {
-            if (listCustomMenuItem && oldHash == customMenuHashId) {
+            if (listCustomMenuItem && prevHash == customMenuHashId) {
                 listCustomMenuItem = listCustomMenuItem.remove();
                 body.style.overflow = "";
             }
-            oldHash = location.hash;
+            prevHash = location.hash;
         }
 
         const videoIdRegex = /(?:shorts\/|watch\?v=|clip\/)([^#\&\?]*)/;
@@ -622,8 +639,8 @@
         window.addEventListener("popstate", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
-        observer(() => {
-            const player = element.movie_player();
+        $shared.mobile_observer = observer(() => {
+            const player = !isEmbed && element.movie_player();
 
             if (player && isVideoPage() && player.closest("[playable=true]")) {
                 addVideoListener(player);
@@ -768,17 +785,21 @@
         window.addEventListener("click", initShortMenu);
 
         observer((_, observe) => {
-            const movie_player = element.movie_player();
-            const short_player = element.short_player();
+            const moviePlayer = element.movie_player();
+            const shortPlayer = element.short_player();
 
-            if (short_player) addVideoListener(short_player);
+            if (shortPlayer) addVideoListener(shortPlayer);
+            if (!moviePlayer) return;
 
-            if (movie_player) {
-                addVideoListener(movie_player);
-                element.panel_settings().append(premiumMenu(), qualityMenu());
+            observe.disconnect();
+            addVideoListener(moviePlayer);
+            const panelSettings = element.panel_settings();
+
+            if (panelSettings) {
+                if (isEmbed) $shared.mobile_observer.disconnect();
+                panelSettings.append(premiumMenu(), qualityMenu());
                 element.settings().addEventListener("click", setOverride, true);
                 document.addEventListener("yt-player-updated", playerUpdated);
-                observe.disconnect();
             }
         });
     })();
