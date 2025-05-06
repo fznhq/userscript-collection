@@ -95,8 +95,10 @@
         }
 
         function spoofData(ev) {
-            const item = ev.target.closest("[bridgeName]");
-            if (item) item.data = {};
+            if (ev.target) {
+                const item = ev.target.closest("[bridgeName]");
+                if (item) item.data = {};
+            }
         }
 
         document.addEventListener("bridgeName", handleAPI);
