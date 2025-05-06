@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.2.0
+// @version      2.2.1
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -95,7 +95,7 @@
         }
 
         function spoofData(ev) {
-            if (ev.target) {
+            if (ev.target.closest) {
                 const item = ev.target.closest("[bridgeName]");
                 if (item) item.data = {};
             }
