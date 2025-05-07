@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.2.7
+// @version      2.2.8
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -31,13 +31,23 @@
     let fullpage = true;
 
     /**
+     * @typedef {object} Option
+     * @property {string} icon
+     * @property {string} label
+     * @property {any} value
+     * @property {Function} onUpdate
+     * @property {Option} sub
+     */
+
+    /**
      * Options must be changed via popup menu,
      * just press (v) to open the menu
      */
+    const subIcon = `{"svg":{"clip-rule":"evenodd","fill-rule":"evenodd","stroke-linejoin":"round","stroke-miterlimit":"2"},"path":{"d":"M10.211 7.155A.75.75 0 0 0 9 7.747v8.501a.75.75 0 0 0 1.212.591l5.498-4.258a.746.746 0 0 0-.001-1.183zm.289 7.563V9.272l3.522 2.719z","fill-rule":"nonzero"}}`;
     const options = {
         fullpage_theater: {
             icon: `{"path":{"d":"M22 4v12H2V4zm1-1H1v14h22zm-6 17H7v1h10z"}}`,
-            label: "Fullpage Theater;", // Remove ";" and change the label to customize your own label.
+            label: "Fullpage Theater;", // Remove ";" to set your own label.
             value: true,
             onUpdate() {
                 applyTheaterMode(true);
@@ -45,7 +55,7 @@
         },
         auto_theater_mode: {
             icon: `{"svg":{"fill-rule":"evenodd","clip-rule":"evenodd"},"path":{"d":"M24 22H0V2h24zm-7-1V6H1v15zm1 0h5V3H1v2h17zm-6-6h-1v-3l-7 7-1-1 7-7H7v-1h5z"}}`,
-            label: "Auto Open Theater;", // Remove ";" and change the label to customize your own label.
+            label: "Auto Open Theater;", // Remove ";" to set your own label.
             value: false,
             onUpdate() {
                 if (this.value && !theater) toggleTheater();
@@ -53,7 +63,7 @@
         },
         hide_scrollbar: {
             icon: `{"path":{"d":"M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0m-3-4h2V6h4l-5-6-5 6h4zm2 8h-2v2H7l5 6 5-6h-4z"}}`,
-            label: "Theater Hide Scrollbar;", // Remove ";" and change the label to customize your own label.
+            label: "Theater Hide Scrollbar;", // Remove ";" to set your own label.
             value: true,
             onUpdate() {
                 if (theater) {
@@ -64,12 +74,12 @@
         },
         close_theater_with_esc: {
             icon: `{"svg":{"clip-rule":"evenodd","fill-rule":"evenodd","stroke-linejoin":"round","stroke-miterlimit":2},"path":{"d":"M21 3.998c0-.478-.379-1-1-1H5c-.62 0-1 .519-1 1v15c0 .621.52 1 1 1h15c.478 0 1-.379 1-1zm-16 0h15v15H5zm7.491 6.432 2.717-2.718a.75.75 0 0 1 1.061 1.062l-2.717 2.717 2.728 2.728a.75.75 0 1 1-1.061 1.062l-2.728-2.728-2.728 2.728a.751.751 0 0 1-1.061-1.062l2.728-2.728-2.722-2.722a.75.75 0 0 1 1.061-1.061z","fill-rule":"nonzero"}}`,
-            label: "Close Theater With Esc;", // Remove ";" and change the label to customize your own label.
+            label: "Close Theater With Esc;", // Remove ";" to set your own label.
             value: true,
         },
         hide_cards: {
             icon: `{"path":{"d":"M22 6v16H6V6zm1-1H5v18h18zM2 2v20h1V3h18V2zm12 9c-3 0-5 3-5 3s2 3 5 3 5-3 5-3-2-3-5-3m0 5a2 2 0 1 1 0-4 2 2 0 0 1 0 4m1-2a1 1 0 1 1-2 0 1 1 0 0 0 1-1l1 1"}}`,
-            label: "Hide Cards;", // Remove ";" and change the label to customize your own label.
+            label: "Hide Cards;", // Remove ";" to set your own label.
             value: true,
             onUpdate() {
                 setHtmlAttr(attr.hide_card, this.value);
@@ -77,23 +87,19 @@
         },
         show_header_near: {
             icon: `{"path":{"d":"M5 4.27 15.476 13H8.934L5 18.117zm-1 0v17l5.5-7h9L4 1.77z"}}`,
-            label: "Show Header When Mouse is Near;", // Remove ";" and change the label to customize your own label.
+            label: "Show Header When Mouse is Near;", // Remove ";" to set your own label.
             value: false,
+            sub: {
+                threshold: {
+                    label: "Threshold;", // Remove ";" to set your own label.
+                    value: 100,
+                },
+            },
         },
     };
 
     function resizeWindow() {
         document.dispatchEvent(new Event("resize", { bubbles: true }));
-    }
-
-    /**
-     * @param {string} name
-     * @param {boolean} value
-     * @returns {boolean}
-     */
-    function saveOption(name, value) {
-        GM.setValue(name, value);
-        return (options[name].value = value);
     }
 
     /**
@@ -108,28 +114,53 @@
         return el.append(...append), el;
     }
 
-    for (const name in options) {
-        const saved_option = await GM.getValue(name);
-        const saved_label = await GM.getValue("label_" + name);
-        const icon = JSON.parse(options[name].icon);
-        let label = options[name].label;
+    /**
+     * @param {string} name
+     * @param {any} value
+     * @param {Option} option
+     * @returns {any}
+     */
+    function saveOption(name, value, option) {
+        GM.setValue(name, value);
+        return (option.value = value);
+    }
 
-        if (saved_option === undefined) {
-            saveOption(name, options[name].value);
+    /**
+     * @param {string} name
+     * @param {string} subName
+     */
+    async function loadOption(name, subName) {
+        const key = subName ? `sub_${name}_${subName}` : name;
+        const keyLabel = `label_${key}`;
+        /** @type {Option} */
+        const option = subName ? options[name].sub[subName] : options[name];
+        const savedOption = await GM.getValue(key);
+
+        if (savedOption === undefined) {
+            saveOption(key, option.value, option);
         } else {
-            options[name].value = saved_option;
+            option.value = savedOption;
         }
+
+        const icon = JSON.parse(option.icon || subIcon);
+        const savedLabel = await GM.getValue(keyLabel);
+        let label = option.label;
 
         if (!label.endsWith(";")) {
-            GM.setValue("label_" + name, label);
-        } else if (saved_label !== undefined) {
-            label = saved_label;
+            GM.setValue(keyLabel, label);
+        } else if (savedLabel !== undefined) {
+            label = savedLabel;
         }
 
-        options[name].label = label.replace(/;$/, "");
-        options[name].icon = createNS("svg", icon.svg, [
-            createNS("path", icon.path),
-        ]);
+        option.label = label.replace(/;$/, "");
+        option.icon = createNS("svg", icon.svg, [createNS("path", icon.path)]);
+    }
+
+    for (const name in options) {
+        await loadOption(name);
+        for (const subName in options[name].sub) {
+            await loadOption(name, subName);
+        }
     }
 
     /**
@@ -143,6 +174,77 @@
         return el.append(...append), el;
     }
 
+    /** @type {Map<HTMLElement, HTMLElement[]>} */
+    const menuItems = new Map();
+
+    /**
+     * @param {string} name
+     * @param {Option} option
+     * @returns {HTMLInputElement}
+     */
+    function itemInput(name, option) {
+        const input = document.createElement("input");
+        const setInput = (value) => (input.value = Number(value));
+
+        let waitTyping = 0;
+        let prevValue = setInput(option.value);
+
+        input.addEventListener("input", (ev) => {
+            const value = setInput(input.value.replace(/\D*/g, ""));
+            clearInterval(waitTyping);
+            waitTyping = setTimeout(() => {
+                if (prevValue != value) saveOption(name, value, option);
+                prevValue = value;
+            }, 500);
+        });
+
+        return input;
+    }
+
+    /**
+     * @param {HTMLElement} item
+     * @param {boolean} checked
+     */
+    function toggleItemSub(item, checked) {
+        for (const itemSub of menuItems.get(item)) {
+            itemSub.style.display = checked ? "" : "none";
+        }
+    }
+
+    /**
+     * @param {string} name
+     * @param {Option} option
+     * @returns  {HTMLElement}
+     */
+    function createItem(name, option) {
+        const checkbox = typeof option.value == "boolean";
+        const isSub = name.includes("sub_");
+        const icon = isSub ? [] : [option.icon];
+        const label = isSub
+            ? [createDiv("icon", [option.icon]), option.label]
+            : [option.label];
+        const content = checkbox
+            ? [createDiv("toggle-checkbox")]
+            : [itemInput(name, option)];
+        const item = createDiv("", [
+            createDiv("icon", icon),
+            createDiv("label", label),
+            createDiv("content", content),
+        ]);
+
+        if (checkbox) {
+            item.setAttribute("aria-checked", option.value);
+            item.addEventListener("click", () => {
+                const checked = saveOption(name, !option.value, option);
+                item.setAttribute("aria-checked", checked);
+                toggleItemSub(item, checked);
+                if (option.onUpdate) option.onUpdate();
+            });
+        }
+
+        return item;
+    }
+
     const popup = {
         show: false,
         menu: (() => {
@@ -151,19 +253,16 @@
 
             for (const name in options) {
                 const option = options[name];
-                const item = createDiv("", [
-                    createDiv("icon", [option.icon]),
-                    createDiv("label", [option.label]),
-                    createDiv("content", [createDiv("toggle-checkbox")]),
-                ]);
+                const item = createItem(name, option);
+                menuItems.set(menu.appendChild(item), []);
 
-                menu.append(item);
-                item.setAttribute("aria-checked", option.value);
-                item.addEventListener("click", () => {
-                    const checked = saveOption(name, !option.value);
-                    item.setAttribute("aria-checked", checked);
-                    if (option.onUpdate) option.onUpdate();
-                });
+                for (const subName in option.sub) {
+                    const subOption = option.sub[subName];
+                    const sub = createItem(`sub_${name}_${subName}`, subOption);
+                    menuItems.get(item).push(menu.appendChild(sub));
+                }
+
+                toggleItemSub(item, item.matches("[aria-checked='true']"));
             }
 
             window.addEventListener("click", (ev) => {
@@ -250,6 +349,17 @@
             font-size: 120%;
             padding: 10px;
             fill: #eee;
+        }
+
+        .ytc-menu input {
+            width: 36px;
+            text-align: center;
+        }
+
+        .ytc-menu .ytp-menuitem-label .ytp-menuitem-icon {
+            display: inline-block;
+            padding: 0 10px 0 0;
+            margin-left: -10px;
         }
     `;
 
@@ -353,7 +463,8 @@
      */
     function mouseShowHeader(ev) {
         if (options.show_header_near.value && fullpage) {
-            const state = !popup.show && ev.clientY < 200;
+            const threshold = options.show_header_near.sub.threshold.value;
+            const state = !popup.show && ev.clientY < threshold;
             if (state) {
                 clearTimeout(showHeaderTimerId);
                 showHeaderTimerId = toggleHeader(false, 1500);
