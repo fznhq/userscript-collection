@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.2.8
+// @version      2.2.9
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -92,7 +92,7 @@
             sub: {
                 threshold: {
                     label: "Threshold;", // Remove ";" to set your own label.
-                    value: 100,
+                    value: 200,
                 },
             },
         },
