@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.3.0
+// @version      2.3.1
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -468,8 +468,8 @@
      */
     function mouseShowHeader(ev) {
         if (options.show_header_near.value && fullpage) {
-            const threshold = options.show_header_near.sub.threshold.value;
-            const state = !popup.show && ev.clientY < threshold;
+            const area = options.show_header_near.sub.trigger_area.value;
+            const state = !popup.show && ev.clientY < area;
             if (state) {
                 clearTimeout(showHeaderTimerId);
                 showHeaderTimerId = toggleHeader(false, 1500);
