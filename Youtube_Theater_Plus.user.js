@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.2.9
+// @version      2.3.0
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -90,8 +90,8 @@
             label: "Show Header When Mouse is Near;", // Remove ";" to set your own label.
             value: false,
             sub: {
-                threshold: {
-                    label: "Threshold;", // Remove ";" to set your own label.
+                trigger_area: {
+                    label: "Trigger Area;", // Remove ";" to set your own label.
                     value: 200,
                 },
             },
@@ -130,7 +130,7 @@
      * @param {string} subName
      */
     async function loadOption(name, subName) {
-        const key = subName ? `sub_${name}_${subName}` : name;
+        const key = subName ? `${name}_sub_${subName}` : name;
         const keyLabel = `label_${key}`;
         /** @type {Option} */
         const option = subName ? options[name].sub[subName] : options[name];
@@ -258,7 +258,7 @@
 
                 for (const subName in option.sub) {
                     const subOption = option.sub[subName];
-                    const sub = createItem(`sub_${name}_${subName}`, subOption);
+                    const sub = createItem(`${name}_sub_${subName}`, subOption);
                     menuItems.get(item).push(menu.appendChild(sub));
                 }
 
@@ -314,6 +314,10 @@
             display: none !important;
         }
 
+        html[chat-hidden] #panels-full-bleed-container {
+            display:none;
+        }
+
         html[theater][masthead-hidden] #masthead-container {
             transform: translateY(-100%) !important;
         }
@@ -363,8 +367,8 @@
         }
     `;
 
-    const prefix = "yttp_";
-    const attrId = "-" + Date.now().toString(36);
+    const prefix = "yttp-";
+    const attrId = "-" + Date.now().toString(36).slice(-4);
     const attr = {
         video_id: "video-id",
         role: "role",
@@ -373,6 +377,7 @@
         hidden_header: "masthead-hidden",
         no_scroll: "no-scroll",
         hide_card: "hide-card",
+        chat_hidden: "chat-hidden",
         trigger: prefix + "trigger" + attrId, // Internal only
     };
 
@@ -536,6 +541,54 @@
             setTimeout(toggleTheater, 1);
         }
     }
+
+    /**
+     * @returns {boolean | undefined}
+     */
+    function isChatFixed() {
+        const chat = document.getElementById("chat");
+
+        if (chat) {
+            const frame = chat.querySelector("iframe");
+
+            if (
+                frame &&
+                chat.offsetHeight &&
+                frame.offsetHeight &&
+                element.watch().hasAttribute("fixed-panels")
+            ) {
+                const styleChat = window.getComputedStyle(chat);
+
+                if (
+                    styleChat.position == "fixed" &&
+                    styleChat.visibility != "hidden" &&
+                    Number(styleChat.opacity)
+                ) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    let chatState = false;
+
+    function observeChatChange() {
+        const state = isChatFixed();
+
+        if (state !== chatState) {
+            chatState = state;
+            setHtmlAttr(attr.chat_hidden, state === false);
+            resizeWindow();
+        }
+    }
+
+    observer(observeChatChange, document, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+    });
 
     observer((_, observe) => {
         const watch = element.watch();
