@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.3.1
+// @version      2.3.2
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -29,6 +29,7 @@
 
     let theater = false;
     let fullpage = true;
+    let headerOpen = false;
 
     /**
      * @typedef {object} Option
@@ -93,6 +94,10 @@
                 trigger_area: {
                     label: "Trigger Area;", // Remove ";" to set your own label.
                     value: 200,
+                },
+                delay: {
+                    label: "Delay (in milliseconds);", // Remove ";" to set your own label.
+                    value: 0,
                 },
             },
         },
@@ -448,33 +453,50 @@
     /**
      * @param {boolean} state
      * @param {number} timeout
+     * @param {Function} callback
      * @returns {number | boolean}
      */
-    function toggleHeader(state, timeout) {
+    function toggleHeader(state, timeout, callback) {
         const toggle = () => {
             if (state || document.activeElement != element.search()) {
-                const scroll =
-                    !options.show_header_near.value && window.scrollY;
-                setHtmlAttr(attr.hidden_header, !(state || scroll));
+                const showNear = options.show_header_near.value;
+                headerOpen = state || (!showNear && !!window.scrollY);
+                setHtmlAttr(attr.hidden_header, !headerOpen);
+                if (callback) callback();
             }
         };
         return fullpage && setTimeout(toggle, timeout || 1);
     }
 
-    let showHeaderTimerId = 0;
+    let mouseNearDelayId = 0;
+    let mouseNearTimerId = 0;
+
+    /**
+     * @param {number} delay
+     * @returns {number}
+     */
+    function mouseNearHide(delay = 0) {
+        return toggleHeader(false, delay, () => {
+            clearTimeout(mouseNearDelayId);
+            mouseNearDelayId = 0;
+        });
+    }
 
     /**
      * @param {MouseEvent} ev
      */
-    function mouseShowHeader(ev) {
+    function mouseNearToggle(ev) {
         if (options.show_header_near.value && fullpage) {
-            const area = options.show_header_near.sub.trigger_area.value;
+            const subOptions = options.show_header_near.sub;
+            const area = subOptions.trigger_area.value;
             const state = !popup.show && ev.clientY < area;
-            if (state) {
-                clearTimeout(showHeaderTimerId);
-                showHeaderTimerId = toggleHeader(false, 1500);
-            }
-            toggleHeader(state);
+            const delay = headerOpen ? 0 : subOptions.delay.value;
+
+            if (state && (!mouseNearDelayId || headerOpen)) {
+                clearTimeout(mouseNearTimerId);
+                mouseNearTimerId = mouseNearHide(delay + 1500);
+                mouseNearDelayId = toggleHeader(true, delay);
+            } else if (!state) mouseNearHide();
         }
     }
 
@@ -498,8 +520,11 @@
     }
 
     function registerEventListener() {
-        window.addEventListener("mousemove", mouseShowHeader);
+        window.addEventListener("mousemove", mouseNearToggle);
         window.addEventListener("keydown", onEscapePress, true);
+        window.addEventListener("mouseout", (ev) => {
+            if (ev.clientY <= 0) mouseNearHide();
+        });
         window.addEventListener("scroll", () => {
             if (!options.show_header_near.value) toggleHeader();
         });
