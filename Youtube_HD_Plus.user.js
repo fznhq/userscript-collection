@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.2.1
+// @version      2.2.2
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -34,9 +34,9 @@
     const isMobile = $host.includes("m.youtube");
     const isMusic = $host.includes("music.youtube");
     const isEmbed = isVideoPage("embed");
-
-    const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
-    const defaultQuality = 1080;
+    const isLightMode = window
+        .getComputedStyle(document.documentElement)
+        .background.includes("255");
 
     let firstSetQuality = true;
     let manualOverride = false;
@@ -44,10 +44,11 @@
     let settingsClicked = false;
 
     const $shared = {};
+    const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
 
     /** @namespace */
     const options = {
-        preferred_quality: defaultQuality,
+        preferred_quality: 1080,
         preferred_premium: true,
         updated_id: "",
     };
@@ -56,7 +57,7 @@
         premium: `{"svg":{"viewBox":"-12 -12 147 119"},"path":{"d":"M1 28 20 1a3 3 0 0 1 3-1h77a3 3 0 0 1 3 1l19 27a3 3 0 0 1 1 2 3 3 0 0 1-1 2L64 94a3 3 0 0 1-4 0L1 32a3 3 0 0 1-1-1 3 3 0 0 1 1-3m44 5 17 51 17-51Zm39 0L68 82l46-49ZM56 82 39 33H9zM28 5l13 20L56 5Zm39 0 15 20L95 5Zm33 2L87 27h28zM77 27 61 7 47 27Zm-41 0L22 7 8 27Z"}}`,
         quality: `{"svg":{"viewBox":"-12 -12 147 131"},"path":{"fill-rule":"evenodd","d":"M113 57a4 4 0 0 1 2 1l3 4a5 5 0 0 1 1 2 4 4 0 0 1 0 1 4 4 0 0 1 0 2 4 4 0 0 1-1 1l-3 2v1l1 1v2h3a4 4 0 0 1 3 1 4 4 0 0 1 1 2 4 4 0 0 1 0 1l-1 6a4 4 0 0 1-1 3 4 4 0 0 1-3 1h-3l-1 1-1 1v1l2 2a4 4 0 0 1 1 1 4 4 0 0 1-1 3 4 4 0 0 1-1 2l-4 3a4 4 0 0 1-1 1 4 4 0 0 1-2 0 5 5 0 0 1-1 0 4 4 0 0 1-2-1l-2-3a1 1 0 0 1 0 1h-3v3a4 4 0 0 1-1 2 4 4 0 0 1-1 1 4 4 0 0 1-1 1 4 4 0 0 1-2 0h-5a4 4 0 0 1-4-5v-3l-2-1-1-1-2 2a4 4 0 0 1-2 1 4 4 0 0 1-1 0 4 4 0 0 1-2 0 4 4 0 0 1-1-1l-4-4a5 5 0 0 1 0-2 4 4 0 0 1-1-2 4 4 0 0 1 2-3l2-2v-1l-1-2h-2a4 4 0 0 1-2-1 4 4 0 0 1-1-1 4 4 0 0 1-1-1 4 4 0 0 1 0-2v-5a4 4 0 0 1 1-2 5 5 0 0 1 1-1 4 4 0 0 1 1-1 4 4 0 0 1 2 0h3l1-1v-2l-1-2a4 4 0 0 1-1-1 4 4 0 0 1 0-2 4 4 0 0 1 0-2 4 4 0 0 1 1-1l4-3a5 5 0 0 1 2-1 4 4 0 0 1 1-1 4 4 0 0 1 2 1 4 4 0 0 1 1 1l2 2h2l1-1 1-2a4 4 0 0 1 0-2 4 4 0 0 1 1-1 4 4 0 0 1 2-1 4 4 0 0 1 1 0h6a5 5 0 0 1 1 1 4 4 0 0 1 2 1 4 4 0 0 1 0 1 4 4 0 0 1 1 2l-1 3h1l1 1 1 1 3-2a4 4 0 0 1 1-1 4 4 0 0 1 2 0 4 4 0 0 1 1 0M11 0h82a11 11 0 0 1 11 11v30h-1a11 11 0 0 0-2-1h-2V21H5v49h51a12 12 0 0 0 0 2v4h-1v11h4l1 1h1l-1 1a12 12 0 0 0 0 2v1H11A11 11 0 0 1 0 81V11A11 11 0 0 1 11 0m35 31 19 13a3 3 0 0 1 0 4L47 61a3 3 0 0 1-2 0 3 3 0 0 1-3-2V33l1-1a3 3 0 0 1 3-1m4 56V76H29v11ZM24 76H5v5a6 6 0 0 0 6 6h13zm52-60V5H55v11Zm5-11v11h18v-5a6 6 0 0 0-6-6ZM50 16V5H29v11Zm-26 0V5H11a6 6 0 0 0-6 6v5Zm70 56a6 6 0 1 1-6 7 6 6 0 0 1 6-7m-1-8a14 14 0 1 1-13 16 14 14 0 0 1 13-16"}}`,
         check_mark: `{"svg":{"viewBox":"-32 -32 186.9 153.8"},"path":{"d":"M1.2 55.5a3.7 3.7 0 0 1 5-5.5l34.1 30.9 76.1-79.7a3.8 3.8 0 0 1 5.4 5.1L43.2 88.7a3.7 3.7 0 0 1-5.2.2L1.2 55.5z"}}`,
-        arrow: `{"svg":{"class":"transform-icon-svg","viewBox":"-80 -80 227 283","fill":"#aaa"},"path":{"d":"M2 111a7 7 0 1 0 10 10l53-55-5-5 5 5c3-3 3-7 0-10L12 2A7 7 0 1 0 2 12l48 49z"}}`,
+        arrow: `{"svg":{"class":"transform-icon-svg","viewBox":"0 0 24 24"},"path":{"d":"m9.4 18.4-.7-.7 5.6-5.6-5.7-5.7.7-.7 6.4 6.4-6.3 6.3z"}}`,
     };
 
     /**
@@ -181,8 +182,8 @@
         popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
         music_menu_item: $("ytmusic-menu-service-item-renderer[class*=popup]"),
+        music_layout: $("ytmusic-app-layout, #layout"),
         link: $("link[rel=canonical]"),
-        layout: $("ytmusic-app-layout, #layout"),
         offline: $("[class*=offline][style*='v=']", false),
         // Reserve Element
         premium: document.createElement("div"),
@@ -195,13 +196,15 @@
             transform: scale(-1, 1);
         }
 
-        body:not([ythdp_is-mobile-page]) ytmusic-menu-popup-renderer {
+        body:not([ythdp-is-mobile]) ytmusic-menu-popup-renderer {
             min-width: 268.5px !important;
         }
         
         #items.ytmusic-menu-popup-renderer {
             width: 250px !important;
         }
+
+        .ythdp.ytp-menuitem-icon { fill: currentColor; }
     `;
 
     /**
@@ -221,7 +224,7 @@
      * @returns {number}
      */
     function parseQualityLabel(label) {
-        return parseInt(label.replace(/^(\D+)/, "").slice(0, 4), 10);
+        return parseInt(label.replace(/^\D+/, "").slice(0, 4));
     }
 
     /**
@@ -339,14 +342,6 @@
     }
 
     /**
-     * @param {HTMLElement} element
-     * @returns {DOMRect}
-     */
-    function getRect(element) {
-        return element.getBoundingClientRect();
-    }
-
-    /**
      * @param {Element[]} elements
      */
     function removeAttributes(elements) {
@@ -397,11 +392,15 @@
 
         if (selected) {
             optionIcon.append(wrapperIcon(icons.arrow));
+            optionIcon.style.width = "18px";
             optionLabel.className = optionClass;
             optionLabel.style.marginInline = "auto 0";
-            optionLabel.style.color = iTexts.length == 1 ? "#aaa" : "";
             optionLabel.append(element.option_text);
             setTextQuality(element.option_text);
+            if (iTexts.length == 1) {
+                optionLabel.style.color = isLightMode ? "#606060" : "#aaa";
+                optionLabel.style.fontSize = "1.4rem";
+            }
         } else optionIcon.remove();
 
         if (icon) iIcon.append(wrapperIcon(icon.cloneNode(true)));
@@ -446,13 +445,12 @@
     }
 
     /**
-     * @param {'watch' | 'short' | 'embed'} type
+     * @param {'watch' | 'shorts' | 'embed'} type
      * @returns {boolean}
      */
     function isVideoPage(type) {
-        const path = location.pathname;
-        const types = type ? [type] : ["watch", "short", "clip", "embed"];
-        return types.some((type) => path.startsWith("/" + type));
+        const types = type || "watch shorts clip embed";
+        return types.includes(location.pathname.split("/")[1] || "!");
     }
 
     function resetState() {
@@ -486,6 +484,7 @@
             const menu = menuItem.closest("#items");
             const item = parseItem({ menuItem });
             const addItem = () => settingsClicked && menu.append(item);
+
             item.addEventListener("click", () => {
                 menu.textContent = "";
                 menu.append(...listQualityToItem(item).items);
@@ -504,10 +503,9 @@
         }
 
         function setIsMobile() {
-            const layout = element.layout();
-            const checkAttr = (attr) => /is-mobile|is-mweb/.test(attr.nodeName);
-            const isMobile = Array.from(layout.attributes).some(checkAttr);
-            body.toggleAttribute("ythdp_is-mobile-page", isMobile);
+            const html = element.music_layout().outerHTML;
+            const isMobile = /^[^>]+is-mobile|is-mweb/.test(html);
+            body.toggleAttribute("ythdp-is-mobile", isMobile);
         }
 
         window.addEventListener("tap", musicSetSettingsClicked, true);
@@ -520,8 +518,8 @@
             if (player && !cachePlayers[player.id]) addVideoListener(player);
             if (menuItem) {
                 observe.disconnect();
-                setIsMobile();
                 musicPopupObserver(menuItem);
+                setIsMobile();
             }
         });
     })();
@@ -551,7 +549,7 @@
             const content = find(listCustomMenuItem, "#content-wrapper");
             const listQualityItems = listQualityToItem(item);
 
-            let contentHeight = parseInt(content.style.maxHeight || 150) + 20;
+            let contentHeight = Number(content.style.maxHeight || 150) + 20;
             contentHeight = contentHeight > 250 ? 250 : contentHeight;
 
             menu.textContent = "";
@@ -563,7 +561,7 @@
 
             const preferredIndex = listQualityItems.preferredIndex;
             const preferred = listQualityItems.items[preferredIndex];
-            const preferredHeight = getRect(preferred).height;
+            const preferredHeight = preferred.offsetHeight;
             const scrollTarget =
                 preferredHeight * preferredIndex -
                 contentHeight / 2 +
@@ -616,24 +614,19 @@
             prevHash = location.hash;
         }
 
-        const videoIdRegex = /(?:shorts\/|watch\?v=|clip\/)([^#\&\?]*)/;
+        const videoIdRegex = /(?:shorts\/|watch\?v=|clip\/)([^#\&\?]*)/g;
 
         /**
-         * @param {HTMLElement | Location} context
-         * @returns {null | string}
-         */
-        function parseLink(context) {
-            const link = context.href.match(videoIdRegex);
-            return link && link[1];
-        }
-
-        /**
-         * @returns {boolean | null | string}
+         * @returns {boolean | string}
          */
         function getVideoId() {
-            const playerId = parseLink(element.link());
-            const currentId = parseLink(location);
-            return playerId == currentId && currentId;
+            const url = element.link().href + "&" + location.href;
+            const videoId = url.match(videoIdRegex);
+            return (
+                videoId &&
+                videoId[0] == videoId[1] &&
+                videoId[0].replace(/.*[\/=]/, "")
+            );
         }
 
         window.addEventListener("click", mobileSetSettingsClicked, true);
@@ -665,18 +658,18 @@
         if (isMusic || isMobile) return;
 
         /**
-         * @param {SVGSVGElement} svgIcon
+         * @param {SVGElement} svg
          * @param {string} textLabel
          * @param {Boolean} checkbox
          * @returns {{item: HTMLDivElement, content: HTMLDivElement}}
          */
-        function createMenuItem(svgIcon, textLabel, checkbox) {
+        function createMenuItem(svg, textLabel, checkbox) {
             const inner = checkbox ? [itemElement("toggle-checkbox")] : [];
             const content = itemElement("content", inner);
-            const icon = itemElement("icon", [svgIcon.cloneNode(true)]);
+            const icon = itemElement("icon ythdp", [svg.cloneNode(true)]);
             const label = itemElement("label", [textLabel]);
             const item = itemElement("", [icon, label, content]);
-            return (icon.style.fill = "currentColor"), { item, content };
+            return { item, content };
         }
 
         function premiumMenu() {
@@ -707,7 +700,8 @@
             content.append("< ", text, " >");
             content.addEventListener("click", (ev) => {
                 const threshold = content.clientWidth / 2;
-                const clickPos = ev.clientX - getRect(content).left;
+                const contentLeft = content.getBoundingClientRect().left;
+                const clickPos = ev.clientX - contentLeft;
                 const length = listQuality.length - 1;
                 let pos = listQuality.indexOf(options[name]);
 
@@ -754,9 +748,11 @@
         }
 
         function setOverride(/** @type {MouseEvent} */ ev) {
-            manualOverride =
-                !manualOverride &&
-                !!ev.target.closest(".ytp-settings-menu [role=menuitemradio]");
+            if (!manualOverride) {
+                manualOverride = !!ev.target.closest(
+                    ".ytp-settings-menu [role=menuitemradio]"
+                );
+            }
         }
 
         function playerUpdated(/** @type {CustomEvent} */ ev) {
@@ -776,7 +772,7 @@
         let shortMenuItem = itemElement("dummy");
 
         function initShortMenu() {
-            const menu = isVideoPage("short") && element.popup_menu();
+            const menu = isVideoPage("shorts") && element.popup_menu();
             if (menu && !menu.closest("[aria-hidden=true]")) {
                 shortMenuItem.remove();
                 shortMenuItem = shortQualityMenu(menu);
