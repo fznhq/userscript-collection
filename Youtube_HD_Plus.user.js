@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.2.2
+// @version      2.2.3
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -549,7 +549,7 @@
             const content = find(listCustomMenuItem, "#content-wrapper");
             const listQualityItems = listQualityToItem(item);
 
-            let contentHeight = Number(content.style.maxHeight || 150) + 20;
+            let contentHeight = parseInt(content.style.maxHeight || 150) + 20;
             contentHeight = contentHeight > 250 ? 250 : contentHeight;
 
             menu.textContent = "";
