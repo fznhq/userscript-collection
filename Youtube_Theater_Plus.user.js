@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.3.2
+// @version      2.3.3
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -189,19 +189,13 @@
      */
     function itemInput(name, option) {
         const input = document.createElement("input");
-        const setInput = (value) => (input.value = Number(value));
+        const v = () => Number(input.value.replace(/\D/g, ""));
+        const setValue = (value) => (input.value = value);
 
-        let waitTyping = 0;
-        let prevValue = setInput(option.value);
+        setValue(option.value);
 
-        input.addEventListener("input", (ev) => {
-            const value = setInput(input.value.replace(/\D*/g, ""));
-            clearInterval(waitTyping);
-            waitTyping = setTimeout(() => {
-                if (prevValue != value) saveOption(name, value, option);
-                prevValue = value;
-            }, 500);
-        });
+        input.addEventListener("input", () => setValue(v()));
+        input.addEventListener("change", () => saveOption(name, v(), option));
 
         return input;
     }
@@ -287,6 +281,7 @@
             (isPressV && !ev.ctrlKey && !isActiveEditable()) ||
             (ev.code == "Escape" && popup.show)
         ) {
+            document.activeElement.blur();
             popup.show = popup.show
                 ? !!popup.menu.remove()
                 : !body.append(popup.menu);
