@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.3.3
+// @version      2.3.4
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -261,7 +261,7 @@
                     menuItems.get(item).push(menu.appendChild(sub));
                 }
 
-                toggleItemSub(item, item.matches("[aria-checked='true']"));
+                toggleItemSub(item, option.value);
             }
 
             window.addEventListener("click", (ev) => {
