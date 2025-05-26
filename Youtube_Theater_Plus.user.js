@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.3.4
+// @version      2.3.5
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -189,13 +189,13 @@
      */
     function itemInput(name, option) {
         const input = document.createElement("input");
-        const v = () => Number(input.value.replace(/\D/g, ""));
+        const val = () => Number(input.value.replace(/\D/g, ""));
         const setValue = (value) => (input.value = value);
 
         setValue(option.value);
 
-        input.addEventListener("input", () => setValue(v()));
-        input.addEventListener("change", () => saveOption(name, v(), option));
+        input.addEventListener("input", () => setValue(val()));
+        input.addEventListener("change", () => saveOption(name, val(), option));
 
         return input;
     }
@@ -315,7 +315,7 @@
         }
 
         html[chat-hidden] #panels-full-bleed-container {
-            display:none;
+            display: none;
         }
 
         html[theater][masthead-hidden] #masthead-container {
@@ -341,7 +341,7 @@
             position: fixed;
             inset: 0;
             z-index: 9000;
-            background: rgba(0, 0, 0, .5);
+            background: rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -477,10 +477,7 @@
         });
     }
 
-    /**
-     * @param {MouseEvent} ev
-     */
-    function mouseNearToggle(ev) {
+    function mouseNearToggle(/** @type {MouseEvent} */ ev) {
         if (options.show_header_near.value && fullpage) {
             const subOptions = options.show_header_near.sub;
             const area = subOptions.trigger_area.value;
@@ -499,10 +496,7 @@
         document.dispatchEvent(keyToggleTheater);
     }
 
-    /**
-     * @param {KeyboardEvent} ev
-     */
-    function onEscapePress(ev) {
+    function onEscapePress(/** @type {KeyboardEvent} */ ev) {
         if (ev.code != "Escape" || !theater || popup.show) return;
 
         if (options.close_theater_with_esc.value) {
@@ -568,28 +562,28 @@
     function isChatFixed() {
         const chat = document.getElementById("chat");
 
-        if (chat) {
-            const frame = chat.querySelector("iframe");
+        if (!chat) return;
+
+        const frame = chat.querySelector("iframe");
+
+        if (
+            frame &&
+            chat.offsetHeight &&
+            frame.offsetHeight &&
+            element.watch().hasAttribute("fixed-panels")
+        ) {
+            const styleChat = window.getComputedStyle(chat);
 
             if (
-                frame &&
-                chat.offsetHeight &&
-                frame.offsetHeight &&
-                element.watch().hasAttribute("fixed-panels")
+                styleChat.position == "fixed" &&
+                styleChat.visibility != "hidden" &&
+                Number(styleChat.opacity)
             ) {
-                const styleChat = window.getComputedStyle(chat);
-
-                if (
-                    styleChat.position == "fixed" &&
-                    styleChat.visibility != "hidden" &&
-                    Number(styleChat.opacity)
-                ) {
-                    return true;
-                }
+                return true;
             }
-
-            return false;
         }
+
+        return false;
     }
 
     let chatState = false;
@@ -612,18 +606,19 @@
 
     observer((_, observe) => {
         const watch = element.watch();
-        if (!watch) return;
 
-        observe.disconnect();
-        observer(
-            (mutations) => {
-                applyTheaterMode();
-                autoOpenTheater(mutations);
-            },
-            watch,
-            { attributes: true }
-        );
-        watch.setAttribute(attr.trigger, "");
-        registerEventListener();
+        if (watch) {
+            observe.disconnect();
+            observer(
+                (mutations) => {
+                    applyTheaterMode();
+                    autoOpenTheater(mutations);
+                },
+                watch,
+                { attributes: true }
+            );
+            watch.setAttribute(attr.trigger, "");
+            registerEventListener();
+        }
     }, body);
 })();
