@@ -43,7 +43,6 @@
     let isUpdated = false;
     let settingsClicked = false;
 
-    const $shared = {};
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 2880, 4320];
 
     /** @namespace */
@@ -548,9 +547,10 @@
             const header = find(listCustomMenuItem, "#header-wrapper");
             const content = find(listCustomMenuItem, "#content-wrapper");
             const listQualityItems = listQualityToItem(item);
-
-            let contentHeight = parseInt(content.style.maxHeight || 150) + 20;
-            contentHeight = contentHeight > 250 ? 250 : contentHeight;
+            const contentHeight = Math.min(
+                parseInt(content.style.maxHeight || 150) + 20,
+                250
+            );
 
             menu.textContent = "";
             menu.append(...listQualityItems.items);
@@ -621,12 +621,30 @@
          */
         function getVideoId() {
             const url = element.link().href + "&" + location.href;
-            const videoId = url.match(videoIdRegex);
-            return (
-                videoId &&
-                videoId[0] == videoId[1] &&
-                videoId[0].replace(/.*[\/=]/, "")
-            );
+            const ids = url.match(videoIdRegex);
+            return ids && ids[0] == ids[1] && ids[0].replace(/.*[/=]/, "");
+        }
+
+        let player;
+
+        function registerPlayer() {
+            if (player && isEmbed) return;
+            if ((player = element.movie_player())) {
+                addVideoListener(player);
+
+                if (
+                    player.closest("[playable=true]") &&
+                    player.className.includes("unstarted-mode")
+                ) {
+                    const id = getVideoId();
+                    const elemId = player.id;
+
+                    if (id) {
+                        if (element.offline()) API(elemId, "loadVideoById", id);
+                        API(elemId, "playVideo");
+                    }
+                }
+            }
         }
 
         window.addEventListener("click", mobileSetSettingsClicked, true);
@@ -634,22 +652,8 @@
         window.addEventListener("popstate", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
-        $shared.mobile_observer = observer(() => {
-            const player = !isEmbed && element.movie_player();
-
-            if (player && isVideoPage() && player.closest("[playable=true]")) {
-                addVideoListener(player);
-
-                if (player.className.includes("unstarted-mode")) {
-                    const id = getVideoId();
-                    const elemId = player.id;
-                    if (id) {
-                        if (element.offline()) API(elemId, "loadVideoById", id);
-                        API(elemId, "playVideo");
-                    }
-                }
-            }
-
+        observer(() => {
+            if (isVideoPage()) registerPlayer();
             if (settingsClicked) mobileQualityMenu();
         });
     })();
@@ -794,7 +798,6 @@
             const panelSettings = element.panel_settings();
 
             if (panelSettings) {
-                if (isEmbed) $shared.mobile_observer.disconnect();
                 panelSettings.append(premiumMenu(), qualityMenu());
                 element.settings().addEventListener("click", setOverride, true);
                 document.addEventListener("yt-player-updated", playerUpdated);
