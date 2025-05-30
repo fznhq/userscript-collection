@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.3.5
+// @version      2.3.6
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -25,6 +25,7 @@
 (async function () {
     "use strict";
 
+    const html = document.documentElement;
     const body = document.body;
 
     let theater = false;
@@ -134,8 +135,16 @@
      * @param {string} name
      * @param {string} subName
      */
+    function optionKey(name, subName) {
+        return subName ? `${name}_sub_${subName}` : name;
+    }
+
+    /**
+     * @param {string} name
+     * @param {string} subName
+     */
     async function loadOption(name, subName) {
-        const key = subName ? `${name}_sub_${subName}` : name;
+        const key = optionKey(name, subName);
         const keyLabel = `label_${key}`;
         /** @type {Option} */
         const option = subName ? options[name].sub[subName] : options[name];
@@ -257,7 +266,7 @@
 
                 for (const subName in option.sub) {
                     const subOption = option.sub[subName];
-                    const sub = createItem(`${name}_sub_${subName}`, subOption);
+                    const sub = createItem(optionKey(name, subName), subOption);
                     menuItems.get(item).push(menu.appendChild(sub));
                 }
 
@@ -367,6 +376,27 @@
         }
     `;
 
+    if (getComputedStyle(html).background.includes("255")) {
+        style.textContent += /*css*/ `
+            .ytc-menu,
+            .ytc-menu [aria-checked=false] .ytp-menuitem-toggle-checkbox::after {
+                background: #fff !important;
+            }
+
+            .ytc-menu .ytp-menuitem-icon {
+                fill: #030303 !important;
+            }
+
+            .ytc-menu .ytp-menuitem-label {
+                color: #0f0f0f !important;
+            }
+
+            .ytc-menu [aria-checked=false] .ytp-menuitem-toggle-checkbox {
+                background: #999 !important;
+            }
+        `;
+    }
+
     const prefix = "yttp-";
     const attrId = "-" + Date.now().toString(36).slice(-4);
     const attr = {
@@ -407,7 +437,7 @@
      * @param {boolean} state
      */
     function setHtmlAttr(attr, state) {
-        document.documentElement.toggleAttribute(prefix + attr + attrId, state);
+        html.toggleAttribute(prefix + attr + attrId, state);
     }
 
     /**
@@ -572,7 +602,7 @@
             frame.offsetHeight &&
             element.watch().hasAttribute("fixed-panels")
         ) {
-            const styleChat = window.getComputedStyle(chat);
+            const styleChat = getComputedStyle(chat);
 
             if (
                 styleChat.position == "fixed" &&
