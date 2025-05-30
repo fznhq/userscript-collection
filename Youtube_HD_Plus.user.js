@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.2.5
+// @version      2.2.6
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -240,7 +240,7 @@
     function getPreferredQuality(data) {
         const quality = data.map((d) => parseQualityLabel(d.qualityLabel));
         const preferred = quality.filter((q) => q <= options.preferred_quality);
-        return Math.max(...preferred) || Math.min(...quality);
+        return preferred.length ? Math.max(...preferred) : Math.min(...quality);
     }
 
     /**
