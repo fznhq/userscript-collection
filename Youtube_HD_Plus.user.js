@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.2.4
+// @version      2.2.5
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-body
 // @inject-into  content
@@ -27,6 +27,7 @@
 (async function () {
     "use strict";
 
+    const html = document.documentElement;
     const body = document.body;
     const head = document.head;
 
@@ -34,9 +35,7 @@
     const isMobile = $host.includes("m.youtube");
     const isMusic = $host.includes("music.youtube");
     const isEmbed = isVideoPage("embed");
-    const isLightMode = window
-        .getComputedStyle(document.documentElement)
-        .background.includes("255");
+    const isLightMode = getComputedStyle(html).background.includes("255");
 
     let firstSetQuality = true;
     let manualOverride = false;
@@ -235,15 +234,13 @@
      */
 
     /**
-     * @param {QualityData[]} qualityData
+     * @param {QualityData[]} data
      * @returns {number}
      */
-    function getPreferredQuality(qualityData) {
-        return Math.max(
-            ...qualityData
-                .map((data) => parseQualityLabel(data.qualityLabel))
-                .filter((quality) => quality <= options.preferred_quality)
-        );
+    function getPreferredQuality(data) {
+        const quality = data.map((d) => parseQualityLabel(d.qualityLabel));
+        const preferred = quality.filter((q) => q <= options.preferred_quality);
+        return Math.max(...preferred) || Math.min(...quality);
     }
 
     /**
@@ -546,25 +543,22 @@
             const menu = item.parentElement;
             const header = find(listCustomMenuItem, "#header-wrapper");
             const content = find(listCustomMenuItem, "#content-wrapper");
-            const listQualityItems = listQualityToItem(item);
-            const contentHeight = Math.min(
-                parseInt(content.style.maxHeight || 150) + 20,
-                250
-            );
+            const contentHeight = parseInt(content.style.maxHeight || 150);
+            const maxHeight = Math.min(contentHeight + 20, 250);
+            const { items, preferredIndex } = listQualityToItem(item);
 
             menu.textContent = "";
-            menu.append(...listQualityItems.items);
+            menu.append(...items);
             header.remove();
-            content.style.maxHeight = contentHeight + "px";
+            content.style.maxHeight = maxHeight + "px";
             body.style.overflow = "hidden";
             container.parentElement.parentElement.append(listCustomMenuItem);
 
-            const preferredIndex = listQualityItems.preferredIndex;
-            const preferred = listQualityItems.items[preferredIndex];
+            const preferred = items[preferredIndex];
             const preferredHeight = preferred.offsetHeight;
             const scrollTarget =
                 preferredHeight * preferredIndex -
-                contentHeight / 2 +
+                maxHeight / 2 +
                 preferredHeight / 2;
             content.scrollTo(0, scrollTarget);
         }
@@ -625,11 +619,10 @@
             return ids && ids[0] == ids[1] && ids[0].replace(/.*[/=]/, "");
         }
 
-        let player;
-
         function registerPlayer() {
-            if (player && isEmbed) return;
-            if ((player = element.movie_player())) {
+            const player = element.movie_player();
+
+            if (player) {
                 addVideoListener(player);
 
                 if (
@@ -653,7 +646,7 @@
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
         observer(() => {
-            if (isVideoPage()) registerPlayer();
+            if (!isEmbed && isVideoPage()) registerPlayer();
             if (settingsClicked) mobileQualityMenu();
         });
     })();
