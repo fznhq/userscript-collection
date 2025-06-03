@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      0.0.3
+// @version      0.0.4
 // @description  Seamlessly redirect YouTube Shorts to regular video player
 // @run-at       document-start
 // @inject-into  content
@@ -22,8 +22,17 @@
     const mainFunction = function () {
         const shortIdRegex = /(?:shorts\/)([^#\&\?]*)/;
 
-        const shortId = location.href.match(shortIdRegex);
-        if (shortId) return location.replace("/watch?v=" + shortId[1]);
+        /**
+         * @param {string} url
+         * @returns {string | null}
+         */
+        function parseId(url) {
+            url = url.match(shortIdRegex);
+            return url && url[1];
+        }
+
+        const shortId = parseId(location.href);
+        if (shortId) return location.replace("/watch?v=" + shortId);
 
         /**
          * @param {object} obj
@@ -48,25 +57,19 @@
         }
 
         /**
-         * @param {string} query
+         * @param {string} elementQuery
          * @param {string} key
          * @returns {{element: HTMLElement, data: object} | undefined}
          */
-        function findData(query, key) {
-            const elements = document.querySelectorAll(query);
+        function findData(elementQuery, key) {
+            const elements = document.querySelectorAll(elementQuery);
 
             for (let element of elements) {
                 let data;
 
-                while (element && !data) {
-                    if (
-                        element.matches("#contents") ||
-                        (element.data && element.data.contents)
-                    ) {
-                        break;
-                    }
-
-                    if (!element.data || !(data = dig(element.data, key))) {
+                while (element && !data && !element.matches("#contents")) {
+                    if (element.data && element.data.contents) break;
+                    if (!(data = dig(element.data, key))) {
                         element = element.parentElement;
                     }
                 }
@@ -111,17 +114,14 @@
             return true;
         }
 
-        function handleShortClick(ev) {
+        function handleShortClick(/** @type {MouseEvent} */ ev) {
             /** @type {HTMLElement} */
             const target = ev.target;
 
             if (target.closest) {
-                const isShort = target.closest("a[href*=short]");
+                const short = target.closest("a[href*=short]");
 
-                if (
-                    isShort &&
-                    redirectShort(isShort.href.match(shortIdRegex)[1])
-                ) {
+                if (short && redirectShort(parseId(short.href))) {
                     ev.stopPropagation();
                     ev.preventDefault();
                 }
