@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      0.0.4
+// @version      0.0.5
 // @description  Seamlessly redirect YouTube Shorts to regular video player
 // @run-at       document-start
 // @inject-into  content
@@ -57,24 +57,28 @@
         }
 
         /**
-         * @param {string} elementQuery
+         * @param {string} linkQuery
          * @param {string} key
-         * @returns {{element: HTMLElement, data: object} | undefined}
+         * @returns {{link: HTMLElement, data: object} | undefined}
          */
-        function findData(elementQuery, key) {
-            const elements = document.querySelectorAll(elementQuery);
+        function findData(linkQuery, key) {
+            const links = document.querySelectorAll(linkQuery);
 
-            for (let element of elements) {
+            for (const link of links) {
+                let parent = link.parentElement;
                 let data;
 
-                while (element && !data && !element.matches("#contents")) {
-                    if (element.data && element.data.contents) break;
-                    if (!(data = dig(element.data, key))) {
-                        element = element.parentElement;
+                while (parent && !data && parent.id != "contents") {
+                    if (
+                        (parent.data && parent.data.contents) ||
+                        (data = dig(parent.data, key))
+                    ) {
+                        break;
                     }
+                    parent = parent.parentElement;
                 }
 
-                if (data) return { element, data };
+                if (data) return { link, data };
             }
         }
 
@@ -105,7 +109,7 @@
             }
 
             setData(trackingParams, `/watch?v=${id}`, id);
-            navEnpoint.element.querySelector("a").click();
+            navEnpoint.link.click();
 
             taskCleanup = () => {
                 setTimeout(() => setData(prevTracking, prevUrl, prevId), 500);
