@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      0.0.5
+// @version      0.0.6
 // @description  Seamlessly redirect YouTube Shorts to regular video player
 // @run-at       document-start
 // @inject-into  content
@@ -62,23 +62,20 @@
          * @returns {{link: HTMLElement, data: object} | undefined}
          */
         function findData(linkQuery, key) {
-            const links = document.querySelectorAll(linkQuery);
+            const elements = document.querySelectorAll(linkQuery);
 
-            for (const link of links) {
-                let parent = link.parentElement;
+            for (let element of elements) {
                 let data;
 
-                while (parent && !data && parent.id != "contents") {
-                    if (
-                        (parent.data && parent.data.contents) ||
-                        (data = dig(parent.data, key))
-                    ) {
-                        break;
-                    }
-                    parent = parent.parentElement;
+                while (
+                    element.id != "contents" &&
+                    !(element.data && element.data.contents) &&
+                    !(data = dig(element.data, key))
+                ) {
+                    element = element.parentElement;
                 }
 
-                if (data) return { link, data };
+                if (data) return { a: element.querySelector("a"), data };
             }
         }
 
@@ -109,7 +106,7 @@
             }
 
             setData(trackingParams, `/watch?v=${id}`, id);
-            navEnpoint.link.click();
+            navEnpoint.a.click();
 
             taskCleanup = () => {
                 setTimeout(() => setData(prevTracking, prevUrl, prevId), 500);
