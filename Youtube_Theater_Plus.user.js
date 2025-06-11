@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.3.6
+// @version      2.3.7
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -49,7 +49,7 @@
     const options = {
         fullpage_theater: {
             icon: `{"path":{"d":"M22 4v12H2V4zm1-1H1v14h22zm-6 17H7v1h10z"}}`,
-            label: "Fullpage Theater;", // Remove ";" to set your own label.
+            label: "Fullpage Theater;", //  Remove ";" to set your own label.
             value: true,
             onUpdate() {
                 applyTheaterMode(true);
@@ -89,7 +89,7 @@
         },
         show_header_near: {
             icon: `{"path":{"d":"M5 4.27 15.476 13H8.934L5 18.117zm-1 0v17l5.5-7h9L4 1.77z"}}`,
-            label: "Show Header When Mouse is Near;", // Remove ";" to set your own label.
+            label: "Show Header When Mouse is Near;", //  Remove ";" to set your own label.
             value: false,
             sub: {
                 trigger_area: {
@@ -318,7 +318,6 @@
         html[hide-card] ytd-player .ytp-paid-content-overlay,
         html[hide-card] ytd-player .iv-branding,
         html[hide-card] ytd-player .ytp-ce-element,
-        html[hide-card] ytd-player .ytp-chrome-top,
         html[hide-card] ytd-player .ytp-suggested-action {
             display: none !important;
         }
@@ -396,6 +395,35 @@
             }
         `;
     }
+
+    style.textContent += /*css*/ `
+        .yttp-title-overlay-custom {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 15px 20px 45px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.075) 75%, rgba(0,0,0,0) 100%);
+            color: white;
+            font-family: "YouTube Sans", "Roboto", sans-serif;
+            font-size: 22px;
+            font-weight: 500;
+            z-index: 20;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+            opacity: 0;
+            transition: opacity 0.2s cubic-bezier(0.4, 0, 1, 1);
+        }
+
+        html[theater] #movie_player:not(.ytp-autohide) .yttp-title-overlay-custom {
+            opacity: 1;
+            transition-delay: 0.1s;
+        }
+
+        html[theater] .ytp-chrome-top {
+            display: none !important;
+        }
+    `;
 
     const prefix = "yttp-";
     const attrId = "-" + Date.now().toString(36).slice(-4);
@@ -628,6 +656,25 @@
         }
     }
 
+    function updateCustomTitleOverlay() {
+        const player = document.querySelector('#movie_player');
+        if (!player) return;
+
+        const originalTitleElement = document.querySelector("h1.ytd-watch-metadata");
+        if (!originalTitleElement || !originalTitleElement.textContent) return;
+
+        let overlay = player.querySelector('.yttp-title-overlay-custom');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'yttp-title-overlay-custom';
+            player.prepend(overlay);
+        }
+
+        if (overlay.textContent !== originalTitleElement.textContent) {
+            overlay.textContent = originalTitleElement.textContent;
+        }
+    }
+
     observer(observeChatChange, document, {
         subtree: true,
         childList: true,
@@ -643,12 +690,14 @@
                 (mutations) => {
                     applyTheaterMode();
                     autoOpenTheater(mutations);
+                    updateCustomTitleOverlay();
                 },
                 watch,
                 { attributes: true }
             );
             watch.setAttribute(attr.trigger, "");
             registerEventListener();
+            updateCustomTitleOverlay();
         }
     }, body);
 })();
