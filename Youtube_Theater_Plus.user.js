@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.3.6
+// @version      2.3.7
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -49,10 +49,19 @@
     const options = {
         fullpage_theater: {
             icon: `{"path":{"d":"M22 4v12H2V4zm1-1H1v14h22zm-6 17H7v1h10z"}}`,
-            label: "Fullpage Theater;", // Remove ";" to set your own label.
+            label: "Fullpage Theater;", // Remove ";" to set your own label.
             value: true,
             onUpdate() {
                 applyTheaterMode(true);
+            },
+            sub: {
+                show_title: {
+                    label: "Show in player title;", // Remove ";" to set your own label.
+                    value: false,
+                    onUpdate() {
+                        setHtmlAttr(attr.show_title, fullpage && this.value);
+                    },
+                },
             },
         },
         auto_theater_mode: {
@@ -89,7 +98,7 @@
         },
         show_header_near: {
             icon: `{"path":{"d":"M5 4.27 15.476 13H8.934L5 18.117zm-1 0v17l5.5-7h9L4 1.77z"}}`,
-            label: "Show Header When Mouse is Near;", // Remove ";" to set your own label.
+            label: "Show Header When Mouse is Near;", // Remove ";" to set your own label.
             value: false,
             sub: {
                 trigger_area: {
@@ -245,7 +254,7 @@
             item.addEventListener("click", () => {
                 const checked = saveOption(name, !option.value, option);
                 item.setAttribute("aria-checked", checked);
-                toggleItemSub(item, checked);
+                if (!isSub) toggleItemSub(item, checked);
                 if (option.onUpdate) option.onUpdate();
             });
         }
@@ -318,7 +327,6 @@
         html[hide-card] ytd-player .ytp-paid-content-overlay,
         html[hide-card] ytd-player .iv-branding,
         html[hide-card] ytd-player .ytp-ce-element,
-        html[hide-card] ytd-player .ytp-chrome-top,
         html[hide-card] ytd-player .ytp-suggested-action {
             display: none !important;
         }
@@ -344,6 +352,18 @@
             height: 100vh;
             min-height: auto;
             max-height: none;
+        }
+
+        html[theater][show-title] .ytp-chrome-top {
+            height: auto !important;
+        }
+
+        html[theater][show-title] .ytp-title {
+            display: flex !important;
+        }
+
+        html[theater][show-title] .ytp-gradient-top {
+            display: block !important;
         }
 
         .ytc-popup-container {
@@ -408,6 +428,7 @@
         no_scroll: "no-scroll",
         hide_card: "hide-card",
         chat_hidden: "chat-hidden",
+        show_title: "show-title",
         trigger: prefix + "trigger" + attrId, // Internal only
     };
 
@@ -563,6 +584,10 @@
 
         setHtmlAttr(attr.theater, fullpage);
         setHtmlAttr(attr.hidden_header, fullpage);
+        setHtmlAttr(
+            attr.show_title,
+            fullpage && options.fullpage_theater.sub.show_title.value
+        );
         setHtmlAttr(attr.no_scroll, theater && options.hide_scrollbar.value);
         setHtmlAttr(attr.hide_card, options.hide_cards.value);
         resizeWindow();
