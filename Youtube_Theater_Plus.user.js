@@ -49,10 +49,19 @@
     const options = {
         fullpage_theater: {
             icon: `{"path":{"d":"M22 4v12H2V4zm1-1H1v14h22zm-6 17H7v1h10z"}}`,
-            label: "Fullpage Theater;", //  Remove ";" to set your own label.
+            label: "Fullpage Theater;", // Remove ";" to set your own label.
             value: true,
             onUpdate() {
                 applyTheaterMode(true);
+            },
+            sub: {
+                show_title: {
+                    label: "Show in player title;", // Remove ";" to set your own label.
+                    value: false,
+                    onUpdate() {
+                        setHtmlAttr(attr.show_title, fullpage && this.value);
+                    },
+                },
             },
         },
         auto_theater_mode: {
@@ -89,7 +98,7 @@
         },
         show_header_near: {
             icon: `{"path":{"d":"M5 4.27 15.476 13H8.934L5 18.117zm-1 0v17l5.5-7h9L4 1.77z"}}`,
-            label: "Show Header When Mouse is Near;", //  Remove ";" to set your own label.
+            label: "Show Header When Mouse is Near;", // Remove ";" to set your own label.
             value: false,
             sub: {
                 trigger_area: {
@@ -245,7 +254,7 @@
             item.addEventListener("click", () => {
                 const checked = saveOption(name, !option.value, option);
                 item.setAttribute("aria-checked", checked);
-                toggleItemSub(item, checked);
+                if (!isSub) toggleItemSub(item, checked);
                 if (option.onUpdate) option.onUpdate();
             });
         }
@@ -345,6 +354,18 @@
             max-height: none;
         }
 
+        html[theater][show-title] .ytp-chrome-top {
+            height: auto !important;
+        }
+
+        html[theater][show-title] .ytp-title {
+            display: flex !important;
+        }
+
+        html[theater][show-title] .ytp-gradient-top {
+            display: block !important;
+        }
+
         .ytc-popup-container {
             position: fixed;
             inset: 0;
@@ -396,35 +417,6 @@
         `;
     }
 
-    style.textContent += /*css*/ `
-        .yttp-title-overlay-custom {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            padding: 15px 20px 45px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.15) 50%, rgba(0,0,0,0.075) 75%, rgba(0,0,0,0) 100%);
-            color: white;
-            font-family: "YouTube Sans", "Roboto", sans-serif;
-            font-size: 22px;
-            font-weight: 500;
-            z-index: 20;
-            pointer-events: none;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-            opacity: 0;
-            transition: opacity 0.2s cubic-bezier(0.4, 0, 1, 1);
-        }
-
-        html[theater] #movie_player:not(.ytp-autohide) .yttp-title-overlay-custom {
-            opacity: 1;
-            transition-delay: 0.1s;
-        }
-
-        html[theater] .ytp-chrome-top {
-            display: none !important;
-        }
-    `;
-
     const prefix = "yttp-";
     const attrId = "-" + Date.now().toString(36).slice(-4);
     const attr = {
@@ -436,6 +428,7 @@
         no_scroll: "no-scroll",
         hide_card: "hide-card",
         chat_hidden: "chat-hidden",
+        show_title: "show-title",
         trigger: prefix + "trigger" + attrId, // Internal only
     };
 
@@ -591,6 +584,10 @@
 
         setHtmlAttr(attr.theater, fullpage);
         setHtmlAttr(attr.hidden_header, fullpage);
+        setHtmlAttr(
+            attr.show_title,
+            fullpage && options.fullpage_theater.sub.show_title.value
+        );
         setHtmlAttr(attr.no_scroll, theater && options.hide_scrollbar.value);
         setHtmlAttr(attr.hide_card, options.hide_cards.value);
         resizeWindow();
@@ -656,25 +653,6 @@
         }
     }
 
-    function updateCustomTitleOverlay() {
-        const player = document.querySelector('#movie_player');
-        if (!player) return;
-
-        const originalTitleElement = document.querySelector("h1.ytd-watch-metadata");
-        if (!originalTitleElement || !originalTitleElement.textContent) return;
-
-        let overlay = player.querySelector('.yttp-title-overlay-custom');
-        if (!overlay) {
-            overlay = document.createElement('div');
-            overlay.className = 'yttp-title-overlay-custom';
-            player.prepend(overlay);
-        }
-
-        if (overlay.textContent !== originalTitleElement.textContent) {
-            overlay.textContent = originalTitleElement.textContent;
-        }
-    }
-
     observer(observeChatChange, document, {
         subtree: true,
         childList: true,
@@ -690,14 +668,12 @@
                 (mutations) => {
                     applyTheaterMode();
                     autoOpenTheater(mutations);
-                    updateCustomTitleOverlay();
                 },
                 watch,
                 { attributes: true }
             );
             watch.setAttribute(attr.trigger, "");
             registerEventListener();
-            updateCustomTitleOverlay();
         }
     }, body);
 })();
