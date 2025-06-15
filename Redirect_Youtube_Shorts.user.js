@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      1.0.0
+// @version      1.0.1
 // @description  Seamlessly redirect YouTube Shorts to regular video player
 // @run-at       document-start
 // @inject-into  page
@@ -92,21 +92,27 @@
         const trackingParams = dig(onTap.data, "clickTrackingParams");
         const metadataEndpoint = dig(navEnpoint.data, "webCommandMetadata");
         const wathcEndpoint = dig(navEnpoint.data, "watchEndpoint");
+
         const prevTracking = navEnpoint.data.clickTrackingParams;
         const prevUrl = metadataEndpoint.url;
         const prevId = wathcEndpoint.videoId;
+        const prevStart = wathcEndpoint.startTimeSeconds;
 
-        function setData(params, url, id) {
+        function setData(params, url, id, start) {
             navEnpoint.data.clickTrackingParams = params;
             metadataEndpoint.url = url;
             wathcEndpoint.videoId = id;
+            if (prevStart) wathcEndpoint.startTimeSeconds = start;
         }
 
-        setData(trackingParams, `/watch?v=${id}`, id);
+        setData(trackingParams, `/watch?v=${id}`, id, 0);
         navEnpoint.a.click();
 
         taskCleanup = () => {
-            setTimeout(() => setData(prevTracking, prevUrl, prevId), 500);
+            setTimeout(
+                () => setData(prevTracking, prevUrl, prevId, prevStart),
+                500
+            );
         };
 
         return true;
