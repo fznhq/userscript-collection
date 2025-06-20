@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      1.0.1
-// @description  Seamlessly redirect YouTube Shorts to regular video player
+// @version      1.0.2
+// @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT a page reload
 // @run-at       document-start
 // @inject-into  page
 // @match        https://www.youtube.com/*
@@ -33,6 +33,13 @@
     const shortId = parseId(location.href);
     if (shortId) return location.replace("/watch?v=" + shortId);
 
+    /** @type {Function | undefined} */
+    let cleanupTask = undefined;
+
+    function runCleanup() {
+        if (cleanupTask) cleanupTask = cleanupTask();
+    }
+
     /**
      * @param {object} obj
      * @param {string} target
@@ -48,17 +55,10 @@
         }
     }
 
-    /** @type {Function | undefined} */
-    let taskCleanup = undefined;
-
-    function runCleanup() {
-        if (taskCleanup) taskCleanup = taskCleanup();
-    }
-
     /**
      * @param {string} linkQuery
      * @param {string} key
-     * @returns {{link: HTMLElement, data: object} | undefined}
+     * @returns {{a: HTMLAnchorElement, data: object} | undefined}
      */
     function findData(linkQuery, key) {
         for (let element of document.querySelectorAll(linkQuery)) {
@@ -83,7 +83,7 @@
     function redirectShort(id) {
         const onTap = findData(`#contents a[href*="${id}"]`, "onTap");
         const navEnpoint = findData(
-            "#contents a[class*=thumbnail][href*=watch]",
+            "#contents a[class*=thumbnail][href]:not([href*=short])",
             "navigationEndpoint"
         );
 
@@ -98,22 +98,16 @@
         const prevId = wathcEndpoint.videoId;
         const prevStart = wathcEndpoint.startTimeSeconds;
 
-        function setData(params, url, id, start) {
-            navEnpoint.data.clickTrackingParams = params;
-            metadataEndpoint.url = url;
-            wathcEndpoint.videoId = id;
+        function setData(start, id, url, params) {
             if (prevStart) wathcEndpoint.startTimeSeconds = start;
+            wathcEndpoint.videoId = id;
+            metadataEndpoint.url = url;
+            navEnpoint.data.clickTrackingParams = params;
         }
 
-        setData(trackingParams, `/watch?v=${id}`, id, 0);
+        setData(0, id, `/watch?v=${id}`, trackingParams);
         navEnpoint.a.click();
-
-        taskCleanup = () => {
-            setTimeout(
-                () => setData(prevTracking, prevUrl, prevId, prevStart),
-                500
-            );
-        };
+        cleanupTask = () => setData(prevStart, prevId, prevUrl, prevTracking);
 
         return true;
     }
