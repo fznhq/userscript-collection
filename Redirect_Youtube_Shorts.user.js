@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      1.0.3
+// @version      1.0.4
 // @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT a page reload
 // @run-at       document-start
 // @inject-into  page
@@ -73,8 +73,9 @@
                 element = element.parentElement;
             }
 
-            if (data && !JSON.stringify(data).includes(type)) continue;
-            if (data) return { a: element.querySelector("a"), data };
+            if (data && JSON.stringify(data).includes(type)) {
+                return { a: element.querySelector("a"), data };
+            }
         }
     }
 
