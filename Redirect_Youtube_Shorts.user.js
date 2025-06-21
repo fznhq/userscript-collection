@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      1.0.2
+// @version      1.0.3
 // @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT a page reload
 // @run-at       document-start
 // @inject-into  page
@@ -58,9 +58,10 @@
     /**
      * @param {string} linkQuery
      * @param {string} key
+     * @param {string} type
      * @returns {{a: HTMLAnchorElement, data: object} | undefined}
      */
-    function findData(linkQuery, key) {
+    function findData(linkQuery, key, type) {
         for (let element of document.querySelectorAll(linkQuery)) {
             let data;
 
@@ -72,6 +73,7 @@
                 element = element.parentElement;
             }
 
+            if (data && !JSON.stringify(data).includes(type)) continue;
             if (data) return { a: element.querySelector("a"), data };
         }
     }
@@ -81,10 +83,15 @@
      * @returns {boolean}
      */
     function redirectShort(id) {
-        const onTap = findData(`#contents a[href*="${id}"]`, "onTap");
+        const onTap = findData(
+            `#contents a[href*="${id}"]`,
+            "onTap",
+            "TYPE_SHORTS"
+        );
         const navEnpoint = findData(
-            "#contents a[class*=thumbnail][href]:not([href*=short])",
-            "navigationEndpoint"
+            "#contents a[class*=thumbnail][href]",
+            "navigationEndpoint",
+            "TYPE_WATCH"
         );
 
         if (!onTap || !navEnpoint) return false;
