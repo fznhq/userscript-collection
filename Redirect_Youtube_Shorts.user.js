@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      1.0.5
+// @version      2.0.0
 // @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT a page reload
 // @run-at       document-start
 // @inject-into  page
@@ -33,13 +33,6 @@
     const shortId = parseId(location.href);
     if (shortId) return location.replace("/watch?v=" + shortId);
 
-    /** @type {Function | undefined} */
-    let cleanupTask = undefined;
-
-    function runCleanup() {
-        if (cleanupTask) cleanupTask = cleanupTask();
-    }
-
     /**
      * @param {object} obj
      * @param {string} target
@@ -56,64 +49,34 @@
     }
 
     /**
-     * @param {string} linkQuery
+     * @param {HTMLAnchorElement} element
      * @param {string} key
-     * @param {'SHORTS' | 'WATCH'} type
-     * @returns {{a: HTMLAnchorElement, data: object} | undefined}
+     * @returns {object}
      */
-    function findData(linkQuery, key, type) {
-        for (let element of document.querySelectorAll(linkQuery)) {
-            let data;
+    function findData(element, key) {
+        let data;
 
-            while (
-                element.id != "contents" &&
-                !(element.data && element.data.contents) &&
-                !(data = dig(element.data, key))
-            ) {
-                element = element.parentElement;
-            }
-
-            if (data && (dig(data, "webPageType") || "").includes(type)) {
-                return { a: element.querySelector("a"), data };
-            }
+        while (!(data = dig(element.data, key))) {
+            element = element.parentElement;
         }
-    }
 
+        return data || {};
+    }
     /**
      * @param {string} id
-     * @returns {boolean}
      */
     function redirectShort(id) {
-        const onTap = findData(`#contents a[href*="${id}"]`, "onTap", "SHORTS");
-        const navEnpoint = findData(
-            "#contents a[class*=thumbnail][href]",
-            "navigationEndpoint",
-            "WATCH"
-        );
+        const element = document.querySelector(`#contents a[href*="${id}"]`);
+        const onTap = findData(element, "onTap");
+        const metadata = dig(onTap, "webCommandMetadata");
 
-        if (!onTap || !navEnpoint) return false;
-
-        const trackingParams = dig(onTap.data, "clickTrackingParams");
-        const metadataEndpoint = dig(navEnpoint.data, "webCommandMetadata");
-        const wathcEndpoint = dig(navEnpoint.data, "watchEndpoint");
-
-        const prevTracking = navEnpoint.data.clickTrackingParams;
-        const prevUrl = metadataEndpoint.url;
-        const prevId = wathcEndpoint.videoId;
-        const prevStart = wathcEndpoint.startTimeSeconds;
-
-        function setData(start, id, url, params) {
-            if (prevStart) wathcEndpoint.startTimeSeconds = start;
-            wathcEndpoint.videoId = id;
-            metadataEndpoint.url = url;
-            navEnpoint.data.clickTrackingParams = params;
+        if (onTap.innertubeCommand && metadata) {
+            metadata.url = `/watch?v=${id}`;
+            metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
+            delete onTap.innertubeCommand.reelWatchEndpoint;
+            onTap.innertubeCommand.watchEndpoint = { videoId: id };
+            element.click();
         }
-
-        setData(0, id, `/watch?v=${id}`, trackingParams);
-        navEnpoint.a.click();
-        cleanupTask = () => setData(prevStart, prevId, prevUrl, prevTracking);
-
-        return true;
     }
 
     function handleShortClick(/** @type {MouseEvent} */ ev) {
@@ -122,14 +85,9 @@
 
         if (target.closest) {
             const short = target.closest("a[href*=short]");
-
-            if (short && redirectShort(parseId(short.href))) {
-                ev.stopPropagation();
-                ev.preventDefault();
-            }
+            if (short) redirectShort(parseId(short.href));
         }
     }
 
     window.addEventListener("click", handleShortClick, true);
-    document.addEventListener("yt-navigate-finish", runCleanup);
 })();
