@@ -56,7 +56,7 @@
     function findData(element, key) {
         let data;
 
-        while (!(data = dig(element.data, key))) {
+        while (element && !(data = dig(element.data, key))) {
             element = element.parentElement;
         }
 
@@ -75,7 +75,6 @@
             metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
             delete onTap.innertubeCommand.reelWatchEndpoint;
             onTap.innertubeCommand.watchEndpoint = { videoId: id };
-            element.click();
         }
     }
 
