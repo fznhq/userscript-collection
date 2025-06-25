@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      2.0.0
+// @version      2.0.1
 // @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT a page reload
 // @run-at       document-start
 // @inject-into  page
@@ -36,13 +36,16 @@
     /**
      * @param {object} obj
      * @param {string} target
+     * @param {boolean} returnParent
      * @returns {any}
      */
-    function dig(obj, target) {
+    function dig(obj, target, returnParent = false) {
         if (obj && typeof obj == "object") {
-            if (target in obj) return obj[target];
+            if (target in obj && !dig(obj[target], target)) {
+                return returnParent ? obj : obj[target];
+            }
             for (const k in obj) {
-                const result = dig(obj[k], target);
+                const result = dig(obj[k], target, returnParent);
                 if (result !== undefined) return result;
             }
         }
@@ -50,35 +53,33 @@
 
     /**
      * @param {HTMLAnchorElement} element
-     * @param {string} key
-     * @returns {object}
+     * @returns {object | undefined}
      */
-    function findData(element, key) {
-        let data;
-
-        while (element && !(data = dig(element.data, key))) {
+    function findShortData(element) {
+        while (element) {
+            const data = dig(element.data, "reelWatchEndpoint", true);
+            if (data) return data;
             element = element.parentElement;
         }
-
-        return data || {};
     }
+
     /**
      * @param {string} id
      */
     function redirectShort(id) {
-        const element = document.querySelector(`#contents a[href*="${id}"]`);
-        const onTap = findData(element, "onTap");
-        const metadata = dig(onTap, "webCommandMetadata");
+        const short = document.querySelector(`#contents a[href*="${id}"]`);
+        const command = findShortData(short);
 
-        if (onTap.innertubeCommand && metadata) {
+        if (command) {
+            const metadata = dig(command, "webCommandMetadata");
             metadata.url = `/watch?v=${id}`;
             metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
-            delete onTap.innertubeCommand.reelWatchEndpoint;
-            onTap.innertubeCommand.watchEndpoint = { videoId: id };
+            command.watchEndpoint = { videoId: id };
+            delete command.reelWatchEndpoint;
         }
     }
 
-    function handleShortClick(/** @type {MouseEvent} */ ev) {
+    function handleShorts(/** @type {MouseEvent} */ ev) {
         /** @type {HTMLElement} */
         const target = ev.target;
 
@@ -88,5 +89,5 @@
         }
     }
 
-    window.addEventListener("click", handleShortClick, true);
+    window.addEventListener("click", handleShorts, true);
 })();
