@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      2.0.2
+// @version      2.0.3
 // @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT a page reload
 // @run-at       document-start
 // @inject-into  page
@@ -19,19 +19,9 @@
 // ==/UserScript==
 
 (function () {
-    const shortIdRegex = /(?:shorts\/)([^#\&\?]*)/;
-
-    /**
-     * @param {string} url
-     * @returns {string | null}
-     */
-    function parseId(url) {
-        url = url.match(shortIdRegex);
-        return url && url[1];
+    if (location.pathname.startsWith("/shorts")) {
+        return location.replace(location.href.replace("/shorts/", "/watch?v="));
     }
-
-    const shortId = parseId(location.href);
-    if (shortId) return location.replace("/watch?v=" + shortId);
 
     /**
      * @param {object} obj
@@ -56,7 +46,7 @@
      * @returns {object | undefined}
      */
     function findShortData(element) {
-        while (element) {
+        while (element && element.tagName !== "YTD-APP") {
             const data = dig(element.data, "reelWatchEndpoint", true);
             if (data) return data;
             element = element.parentElement;
@@ -66,26 +56,32 @@
     /**
      * @param {string} id
      */
-    function redirectShort(id) {
-        const short = document.querySelector(`#contents a[href*="${id}"]`);
-        const command = findShortData(short);
+    function redirectShorts(id) {
+        const elements = document.querySelectorAll(`a[href*="shorts/${id}"]`);
 
-        if (command && dig(command, "videoId") === id) {
-            const metadata = dig(command, "webCommandMetadata");
-            metadata.url = `/watch?v=${id}`;
-            metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
-            command.watchEndpoint = { videoId: id };
-            delete command.reelWatchEndpoint;
+        for (const element of elements) {
+            const command = findShortData(element);
+
+            if (command && dig(command, "videoId") === id) {
+                const metadata = dig(command, "url", true);
+                metadata.url = `/watch?v=${id}`;
+                metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
+                command.watchEndpoint = { videoId: id };
+                delete command.reelWatchEndpoint;
+            }
         }
     }
+
+    const idRegex = /(?:shorts\/|watch\?v=)([^#\&\?]*)/;
 
     function handleShorts(/** @type {MouseEvent} */ ev) {
         /** @type {HTMLElement} */
         const target = ev.target;
 
         if (target.closest) {
-            const short = target.closest("a[href*=short]");
-            if (short) redirectShort(parseId(short.href));
+            const query = "a[href*='/shorts/'], a[href*='/watch?v=']";
+            const url = target.closest(query);
+            if (url) redirectShorts(url.href.match(idRegex)[1]);
         }
     }
 
