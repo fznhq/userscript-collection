@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.2.6
+// @version      2.2.7
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
-// @run-at       document-body
+// @run-at       document-end
 // @inject-into  content
 // @match        https://www.youtube.com/*
 // @match        https://www.youtube-nocookie.com/*
@@ -37,7 +37,6 @@
     const isEmbed = isVideoPage("embed");
     const isLightMode = getComputedStyle(html).background.includes("255");
 
-    let firstSetQuality = true;
     let manualOverride = false;
     let isUpdated = false;
     let settingsClicked = false;
@@ -180,7 +179,6 @@
         popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
         music_menu_item: $("ytmusic-menu-service-item-renderer[class*=popup]"),
-        music_layout: $("ytmusic-app-layout, #layout"),
         link: $("link[rel=canonical]"),
         offline: $("[class*=offline][style*='v=']", false),
         // Reserve Element
@@ -194,27 +192,19 @@
             transform: scale(-1, 1);
         }
 
-        body:not([ythdp-is-mobile]) ytmusic-menu-popup-renderer {
-            min-width: 268.5px !important;
-        }
-        
         #items.ytmusic-menu-popup-renderer {
             width: 250px !important;
         }
-
-        .ythdp.ytp-menuitem-icon { fill: currentColor; }
     `;
 
     /**
      * @param {MutationCallback} callback
      * @param {Node} target
      * @param {MutationObserverInit | undefined} options
-     * @returns {MutationObserver}
      */
     function observer(callback, target = body, options) {
         const mutation = new MutationObserver(callback);
         mutation.observe(target, options || { subtree: true, childList: true });
-        return mutation;
     }
 
     /**
@@ -244,26 +234,24 @@
     }
 
     /**
-     * @param {string} id
      * @param {QualityData[]} qualityData
      * @returns {QualityData | null | undefined}
      */
-    function getQuality(id, qualityData) {
+    function getQuality(qualityData) {
         const quality = { premium: null, normal: null };
         const preferred = getPreferredQuality(qualityData);
-        const isPremium = options.preferred_premium && !id.includes("short");
 
         if (!isFinite(preferred)) return;
 
         qualityData.forEach((data) => {
             const label = data.qualityLabel;
-            if (parseQualityLabel(label) == preferred && data.isPlayable) {
+            if (data.isPlayable && parseQualityLabel(label) === preferred) {
                 if (/premium/i.test(label)) quality.premium = data;
                 else quality.normal = data;
             }
         });
 
-        return (isPremium && quality.premium) || quality.normal;
+        return (options.preferred_premium && quality.premium) || quality.normal;
     }
 
     /**
@@ -275,25 +263,17 @@
         if (isUpdated) return (isUpdated = false);
 
         const id = this.id;
-        const label = await API(id, "getPlaybackQualityLabel");
-        const quality = parseQualityLabel(label);
+        const qualityData = await API(id, "getAvailableQualityData");
+        const selected = getQuality(qualityData || []);
 
-        if (quality) {
-            const qualityData = await API(id, "getAvailableQualityData");
-            const selected = getQuality(id, qualityData || []);
-
-            if (
-                selected &&
-                (isUpdated = firstSetQuality || selected.qualityLabel != label)
-            ) {
-                firstSetQuality = !API(
-                    id,
-                    "setPlaybackQualityRange",
-                    selected.quality,
-                    selected.quality,
-                    selected.formatId
-                );
-            }
+        if (selected) {
+            isUpdated = !!API(
+                id,
+                "setPlaybackQualityRange",
+                selected.quality,
+                selected.quality,
+                selected.formatId
+            );
         }
     }
 
@@ -341,12 +321,12 @@
      * @param {Element[]} elements
      */
     function removeAttributes(elements) {
-        elements.forEach((element) => {
+        for (const element of elements) {
             element.textContent = "";
-            Array.from(element.attributes).forEach((attr) => {
-                if (attr.name != "class") element.removeAttribute(attr.name);
-            });
-        });
+            for (const attr of element.attributes) {
+                if (attr.name !== "class") element.removeAttribute(attr.name);
+            }
+        }
     }
 
     /**
@@ -354,7 +334,7 @@
      * @returns {HTMLElement}
      */
     function firstOnly(element) {
-        for (let i = 1; i < element.length; i++) element[i].remove();
+        for (let i = element.length; --i; ) element[i].remove();
         return element[0];
     }
 
@@ -385,7 +365,9 @@
         item.setAttribute(bridgeName, "");
         iText.after(optionLabel, optionIcon);
         removeAttributes([iIcon, iText, optionIcon, optionLabel]);
+        iText.textContent = label;
 
+        if (icon) iIcon.append(wrapperIcon(icon.cloneNode(true)));
         if (selected) {
             optionIcon.append(wrapperIcon(icons.arrow));
             optionIcon.style.width = "18px";
@@ -393,15 +375,13 @@
             optionLabel.style.marginInline = "auto 0";
             optionLabel.append(element.option_text);
             setTextQuality(element.option_text);
-            if (iTexts.length == 1) {
+            if (iTexts.length === 1) {
                 optionLabel.style.color = isLightMode ? "#606060" : "#aaa";
                 optionLabel.style.fontSize = "1.4rem";
             }
         } else optionIcon.remove();
 
-        if (icon) iIcon.append(wrapperIcon(icon.cloneNode(true)));
-        iText.textContent = label;
-        return item.remove(), item;
+        return item;
     }
 
     /**
@@ -413,7 +393,7 @@
         const tempIndex = listQuality.indexOf(options[name]);
         const preferredIndex = listQuality.length - 1 - tempIndex;
         const items = listQuality.map((quality, i) => {
-            const icon = tempIndex == i && icons.check_mark;
+            const icon = tempIndex === i && icons.check_mark;
             const label = quality + "p";
             const item = parseItem({ menuItem, icon, label, selected: false });
             item.addEventListener("click", () => {
@@ -450,13 +430,12 @@
     }
 
     function resetState() {
-        firstSetQuality = true;
         isUpdated = false;
         manualOverride = false;
     }
 
     async function syncOptions() {
-        if ((await GM.getValue("updated_id")) != options.updated_id) {
+        if ((await GM.getValue("updated_id")) !== options.updated_id) {
             await loadOptions(), togglePremium(), setTextQuality();
             for (const id in cachePlayers) {
                 const [player, video] = cachePlayers[id];
@@ -477,7 +456,7 @@
          */
         function musicPopupObserver(menuItem) {
             const dropdown = menuItem.closest("tp-yt-iron-dropdown");
-            const menu = menuItem.closest("#items");
+            const menu = find(dropdown, "#items");
             const item = parseItem({ menuItem });
             const addItem = () => settingsClicked && menu.append(item);
 
@@ -498,24 +477,17 @@
             );
         }
 
-        function setIsMobile() {
-            const html = element.music_layout().outerHTML;
-            const isMobile = /^[^>]+is-mobile|is-mweb/.test(html);
-            body.toggleAttribute("ythdp-is-mobile", isMobile);
-        }
-
         window.addEventListener("tap", musicSetSettingsClicked, true);
         window.addEventListener("click", musicSetSettingsClicked, true);
 
         observer((_, observe) => {
             const player = element.movie_player();
-            const menuItem = element.music_menu_item();
+            const menuItem = settingsClicked && element.music_menu_item();
 
             if (player && !cachePlayers[player.id]) addVideoListener(player);
             if (menuItem) {
                 observe.disconnect();
                 musicPopupObserver(menuItem);
-                setIsMobile();
             }
         });
     })();
@@ -589,19 +561,19 @@
         function mobileSetOverride(/** @type {MouseEvent} */ ev) {
             if (manualOverride || listCustomMenuItem) return;
             if (!element.m_bottom_container()) menuStep = 0;
-            if (menuStep++ == 2) {
+            if (menuStep++ === 2) {
                 manualOverride = !!ev.target.closest("[role=menuitem]");
             }
         }
 
         function mobilePlayerUpdated(/** @type {CustomEvent} */ ev) {
-            if (isVideoPage() && ev.detail.type == "newdata") resetState();
+            if (isVideoPage() && ev.detail.type === "newdata") resetState();
         }
 
         let prevHash = "";
 
         function mobileHandlePressBack() {
-            if (listCustomMenuItem && prevHash == customMenuHashId) {
+            if (listCustomMenuItem && prevHash === customMenuHashId) {
                 listCustomMenuItem = listCustomMenuItem.remove();
                 body.style.overflow = "";
             }
@@ -616,7 +588,7 @@
         function getVideoId() {
             const url = element.link().href + "&" + location.href;
             const ids = url.match(videoIdRegex);
-            return ids && ids[0] == ids[1] && ids[0].replace(/.*[/=]/, "");
+            return ids && ids[0] === ids[1] && ids[0].replace(/.*[/=]/, "");
         }
 
         function registerPlayer() {
@@ -663,10 +635,10 @@
         function createMenuItem(svg, textLabel, checkbox) {
             const inner = checkbox ? [itemElement("toggle-checkbox")] : [];
             const content = itemElement("content", inner);
-            const icon = itemElement("icon ythdp", [svg.cloneNode(true)]);
             const label = itemElement("label", [textLabel]);
-            const item = itemElement("", [icon, label, content]);
-            return { item, content };
+            const icon = itemElement("icon", [svg.cloneNode(true)]);
+            icon.style.fill = "currentColor";
+            return { item: itemElement("", [icon, label, content]), content };
         }
 
         function premiumMenu() {
@@ -738,7 +710,6 @@
             container.style.minWidth = "130px";
             option.style.margin = container.style.margin = "0 auto";
             option.style.width = "fit-content";
-            option.style.paddingInline = "12px";
 
             qualityOption(option, element.short_player());
             return item;
@@ -766,18 +737,14 @@
             }
         }
 
-        let shortMenuItem = itemElement("dummy");
-
-        function initShortMenu() {
-            const menu = isVideoPage("shorts") && element.popup_menu();
-            if (menu && !menu.closest("[aria-hidden=true]")) {
-                shortMenuItem.remove();
-                shortMenuItem = shortQualityMenu(menu);
-                menu.parentElement.append(shortMenuItem);
+        function attachMenuItem() {
+            const menu = element.popup_menu();
+            if (menu && !find(menu.parentElement, `[${bridgeName}]`)) {
+                menu.parentElement.append(shortQualityMenu(menu));
             }
         }
 
-        window.addEventListener("click", initShortMenu);
+        window.addEventListener("click", attachMenuItem);
 
         observer((_, observe) => {
             const moviePlayer = element.movie_player();
