@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.3.8
+// @version      2.3.7
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -56,7 +56,7 @@
             },
             sub: {
                 show_title: {
-                    label: "Show in Player Title;", // Remove ";" to set your own label.
+                    label: "In Player Title;", // Remove ";" to set your own label.
                     value: false,
                     onUpdate() {
                         setHtmlAttr(attr.show_title, fullpage && this.value);
@@ -197,9 +197,6 @@
         return el.append(...append), el;
     }
 
-    /** @type {Map<HTMLElement, HTMLElement[]>} */
-    const menuItems = new Map();
-
     /**
      * @param {string} name
      * @param {Option} option
@@ -218,6 +215,9 @@
         return input;
     }
 
+    /** @type {Map<HTMLElement, HTMLElement[]>} */
+    const menuItems = new Map();
+
     /**
      * @param {HTMLElement} item
      * @param {boolean} checked
@@ -234,7 +234,7 @@
      * @returns  {HTMLElement}
      */
     function createItem(name, option) {
-        const checkbox = typeof option.value == "boolean";
+        const checkbox = typeof option.value === "boolean";
         const isSub = name.includes("sub_");
         const icon = isSub ? [] : [option.icon];
         const label = isSub
@@ -293,11 +293,11 @@
     };
 
     window.addEventListener("keydown", (ev) => {
-        const isPressV = ev.key.toLowerCase() == "v" || ev.code == "KeyV";
+        const isPressV = ev.key.toLowerCase() === "v" || ev.code === "KeyV";
 
         if (
             (isPressV && !ev.ctrlKey && !isActiveEditable()) ||
-            (ev.code == "Escape" && popup.show)
+            (ev.code === "Escape" && popup.show)
         ) {
             document.activeElement.blur();
             popup.show = popup.show
@@ -440,7 +440,7 @@
     }
 
     const element = {
-        watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid == trash
+        watch: $("ytd-watch-flexy, ytd-watch-grid"), // ytd-watch-grid === trash
         search: $("form[action*=result] input"),
     };
 
@@ -477,7 +477,7 @@
     function isTheater() {
         const watch = element.watch();
         return (
-            watch.getAttribute(attr.role) == "main" &&
+            watch.getAttribute(attr.role) === "main" &&
             watch.hasAttribute(attr.theater) &&
             !watch.hasAttribute(attr.fullscreen)
         );
@@ -490,8 +490,8 @@
         /** @type {HTMLElement} */
         const active = document.activeElement;
         return (
-            active.tagName == "TEXTAREA" ||
-            active.tagName == "INPUT" ||
+            active.tagName === "TEXTAREA" ||
+            active.tagName === "INPUT" ||
             active.isContentEditable
         );
     }
@@ -504,7 +504,7 @@
      */
     function toggleHeader(state, timeout, callback) {
         const toggle = () => {
-            if (state || document.activeElement != element.search()) {
+            if (state || document.activeElement !== element.search()) {
                 const showNear = options.show_header_near.value;
                 headerOpen = state || (!showNear && !!window.scrollY);
                 setHtmlAttr(attr.hidden_header, !headerOpen);
@@ -548,15 +548,13 @@
     }
 
     function onEscapePress(/** @type {KeyboardEvent} */ ev) {
-        if (ev.code != "Escape" || !theater || popup.show) return;
+        if (ev.code !== "Escape" || !theater || popup.show) return;
 
-        if (options.close_theater_with_esc.value) {
-            toggleTheater();
-        } else {
-            const input = element.search();
-            if (document.activeElement != input) input.focus();
-            else input.blur();
-        }
+        const input = element.search();
+
+        if (options.close_theater_with_esc.value) toggleTheater();
+        else if (document.activeElement !== input) input.focus();
+        else input.blur();
     }
 
     function registerEventListener() {
@@ -578,16 +576,15 @@
     function applyTheaterMode(force) {
         const state = isTheater();
 
-        if (theater == state && (!state || !force)) return;
+        if (theater === state && (!state || !force)) return;
+
+        const opt_ft = options.fullpage_theater;
         theater = state;
-        fullpage = theater && options.fullpage_theater.value;
+        fullpage = theater && opt_ft.value;
 
         setHtmlAttr(attr.theater, fullpage);
         setHtmlAttr(attr.hidden_header, fullpage);
-        setHtmlAttr(
-            attr.show_title,
-            fullpage && options.fullpage_theater.sub.show_title.value
-        );
+        setHtmlAttr(attr.show_title, fullpage && opt_ft.sub.show_title.value);
         setHtmlAttr(attr.no_scroll, theater && options.hide_scrollbar.value);
         setHtmlAttr(attr.hide_card, options.hide_cards.value);
         resizeWindow();
@@ -628,8 +625,8 @@
             const styleChat = getComputedStyle(chat);
 
             if (
-                styleChat.position == "fixed" &&
-                styleChat.visibility != "hidden" &&
+                styleChat.position === "fixed" &&
+                styleChat.visibility !== "hidden" &&
                 Number(styleChat.opacity)
             ) {
                 return true;
