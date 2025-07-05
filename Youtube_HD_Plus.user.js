@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.2.7
+// @version      2.3.0
 // @description  Automatically select your desired video quality and select premium when posibble. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
@@ -50,12 +50,46 @@
         updated_id: "",
     };
 
+    const labels = {
+        premium: "Preferred Premium;", // Remove ";" to set your own label.
+        quality: "Preferred Quality;", // Remove ";" to set your own label.
+    };
+
     const icons = {
         premium: `{"svg":{"viewBox":"-12 -12 147 119"},"path":{"d":"M1 28 20 1a3 3 0 0 1 3-1h77a3 3 0 0 1 3 1l19 27a3 3 0 0 1 1 2 3 3 0 0 1-1 2L64 94a3 3 0 0 1-4 0L1 32a3 3 0 0 1-1-1 3 3 0 0 1 1-3m44 5 17 51 17-51Zm39 0L68 82l46-49ZM56 82 39 33H9zM28 5l13 20L56 5Zm39 0 15 20L95 5Zm33 2L87 27h28zM77 27 61 7 47 27Zm-41 0L22 7 8 27Z"}}`,
         quality: `{"svg":{"viewBox":"-12 -12 147 131"},"path":{"fill-rule":"evenodd","d":"M113 57a4 4 0 0 1 2 1l3 4a5 5 0 0 1 1 2 4 4 0 0 1 0 1 4 4 0 0 1 0 2 4 4 0 0 1-1 1l-3 2v1l1 1v2h3a4 4 0 0 1 3 1 4 4 0 0 1 1 2 4 4 0 0 1 0 1l-1 6a4 4 0 0 1-1 3 4 4 0 0 1-3 1h-3l-1 1-1 1v1l2 2a4 4 0 0 1 1 1 4 4 0 0 1-1 3 4 4 0 0 1-1 2l-4 3a4 4 0 0 1-1 1 4 4 0 0 1-2 0 5 5 0 0 1-1 0 4 4 0 0 1-2-1l-2-3a1 1 0 0 1 0 1h-3v3a4 4 0 0 1-1 2 4 4 0 0 1-1 1 4 4 0 0 1-1 1 4 4 0 0 1-2 0h-5a4 4 0 0 1-4-5v-3l-2-1-1-1-2 2a4 4 0 0 1-2 1 4 4 0 0 1-1 0 4 4 0 0 1-2 0 4 4 0 0 1-1-1l-4-4a5 5 0 0 1 0-2 4 4 0 0 1-1-2 4 4 0 0 1 2-3l2-2v-1l-1-2h-2a4 4 0 0 1-2-1 4 4 0 0 1-1-1 4 4 0 0 1-1-1 4 4 0 0 1 0-2v-5a4 4 0 0 1 1-2 5 5 0 0 1 1-1 4 4 0 0 1 1-1 4 4 0 0 1 2 0h3l1-1v-2l-1-2a4 4 0 0 1-1-1 4 4 0 0 1 0-2 4 4 0 0 1 0-2 4 4 0 0 1 1-1l4-3a5 5 0 0 1 2-1 4 4 0 0 1 1-1 4 4 0 0 1 2 1 4 4 0 0 1 1 1l2 2h2l1-1 1-2a4 4 0 0 1 0-2 4 4 0 0 1 1-1 4 4 0 0 1 2-1 4 4 0 0 1 1 0h6a5 5 0 0 1 1 1 4 4 0 0 1 2 1 4 4 0 0 1 0 1 4 4 0 0 1 1 2l-1 3h1l1 1 1 1 3-2a4 4 0 0 1 1-1 4 4 0 0 1 2 0 4 4 0 0 1 1 0M11 0h82a11 11 0 0 1 11 11v30h-1a11 11 0 0 0-2-1h-2V21H5v49h51a12 12 0 0 0 0 2v4h-1v11h4l1 1h1l-1 1a12 12 0 0 0 0 2v1H11A11 11 0 0 1 0 81V11A11 11 0 0 1 11 0m35 31 19 13a3 3 0 0 1 0 4L47 61a3 3 0 0 1-2 0 3 3 0 0 1-3-2V33l1-1a3 3 0 0 1 3-1m4 56V76H29v11ZM24 76H5v5a6 6 0 0 0 6 6h13zm52-60V5H55v11Zm5-11v11h18v-5a6 6 0 0 0-6-6ZM50 16V5H29v11Zm-26 0V5H11a6 6 0 0 0-6 6v5Zm70 56a6 6 0 1 1-6 7 6 6 0 0 1 6-7m-1-8a14 14 0 1 1-13 16 14 14 0 0 1 13-16"}}`,
         check_mark: `{"svg":{"viewBox":"-32 -32 186.9 153.8"},"path":{"d":"M1.2 55.5a3.7 3.7 0 0 1 5-5.5l34.1 30.9 76.1-79.7a3.8 3.8 0 0 1 5.4 5.1L43.2 88.7a3.7 3.7 0 0 1-5.2.2L1.2 55.5z"}}`,
         arrow: `{"svg":{"class":"transform-icon-svg","viewBox":"0 0 24 24"},"path":{"d":"m9.4 18.4-.7-.7 5.6-5.6-5.7-5.7.7-.7 6.4 6.4-6.3 6.3z"}}`,
     };
+
+    for (const key in labels) {
+        const storageKeyLabel = `label_${key}`;
+        const savedLabel = await GM.getValue(storageKeyLabel);
+        let label = labels[key];
+
+        if (!label.endsWith(";")) GM.setValue(storageKeyLabel, label);
+        else if (savedLabel !== undefined) label = savedLabel;
+
+        labels[key] = label.replace(/;$/, "");
+    }
+
+    /**
+     * @param {string} name
+     * @param {object} attributes
+     * @param {Array} append
+     * @returns {SVGElement}
+     */
+    function createNS(name, attributes = {}, append = []) {
+        const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+        for (const k in attributes) el.setAttributeNS(null, k, attributes[k]);
+        return el.append(...append), el;
+    }
+
+    for (const name in icons) {
+        const icon = JSON.parse(icons[name]);
+        icon.svg = { ...icon.svg, width: "100%", height: "100%" };
+        icons[name] = createNS("svg", icon.svg, [createNS("path", icon.path)]);
+    }
 
     /**
      * @param {string} name
@@ -83,7 +117,7 @@
         return prefix + (Date.now() + Math.random() * 10e20).toString(36);
     }
 
-    const bridgeName = generateId("bridge");
+    const bridgeName = generateId("bridge-");
     const bridgeMain = function () {
         function handleAPI(ev) {
             const [uniqueId, id, fn, ...args] = ev.detail.split("|");
@@ -98,6 +132,10 @@
                 if (item) item.data = {};
             }
         }
+
+        const create = (name) => document.createElement(name);
+        const container = document.body.appendChild(create("ythdp-elements"));
+        container.append(create("ytd-toggle-menu-service-item-renderer"));
 
         document.addEventListener("bridgeName", handleAPI);
         window.addEventListener("touchstart", spoofData, true);
@@ -132,24 +170,6 @@
     }
 
     /**
-     * @param {string} name
-     * @param {object} attributes
-     * @param {Array} append
-     * @returns {SVGElement}
-     */
-    function createNS(name, attributes = {}, append = []) {
-        const el = document.createElementNS("http://www.w3.org/2000/svg", name);
-        for (const k in attributes) el.setAttributeNS(null, k, attributes[k]);
-        return el.append(...append), el;
-    }
-
-    for (const name in icons) {
-        const icon = JSON.parse(icons[name]);
-        icon.svg = { ...icon.svg, width: "100%", height: "100%" };
-        icons[name] = createNS("svg", icon.svg, [createNS("path", icon.path)]);
-    }
-
-    /**
      * @param {Document | HTMLElement} context
      * @param {string} query
      * @param {boolean} all
@@ -169,8 +189,11 @@
         return () => (cache && element) || (element = find(document, query));
     }
 
-    const cachePlayers = {};
-    const cacheTextQuality = new Set();
+    const caches = {
+        player: {},
+        text_quality: new Set(),
+        toggle_premium: new Set(),
+    };
     const element = {
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
@@ -181,9 +204,6 @@
         music_menu_item: $("ytmusic-menu-service-item-renderer[class*=popup]"),
         link: $("link[rel=canonical]"),
         offline: $("[class*=offline][style*='v=']", false),
-        // Reserve Element
-        premium: document.createElement("div"),
-        option_text: document.createTextNode(""),
     };
 
     const style = head.appendChild(document.createElement("style"));
@@ -194,6 +214,10 @@
 
         #items.ytmusic-menu-popup-renderer {
             width: 250px !important;
+        }
+
+        ythdp-elements {
+            display: none !important;
         }
     `;
 
@@ -302,19 +326,29 @@
         return el.append(...append), el;
     }
 
-    function togglePremium() {
-        element.premium.setAttribute("aria-checked", options.preferred_premium);
+    /**
+     * @param {HTMLElement | undefined} element
+     * @returns {HTMLElement | undefined}
+     */
+    function togglePremium(element) {
+        if (element) caches.toggle_premium.add(element);
+        caches.toggle_premium.forEach((/** @type {HTMLElement} */ toggle) => {
+            toggle.toggleAttribute("checked", options.preferred_premium);
+            toggle.setAttribute("aria-checked", options.preferred_premium);
+        });
+        return element;
     }
 
     /**
      * @param {Text | undefined} nodeText
+     * @returns {Text | undefined}
      */
     function setTextQuality(nodeText) {
-        if (nodeText) cacheTextQuality.add(nodeText);
-
-        cacheTextQuality.forEach((qualityText) => {
-            qualityText.textContent = options.preferred_quality + "p";
+        if (nodeText) caches.text_quality.add(nodeText);
+        caches.text_quality.forEach((/** @type {Text} */ text) => {
+            text.textContent = options.preferred_quality + "p";
         });
+        return nodeText;
     }
 
     /**
@@ -338,6 +372,8 @@
         return element[0];
     }
 
+    let selectedLabel = document.createTextNode("");
+
     /**
      * @param {Object} param
      * @param {HTMLElement} param.menuItem
@@ -348,13 +384,12 @@
     function parseItem({
         menuItem,
         icon = icons.quality,
-        label = "Preferred Quality",
+        label = labels.quality,
         selected = true,
     }) {
         const item = body.appendChild(menuItem.cloneNode(true));
         const iIcon = firstOnly(find(item, "c3-icon, yt-icon", true));
         const iTexts = find(item, "[role=text], yt-formatted-string", true);
-        const optionClass = iTexts[iTexts.length - 1].className;
         const iText = firstOnly(iTexts);
         const optionLabel = iText.cloneNode();
         const optionIcon = iIcon.cloneNode();
@@ -363,6 +398,7 @@
         };
 
         item.setAttribute(bridgeName, "");
+        item.setAttribute("use-icons", "");
         iText.after(optionLabel, optionIcon);
         removeAttributes([iIcon, iText, optionIcon, optionLabel]);
         iText.textContent = label;
@@ -371,10 +407,9 @@
         if (selected) {
             optionIcon.append(wrapperIcon(icons.arrow));
             optionIcon.style.width = "18px";
-            optionLabel.className = optionClass;
+            optionLabel.className = iTexts[iTexts.length - 1].className;
             optionLabel.style.marginInline = "auto 0";
-            optionLabel.append(element.option_text);
-            setTextQuality(element.option_text);
+            optionLabel.append(setTextQuality(selectedLabel));
             if (iTexts.length === 1) {
                 optionLabel.style.color = isLightMode ? "#606060" : "#aaa";
                 optionLabel.style.fontSize = "1.4rem";
@@ -410,10 +445,10 @@
      * @param {HTMLElement} player
      */
     function addVideoListener(player) {
-        const cache = cachePlayers[player.id];
+        const cache = caches.player[player.id];
         const video = find(player, "video");
         if (!cache || cache[1] !== video) {
-            cachePlayers[player.id] = [player, video];
+            caches.player[player.id] = [player, video];
             const fn = setVideoQuality.bind(player, false);
             video.addEventListener("play", () => setTimeout(fn, 10));
             video.addEventListener("resize", fn);
@@ -437,8 +472,8 @@
     async function syncOptions() {
         if ((await GM.getValue("updated_id")) !== options.updated_id) {
             await loadOptions(), togglePremium(), setTextQuality();
-            for (const id in cachePlayers) {
-                const [player, video] = cachePlayers[id];
+            for (const id in caches.player) {
+                const [player, video] = caches.player[id];
                 if (!video.paused) setVideoQuality.call(player, true);
             }
         }
@@ -484,7 +519,7 @@
             const player = element.movie_player();
             const menuItem = settingsClicked && element.music_menu_item();
 
-            if (player && !cachePlayers[player.id]) addVideoListener(player);
+            if (player && !caches.player[player.id]) addVideoListener(player);
             if (menuItem) {
                 observe.disconnect();
                 musicPopupObserver(menuItem);
@@ -641,19 +676,38 @@
             return { item: itemElement("", [icon, label, content]), content };
         }
 
-        function premiumMenu() {
+        /**
+         * @param {HTMLElement} item
+         * @param {HTMLElement} player
+         * @returns {HTMLElement}
+         */
+        function premiumOption(item, player) {
             const name = "preferred_premium";
-            const menu = (element.premium = createMenuItem(
-                icons.premium,
-                "Preferred Premium",
-                true
-            ).item);
-
-            menu.addEventListener("click", () => {
-                savePreferred(name, !options[name], element.movie_player());
+            const toggle = find(item, "[role=button]") || item;
+            item.addEventListener("click", () => {
+                savePreferred(name, !options[name], player);
             });
+            return togglePremium(toggle);
+        }
 
-            return togglePremium(), menu;
+        function premiumMenu() {
+            return premiumOption(
+                createMenuItem(icons.premium, labels.premium, true).item,
+                element.movie_player()
+            );
+        }
+
+        function shortPremiumMenu() {
+            const tag = "ytd-toggle-menu-service-item-renderer";
+            const item = parseItem({
+                menuItem: find(document, tag),
+                label: labels.premium,
+                icon: icons.premium,
+                selected: false,
+            });
+            find(item, ".toggle-label").textContent = "";
+            premiumOption(item, element.short_player());
+            return item;
         }
 
         /**
@@ -686,7 +740,7 @@
         }
 
         function qualityMenu() {
-            const menu = createMenuItem(icons.quality, "Preferred Quality");
+            const menu = createMenuItem(icons.quality, labels.quality);
 
             menu.item.style.cursor = "default";
             menu.content.style.fontSize = "130%";
@@ -737,14 +791,17 @@
             }
         }
 
-        function attachMenuItem() {
-            const menu = element.popup_menu();
+        function attachShortMenuItem() {
+            const menu = isVideoPage("shorts") && element.popup_menu();
             if (menu && !find(menu.parentElement, `[${bridgeName}]`)) {
-                menu.parentElement.append(shortQualityMenu(menu));
+                menu.parentElement.append(
+                    shortPremiumMenu(),
+                    shortQualityMenu(menu)
+                );
             }
         }
 
-        window.addEventListener("click", attachMenuItem);
+        window.addEventListener("click", attachShortMenuItem);
 
         observer((_, observe) => {
             const moviePlayer = element.movie_player();
