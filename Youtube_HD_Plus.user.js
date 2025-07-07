@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.3.0
+// @version      2.3.1
 // @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
@@ -135,6 +135,7 @@
 
         const create = (name) => document.createElement(name);
         const container = document.body.appendChild(create("ythdp-elements"));
+        container.style.display = "none";
         container.append(create("ytd-toggle-menu-service-item-renderer"));
 
         document.addEventListener("bridgeName", handleAPI);
@@ -153,7 +154,7 @@
 
     /**
      * @param {string} id
-     * @param {'getPlaybackQualityLabel' | 'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo' | 'loadVideoById'} name
+     * @param {'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo' | 'loadVideoById'} name
      * @param  {string[]} args
      * @returns {Promise<string>}
      */
@@ -214,10 +215,6 @@
 
         #items.ytmusic-menu-popup-renderer {
             width: 250px !important;
-        }
-
-        ythdp-elements {
-            display: none !important;
         }
     `;
 
@@ -307,8 +304,8 @@
      * @param {HTMLElement} player
      * @param {Boolean} override
      */
-    function savePreferred(optionName, newValue, player, override) {
-        if (override) manualOverride = false;
+    function savePreferred(optionName, newValue, player, clearOverride) {
+        if (clearOverride) manualOverride = false;
         saveOption(optionName, newValue);
         saveOption("updated_id", generateId());
         togglePremium(), setTextQuality();
@@ -469,6 +466,18 @@
         manualOverride = false;
     }
 
+    /**
+     * @param {MouseEvent} ev
+     * @param {string} query
+     */
+    function setManualOverride(ev, query) {
+        const item = ev.target.closest(query);
+        if (item) {
+            const selected = parseQualityLabel(item.textContent);
+            manualOverride = listQuality.includes(selected);
+        }
+    }
+
     async function syncOptions() {
         if ((await GM.getValue("updated_id")) !== options.updated_id) {
             await loadOptions(), togglePremium(), setTextQuality();
@@ -593,12 +602,10 @@
 
         let menuStep = 0;
 
-        function mobileSetOverride(/** @type {MouseEvent} */ ev) {
+        function mobileSetOverride(ev) {
             if (manualOverride || listCustomMenuItem) return;
             if (!element.m_bottom_container()) menuStep = 0;
-            if (menuStep++ === 2) {
-                manualOverride = !!ev.target.closest("[role=menuitem]");
-            }
+            if (menuStep++ >= 2) setManualOverride(ev, "[role=menuitem]");
         }
 
         function mobilePlayerUpdated(/** @type {CustomEvent} */ ev) {
@@ -769,12 +776,8 @@
             return item;
         }
 
-        function setOverride(/** @type {MouseEvent} */ ev) {
-            if (!manualOverride) {
-                manualOverride = !!ev.target.closest(
-                    ".ytp-settings-menu [role=menuitemradio]"
-                );
-            }
+        function setOverride(ev) {
+            if (!manualOverride) setManualOverride(ev, "[role=menuitemradio]");
         }
 
         function playerUpdated(/** @type {CustomEvent} */ ev) {
