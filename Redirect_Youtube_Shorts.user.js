@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
 // @version      2.0.5
-// @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT a page reload
+// @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT page reload
 // @run-at       document-start
 // @inject-into  page
 // @match        https://www.youtube.com/*
