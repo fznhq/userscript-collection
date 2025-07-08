@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      2.0.4
+// @version      2.0.5
 // @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT a page reload
 // @run-at       document-start
 // @inject-into  page
@@ -26,16 +26,13 @@
     /**
      * @param {object} obj
      * @param {string} target
-     * @param {boolean} returnParent
      * @returns {any}
      */
-    function dig(obj, target, returnParent = false) {
+    function dig(obj, target) {
         if (obj && typeof obj === "object") {
-            if (target in obj && !dig(obj[target], target)) {
-                return returnParent ? obj : obj[target];
-            }
+            if (target in obj && !dig(obj[target], target)) return obj;
             for (const k in obj) {
-                const result = dig(obj[k], target, returnParent);
+                const result = dig(obj[k], target);
                 if (result !== undefined) return result;
             }
         }
@@ -47,7 +44,7 @@
      */
     function findShortData(element) {
         while (element && element.tagName !== "YTD-APP") {
-            const data = dig(element.data, "reelWatchEndpoint", true);
+            const data = dig(element.data, "reelWatchEndpoint");
             if (data) return data;
             element = element.parentElement;
         }
@@ -63,7 +60,7 @@
             const command = findShortData(element);
 
             if (command && command.reelWatchEndpoint.videoId === id) {
-                const metadata = dig(command, "url", true);
+                const metadata = dig(command, "url");
                 metadata.url = `/watch?v=${id}`;
                 metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
                 command.watchEndpoint = { videoId: id };
