@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.3.2
+// @version      2.4.0
 // @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
@@ -275,27 +275,42 @@
         return (options.preferred_premium && quality.premium) || quality.normal;
     }
 
+    /** @type {Function[]} */
+    let setQualitySequence = [];
+    let isSequenceRun = false;
+
+    async function runSequence() {
+        if (isSequenceRun) return;
+        isSequenceRun = true;
+        while (setQualitySequence.length) await setQualitySequence.shift()();
+        isSequenceRun = false;
+    }
+
     /**
      * @param {boolean} clearIsUpdated
      */
-    async function setVideoQuality(clearIsUpdated) {
-        if (manualOverride) return;
-        if (clearIsUpdated) isUpdated = false;
-        if (isUpdated) return (isUpdated = false);
+    function setVideoQuality(clearIsUpdated) {
+        setQualitySequence.push(async () => {
+            if (manualOverride) return;
+            if (clearIsUpdated) isUpdated = false;
+            if (isUpdated) return (isUpdated = false);
 
-        const id = this.id;
-        const qualityData = await API(id, "getAvailableQualityData");
-        const selected = getQuality(qualityData || []);
+            const id = this.id;
+            const qualityData = await API(id, "getAvailableQualityData");
+            const selected = getQuality(qualityData || []);
 
-        if (selected) {
-            isUpdated = !!API(
-                id,
-                "setPlaybackQualityRange",
-                selected.quality,
-                selected.quality,
-                selected.formatId
-            );
-        }
+            if (selected && (isUpdated = true)) {
+                await API(
+                    id,
+                    "setPlaybackQualityRange",
+                    selected.quality,
+                    selected.quality,
+                    selected.formatId
+                );
+            }
+        });
+
+        runSequence();
     }
 
     /**
