@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.3.9
+// @version      2.4.0
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -8,7 +8,6 @@
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/embed*
 // @exclude      https://*.youtube.com/tv*
-// @exclude      https:/tv.youtube.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
 // @grant        GM.setValue

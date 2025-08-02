@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.4.0
+// @version      2.4.1
 // @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
@@ -10,7 +10,6 @@
 // @match        https://music.youtube.com/*
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/tv*
-// @exclude      https:/tv.youtube.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
 // @grant        GM.setValue

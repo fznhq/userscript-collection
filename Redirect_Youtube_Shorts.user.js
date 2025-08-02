@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      2.0.6
+// @version      2.0.7
 // @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT page reload
 // @run-at       document-start
 // @inject-into  page
@@ -8,7 +8,6 @@
 // @exclude      https://*.youtube.com/live_chat*
 // @exclude      https://*.youtube.com/embed*
 // @exclude      https://*.youtube.com/tv*
-// @exclude      https:/tv.youtube.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Redirect_Youtube_Shorts.user.js
 // @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Redirect_Youtube_Shorts.user.js
