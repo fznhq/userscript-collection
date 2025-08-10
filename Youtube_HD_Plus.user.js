@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.4.1
+// @version      2.4.2
 // @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
@@ -275,13 +275,13 @@
     }
 
     /** @type {Function[]} */
-    let setQualitySequence = [];
+    let stackSequence = [];
     let isSequenceRun = false;
 
     async function runSequence() {
         if (isSequenceRun) return;
         isSequenceRun = true;
-        while (setQualitySequence.length) await setQualitySequence.shift()();
+        for (let fn; (fn = stackSequence.pop()); ) await fn();
         isSequenceRun = false;
     }
 
@@ -289,7 +289,7 @@
      * @param {boolean} clearIsUpdated
      */
     function setVideoQuality(clearIsUpdated) {
-        setQualitySequence.push(async () => {
+        stackSequence.push(async () => {
             if (manualOverride) return;
             if (clearIsUpdated) isUpdated = false;
             if (isUpdated) return (isUpdated = false);
@@ -503,7 +503,7 @@
     }
 
     (function checkOptions() {
-        setTimeout(() => syncOptions().then(checkOptions), 1e3);
+        setTimeout(() => syncOptions().then(checkOptions), 1000);
     })();
 
     (function music() {
@@ -554,25 +554,24 @@
         if (!isMobile && !isEmbed) return;
 
         /** @type {HTMLElement} */
-        let listCustomMenuItem = null;
-        const customMenuHashId = "#custom-q-bottom-menu";
+        let customListMenu = null;
         const queryItem = "[role=menuitem], ytm-menu-service-item-renderer";
 
         /**
          * @param {HTMLElement} container
          */
         function customMenu(container) {
-            location.replace(customMenuHashId);
-            listCustomMenuItem = container.cloneNode(true);
-            listCustomMenuItem.addEventListener("click", () => {
+            location.replace("#custom-q-bottom-menu");
+            customListMenu = container.cloneNode(true);
+            customListMenu.addEventListener("click", () => {
                 if (isEmbed) location.hash = "";
                 else history.back();
             });
 
-            const item = find(listCustomMenuItem, queryItem);
+            const item = find(customListMenu, queryItem);
             const menu = item.parentElement;
-            const header = find(listCustomMenuItem, "#header-wrapper");
-            const content = find(listCustomMenuItem, "#content-wrapper");
+            const header = find(customListMenu, "#header-wrapper");
+            const content = find(customListMenu, "#content-wrapper");
             const contentHeight = parseInt(content.style.maxHeight || 150);
             const maxHeight = Math.min(contentHeight + 20, 250);
             const { items, preferredIndex } = listQualityToItem(item);
@@ -582,7 +581,7 @@
             header.remove();
             content.style.maxHeight = maxHeight + "px";
             body.style.overflow = "hidden";
-            container.parentElement.parentElement.append(listCustomMenuItem);
+            container.parentElement.parentElement.append(customListMenu);
 
             const preferred = items[preferredIndex];
             const preferredHeight = preferred.offsetHeight;
@@ -617,7 +616,7 @@
         let menuStep = 0;
 
         function mobileSetOverride(ev) {
-            if (manualOverride || listCustomMenuItem) return;
+            if (manualOverride || customListMenu) return;
             if (!element.m_bottom_container()) menuStep = 0;
             if (menuStep++ >= 2) setManualOverride(ev, "[role=menuitem]");
         }
@@ -626,25 +625,22 @@
             if (isVideoPage() && ev.detail.type === "newdata") resetState();
         }
 
-        let prevHash = "";
-
         function mobileHandlePressBack() {
-            if (listCustomMenuItem && prevHash === customMenuHashId) {
-                listCustomMenuItem = listCustomMenuItem.remove();
+            if (customListMenu) {
+                customListMenu = customListMenu.remove();
                 body.style.overflow = "";
             }
-            prevHash = location.hash;
         }
 
-        const videoIdRegex = /(?:shorts\/|watch\?v=|clip\/)([^#\&\?]*)/g;
+        const videoIdRegex = /(?:shorts\/|watch\?v=|clip\/)([^#\&\?]*)/;
 
         /**
          * @returns {boolean | string}
          */
         function getVideoId() {
-            const url = element.link().href + "&" + location.href;
-            const ids = url.match(videoIdRegex);
-            return ids && ids[0] === ids[1] && ids[0].replace(/.*[/=]/, "");
+            const id1 = element.link().href.match(videoIdRegex);
+            const id2 = location.href.match(videoIdRegex);
+            return id1 && id2 && id1[1] === id2[1] && id1;
         }
 
         function registerPlayer() {
