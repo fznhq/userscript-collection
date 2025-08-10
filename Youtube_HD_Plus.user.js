@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.4.2
+// @version      2.4.3
 // @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
@@ -640,7 +640,7 @@
         function getVideoId() {
             const id1 = element.link().href.match(videoIdRegex);
             const id2 = location.href.match(videoIdRegex);
-            return id1 && id2 && id1[1] === id2[1] && id1;
+            return id1 && id2 && id1[1] === id2[1] && id1[1];
         }
 
         function registerPlayer() {
