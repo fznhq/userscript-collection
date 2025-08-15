@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Redirect YouTube Shorts
-// @version      2.0.7
+// @version      2.0.8
 // @description  Seamlessly redirect YouTube Shorts to the regular video player WITHOUT page reload
 // @run-at       document-start
 // @inject-into  page
@@ -53,7 +53,7 @@
      * @param {string} id
      */
     function redirectShorts(id) {
-        const elements = document.querySelectorAll(`a[href*="shorts/${id}"]`);
+        const elements = document.querySelectorAll(`a[href*="${id}"]`);
 
         for (const element of elements) {
             const command = findShortData(element);
@@ -69,14 +69,14 @@
         }
     }
 
-    const idRegex = /(?:shorts\/|watch\?v=)([^#\&\?]*)/;
+    const idRegex = /shorts\/([^#&?]*)/;
 
     function handleShorts(/** @type {MouseEvent} */ ev) {
         /** @type {HTMLElement} */
         const target = ev.target;
 
         if (target.closest) {
-            const query = "a[href*='/shorts/'], a[href*='/watch?v=']";
+            const query = "a[href*='/shorts/']";
             const url = target.closest(query);
             if (url) redirectShorts(url.href.match(idRegex)[1]);
         }
