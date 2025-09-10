@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         YouTube HD+
-// @version      2.5.0
+// @name         YouTube HD Plus
+// @version      2.5.1
 // @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
