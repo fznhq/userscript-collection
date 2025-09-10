@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         YouTube HD Plus
-// @version      2.4.4
+// @name         YouTube HD+
+// @version      2.5.0
 // @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
@@ -44,9 +44,17 @@
 
     /** @namespace */
     const options = {
+        preferred_quality: undefined, // Value from listQuality.
+        preferred_premium: undefined, // true or false.
+        show_ui: undefined, // true or false.
+        updated_id: "",
+    };
+
+    /** DO NOT CHANGE */
+    const fallbackOptions = {
         preferred_quality: 1080,
         preferred_premium: true,
-        updated_id: "",
+        show_ui: true,
     };
 
     const labels = {
@@ -60,17 +68,6 @@
         check_mark: `{"svg":{"viewBox":"-32 -32 186.9 153.8"},"path":{"d":"M1.2 55.5a3.7 3.7 0 0 1 5-5.5l34.1 30.9 76.1-79.7a3.8 3.8 0 0 1 5.4 5.1L43.2 88.7a3.7 3.7 0 0 1-5.2.2L1.2 55.5z"}}`,
         arrow: `{"svg":{"class":"transform-icon-svg","viewBox":"0 0 24 24"},"path":{"d":"m9.4 18.4-.7-.7 5.6-5.6-5.7-5.7.7-.7 6.4 6.4-6.3 6.3z"}}`,
     };
-
-    for (const key in labels) {
-        const storageKeyLabel = `label_${key}`;
-        const savedLabel = await GM.getValue(storageKeyLabel);
-        let label = labels[key];
-
-        if (!label.endsWith(";")) GM.setValue(storageKeyLabel, label);
-        else if (savedLabel !== undefined) label = savedLabel;
-
-        labels[key] = label.replace(/;$/, "");
-    }
 
     /**
      * @param {string} name
@@ -91,22 +88,49 @@
     }
 
     /**
-     * @param {string} name
+     * @param {string} key
      * @param {any} value
      */
-    function saveOption(name, value) {
-        GM.setValue(name, (options[name] = value));
+    function saveOption(key, value) {
+        GM.setValue(key, value);
+        if (key in options) options[key] = value;
     }
 
-    async function loadOptions() {
-        for (const name in options) {
-            const saved_option = await GM.getValue(name);
-            if (saved_option === undefined) saveOption(name, options[name]);
-            else options[name] = saved_option;
+    for (const key in labels) {
+        const storageKeyLabel = `label_${key}`;
+        const savedLabel = await GM.getValue(storageKeyLabel);
+        let label = labels[key];
+
+        if (!label.endsWith(";")) saveOption(storageKeyLabel, label);
+        else if (savedLabel !== undefined) label = savedLabel;
+
+        labels[key] = label.replace(/;$/, "");
+    }
+
+    /**
+     * @param {boolean | undefined} init
+     */
+    async function loadOptions(init) {
+        for (const key in options) {
+            const saved = await GM.getValue(key);
+            const lastDefaultKey = `last_default_${key}`;
+            const lastDefault = await GM.getValue(lastDefaultKey);
+            const value = options[key];
+
+            if (init && value !== undefined && lastDefault != value) {
+                saveOption(key, value);
+                saveOption(lastDefaultKey, value);
+            } else if (init && value === undefined && saved === undefined) {
+                saveOption(key, fallbackOptions[key]);
+            } else if (saved === undefined) {
+                saveOption(key, value);
+            } else {
+                options[key] = saved;
+            }
         }
     }
 
-    await loadOptions();
+    await loadOptions(true);
 
     /**
      * @param {string} prefix
@@ -321,14 +345,14 @@
     }
 
     /**
-     * @param {keyof options} optionName
+     * @param {keyof options} optionKey
      * @param {any} newValue
      * @param {HTMLElement} player
      * @param {Boolean} override
      */
-    function savePreferred(optionName, newValue, player, clearOverride) {
+    function savePreferred(optionKey, newValue, player, clearOverride) {
         if (clearOverride) manualOverride = false;
-        saveOption(optionName, newValue);
+        saveOption(optionKey, newValue);
         saveOption("updated_id", generateId());
         togglePremium(), setTextQuality();
         setVideoQuality.call(player, true);
@@ -505,6 +529,7 @@
             await loadOptions(), togglePremium(), setTextQuality();
             for (const id in caches.player) {
                 const [player, video] = caches.player[id];
+                isUpdated = false;
                 if (!video.paused) setVideoQuality.call(player, true);
             }
         }
@@ -551,10 +576,8 @@
             const menuItem = settingsClicked && element.music_menu_item();
 
             if (player && !caches.player[player.id]) addVideoListener(player);
-            if (menuItem) {
-                observe.disconnect();
-                musicPopupObserver(menuItem);
-            }
+            if (menuItem || (!options.show_ui && player)) observe.disconnect();
+            if (menuItem) musicPopupObserver(menuItem);
         });
     })();
 
@@ -614,7 +637,11 @@
         }
 
         function mobileSetSettingsClicked(/** @type {MouseEvent} */ ev) {
-            if (isVideoPage() && !element.m_bottom_container()) {
+            if (
+                options.show_ui &&
+                isVideoPage() &&
+                !element.m_bottom_container()
+            ) {
                 settingsClicked = !!ev.target.closest(
                     "player-top-controls .player-settings-icon, shorts-video ytm-bottom-sheet-renderer"
                 );
@@ -833,12 +860,12 @@
 
             observe.disconnect();
             addVideoListener(moviePlayer);
-            const panelSettings = element.panel_settings();
+            document.addEventListener("yt-player-updated", playerUpdated);
+            const panelSettings = options.show_ui && element.panel_settings();
 
             if (panelSettings) {
                 panelSettings.append(premiumMenu(), qualityMenu());
                 element.settings().addEventListener("click", setOverride, true);
-                document.addEventListener("yt-player-updated", playerUpdated);
             }
         });
     })();
