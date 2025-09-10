@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.5.1
+// @version      2.5.2
 // @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
@@ -48,13 +48,6 @@
         preferred_premium: undefined, // true or false.
         show_ui: undefined, // true or false.
         updated_id: "",
-    };
-
-    /** DO NOT CHANGE */
-    const fallbackOptions = {
-        preferred_quality: 1080,
-        preferred_premium: true,
-        show_ui: true,
     };
 
     const labels = {
@@ -106,6 +99,13 @@
 
         labels[key] = label.replace(/;$/, "");
     }
+
+    /** DO NOT CHANGE */
+    const fallbackOptions = {
+        preferred_quality: 1080,
+        preferred_premium: true,
+        show_ui: true,
+    };
 
     /**
      * @param {boolean | undefined} init
