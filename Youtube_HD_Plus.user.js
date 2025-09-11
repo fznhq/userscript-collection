@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.5.2
+// @version      2.5.3
 // @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
@@ -42,7 +42,10 @@
 
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 4320];
 
-    /** @namespace */
+    /**
+     * You can change the config here in the script.
+     * @namespace
+     */
     const options = {
         preferred_quality: undefined, // Value from listQuality.
         preferred_premium: undefined, // true or false.
@@ -117,9 +120,12 @@
             const lastDefault = await GM.getValue(lastDefaultKey);
             const value = options[key];
 
-            if (init && value !== undefined && lastDefault != value) {
-                saveOption(key, value);
+            if (init && lastDefault !== value) {
                 saveOption(lastDefaultKey, value);
+            }
+
+            if (init && value !== undefined && lastDefault !== value) {
+                saveOption(key, value);
             } else if (init && value === undefined && saved === undefined) {
                 saveOption(key, fallbackOptions[key]);
             } else if (saved === undefined) {
@@ -493,8 +499,8 @@
         if (!cache || cache[1] !== video) {
             caches.player[player.id] = [player, video];
             const fn = setVideoQuality.bind(player, false);
-            video.addEventListener("play", () => setTimeout(fn, 10));
-            video.addEventListener("resize", fn);
+            const types = ["play", "resize"];
+            types.forEach((type) => video.addEventListener(type, fn));
         }
     }
 
