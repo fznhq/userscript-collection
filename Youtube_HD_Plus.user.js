@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube HD Plus
-// @version      2.5.3
+// @version      2.5.4
 // @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
 // @run-at       document-end
 // @inject-into  content
@@ -37,7 +37,6 @@
     const isLightMode = getComputedStyle(html).background.includes("255");
 
     let manualOverride = false;
-    let isUpdated = false;
     let settingsClicked = false;
 
     const listQuality = [144, 240, 360, 480, 720, 1080, 1440, 2160, 4320];
@@ -322,21 +321,15 @@
         isSequenceRun = false;
     }
 
-    /**
-     * @param {boolean} clearIsUpdated
-     */
-    function setVideoQuality(clearIsUpdated) {
+    function setVideoQuality() {
         if (manualOverride) return;
 
         stackSequence.push(async () => {
-            if (clearIsUpdated) isUpdated = false;
-            if (isUpdated) return (isUpdated = false);
-
             const id = this.id;
             const qualityData = await API(id, "getAvailableQualityData");
             const selected = getQuality(qualityData || []);
 
-            if (selected && (isUpdated = true)) {
+            if (selected) {
                 await API(
                     id,
                     "setPlaybackQualityRange",
@@ -361,7 +354,7 @@
         saveOption(optionKey, newValue);
         saveOption("updated_id", generateId());
         togglePremium(), setTextQuality();
-        setVideoQuality.call(player, true);
+        setVideoQuality.call(player);
     }
 
     /**
@@ -498,8 +491,8 @@
         const video = find(player, "video");
         if (!cache || cache[1] !== video) {
             caches.player[player.id] = [player, video];
-            const fn = setVideoQuality.bind(player, false);
-            const types = ["play", "resize"];
+            const fn = setVideoQuality.bind(player);
+            const types = ["playing", "resize"];
             types.forEach((type) => video.addEventListener(type, fn));
         }
     }
@@ -514,7 +507,6 @@
     }
 
     function resetState() {
-        isUpdated = false;
         manualOverride = false;
     }
 
@@ -535,8 +527,7 @@
             await loadOptions(), togglePremium(), setTextQuality();
             for (const id in caches.player) {
                 const [player, video] = caches.player[id];
-                isUpdated = false;
-                if (!video.paused) setVideoQuality.call(player, true);
+                if (!video.paused) setVideoQuality.call(player);
             }
         }
     }
@@ -574,8 +565,10 @@
             );
         }
 
-        window.addEventListener("tap", musicSetSettingsClicked, true);
-        window.addEventListener("click", musicSetSettingsClicked, true);
+        if (options.show_ui) {
+            window.addEventListener("tap", musicSetSettingsClicked, true);
+            window.addEventListener("click", musicSetSettingsClicked, true);
+        }
 
         observer((_, observe) => {
             const player = element.movie_player();
@@ -643,11 +636,7 @@
         }
 
         function mobileSetSettingsClicked(/** @type {MouseEvent} */ ev) {
-            if (
-                options.show_ui &&
-                isVideoPage() &&
-                !element.m_bottom_container()
-            ) {
+            if (isVideoPage() && !element.m_bottom_container()) {
                 settingsClicked = !!ev.target.closest(
                     "player-top-controls .player-settings-icon, shorts-video ytm-bottom-sheet-renderer"
                 );
@@ -705,7 +694,10 @@
             }
         }
 
-        window.addEventListener("click", mobileSetSettingsClicked, true);
+        if (options.show_ui) {
+            window.addEventListener("click", mobileSetSettingsClicked, true);
+        }
+
         window.addEventListener("click", mobileSetOverride, true);
         window.addEventListener("popstate", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
@@ -855,7 +847,9 @@
             }
         }
 
-        window.addEventListener("click", attachShortMenuItem);
+        if (options.show_ui) {
+            window.addEventListener("click", attachShortMenuItem);
+        }
 
         observer((_, observe) => {
             const moviePlayer = element.movie_player();
