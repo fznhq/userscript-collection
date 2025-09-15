@@ -1,4 +1,4 @@
-// ==UserScript==//
+// ==UserScript==
 // @name            Redirect YouTube Shorts
 // @name:en         Redirect YouTube Shorts
 // @name:id         Redirect YouTube Shorts
@@ -21,7 +21,7 @@
 // @description:es  Redirige automáticamente YouTube Shorts al reproductor normal sin recargar la página
 // @description:de  Leitet YouTube Shorts automatisch zum normalen Videoplayer um, ohne die Seite neu zu laden
 // @description:ru  Автоматически перенаправляет YouTube Shorts в обычный видеоплеер без перезагрузки страницы
-// @version         2.0.9
+// @version         2.1.0
 // @run-at          document-start
 // @inject-into     page
 // @match           https://www.youtube.com/*
