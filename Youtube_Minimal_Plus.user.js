@@ -256,7 +256,8 @@
                 html.minimal-youtube-hide-sidebar ytd-page-manager.ytd-app { margin-left: 0 !important; }
                 
                 /* FIX: Overlapping Playlist */
-                html.minimal-youtube-hide-sidebar ytd-playlist-header-renderer { left: 0 !important; }
+                html.minimal-youtube-hide-sidebar ytd-browse[role=main] ytd-playlist-header-renderer:not([hidden]),
+                html.minimal-youtube-hide-sidebar ytd-browse[role=main] yt-page-header-renderer:not([hidden]) { left: 0 !important; }
 
                 /* Toast */
                 .yt-minimal-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--yt-spec-base-background, #181818); color: var(--yt-spec-text-primary, #eee); padding: 10px 20px; border-radius: 4px; z-index: 10000; opacity: 0.9; transition: opacity 0.3s; }
