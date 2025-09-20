@@ -75,17 +75,32 @@
         showToast(`${options[key].label} ${value ? 'enabled' : 'disabled'}`);
     }
 
+    const prefix = "ytmp-";
+    const attrId = "-" + Date.now().toString(36).slice(-4);
+    const attr = {
+        minimalHomepage: "minimal-homepage",
+        hideComments: "hide-comments",
+        hideSecondary: "hide-secondary",
+        hideRelated: "hide-related",
+        hideSidebar: "hide-sidebar",
+        hideTopBarButtons: "hide-top-bar-buttons",
+    };
+
+    function setHtmlAttr(attrName, state) {
+        document.documentElement.toggleAttribute(prefix + attr[attrName] + attrId, state);
+    }
+
     function applyStyles() {
         if (debug) console.log('Applying styles...');
         const html = document.documentElement;
         const isHomepage = window.location.pathname === "/";
         try {
-            html.classList.toggle("minimal-youtube-homepage", options.minimalHomepage.value && isHomepage);
-            html.classList.toggle("minimal-youtube-hide-comments", options.hideComments.value);
-            html.classList.toggle("minimal-youtube-hide-secondary", options.hideSecondary.value);
-            html.classList.toggle("minimal-youtube-hide-related", options.hideRelated.value);
-            html.classList.toggle("minimal-youtube-hide-sidebar", options.hideSidebar.value);
-            html.classList.toggle("minimal-youtube-hide-top-bar-buttons", options.hideTopBarButtons.value);
+            setHtmlAttr("minimalHomepage", options.minimalHomepage.value && isHomepage);
+            setHtmlAttr("hideComments", options.hideComments.value);
+            setHtmlAttr("hideSecondary", options.hideSecondary.value);
+            setHtmlAttr("hideRelated", options.hideRelated.value);
+            setHtmlAttr("hideSidebar", options.hideSidebar.value);
+            setHtmlAttr("hideTopBarButtons", options.hideTopBarButtons.value);
 
             if (options.minimalHomepage.value && isHomepage) {
                 if (!homeContainer) createHomeContainer();
@@ -221,7 +236,7 @@
     function init() {
         loadOptions().then(() => {
             const style = document.createElement("style");
-            style.textContent = `
+            let cssText = `
                 /* Popup Styles */
                 .yt-minimal-popup-container { display: flex; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 9999; }
                 .yt-minimal-menu.ytp-panel-menu { background: var(--yt-spec-base-background, #181818); width: 400px; padding: 10px; fill: var(--yt-spec-text-primary, #eee); font-family: "Roboto", "Arial", sans-serif; border-radius: 12px; }
@@ -236,8 +251,8 @@
                 .ytp-menuitem[aria-checked=true] .ytp-menuitem-toggle-checkbox::after { left: 10px; }
 
                 /* Minimal YouTube Styles */
-                html.minimal-youtube-homepage, html.minimal-youtube-homepage body { height: 100vh; background-color: var(--yt-spec-base-background, #0f0f0f); }
-                html.minimal-youtube-homepage ytd-app > :not(.home-container) { display: none !important; }
+                html[${prefix}minimal-homepage${attrId}], html[${prefix}minimal-homepage${attrId}] body { height: 100vh; background-color: var(--yt-spec-base-background, #0f0f0f); }
+                html[${prefix}minimal-homepage${attrId}] ytd-app > :not(.home-container) { display: none !important; }
                 .home-container { display: none; flex-direction: column; gap: 24px; align-items: center; justify-content: center; height: 100%; position: absolute; top: 0; left: 0; width: 100%; background: var(--yt-spec-base-background, #0f0f0f); z-index: 1000; }
                 .logo-full { width: 200px; margin-bottom: 20px; }
                 .search-group { height: 40px; display: flex; position: relative; }
@@ -247,17 +262,17 @@
                 .search-icon-container { height: 24px; width: 24px; fill: var(--yt-spec-icon-active-other, #909090); }
 
                 /* Hide element styles */
-                html.minimal-youtube-hide-comments #comments { display: none !important; }
-                html.minimal-youtube-hide-secondary #secondary { display: none !important; }
-                html.minimal-youtube-hide-related #related { display: none !important; }
-                html.minimal-youtube-hide-sidebar #guide, html.minimal-youtube-hide-sidebar tp-yt-app-drawer, html.minimal-youtube-hide-sidebar ytd-mini-guide-renderer { display: none !important; }
-                html.minimal-youtube-hide-top-bar-buttons #guide-button, html.minimal-youtube-hide-top-bar-buttons #voice-search-button, html.minimal-youtube-hide-top-bar-buttons .ytd-masthead #end #buttons { display: none !important; }
+                html[${prefix}hide-comments${attrId}] #comments { display: none !important; }
+                html[${prefix}hide-secondary${attrId}] #secondary { display: none !important; }
+                html[${prefix}hide-related${attrId}] #related { display: none !important; }
+                html[${prefix}hide-sidebar${attrId}] #guide, html[${prefix}hide-sidebar${attrId}] tp-yt-app-drawer, html[${prefix}hide-sidebar${attrId}] ytd-mini-guide-renderer { display: none !important; }
+                html[${prefix}hide-top-bar-buttons${attrId}] #guide-button, html[${prefix}hide-top-bar-buttons${attrId}] #voice-search-button, html[${prefix}hide-top-bar-buttons${attrId}] .ytd-masthead #end #buttons { display: none !important; }
                 /* FIX: Reclaim sidebar space */
-                html.minimal-youtube-hide-sidebar ytd-page-manager.ytd-app { margin-left: 0 !important; }
-                
+                html[${prefix}hide-sidebar${attrId}] ytd-page-manager.ytd-app { margin-left: 0 !important; }
+
                 /* FIX: Overlapping Playlist */
-                html.minimal-youtube-hide-sidebar ytd-browse[role=main] ytd-playlist-header-renderer:not([hidden]),
-                html.minimal-youtube-hide-sidebar ytd-browse[role=main] yt-page-header-renderer:not([hidden]) { left: 0 !important; }
+                html[${prefix}hide-sidebar${attrId}] ytd-browse[role=main] ytd-playlist-header-renderer:not([hidden]),
+                html[${prefix}hide-sidebar${attrId}] ytd-browse[role=main] yt-page-header-renderer:not([hidden]) { left: 0 !important; }
 
                 /* Toast */
                 .yt-minimal-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--yt-spec-base-background, #181818); color: var(--yt-spec-text-primary, #eee); padding: 10px 20px; border-radius: 4px; z-index: 10000; opacity: 0.9; transition: opacity 0.3s; }
@@ -270,10 +285,11 @@
                     .search-group { flex-direction: column; height: auto; }
                 }
             `;
+            style.textContent = cssText;
             document.head.appendChild(style);
 
             window.addEventListener("keydown", (e) => {
-                if (e.key === "c" && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                if (e.key.toLowerCase() === "b" && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
                     e.preventDefault();
                     e.stopPropagation();
                     togglePopup();
