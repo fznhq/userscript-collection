@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         YouTube Theater Plus
-// @version      2.4.0
+// @version      2.4.1
 // @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
 // @run-at       document-body
 // @inject-into  content
@@ -11,11 +11,12 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant        GM.getValue
 // @grant        GM.setValue
-// @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
-// @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Fullpage_Theater.user.js
+// @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Theater_Plus.user.js
+// @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Theater_Plus.user.js
 // @author       Fznhq
 // @namespace    https://github.com/fznhq
 // @homepageURL  https://github.com/fznhq/userscript-collection
+// @homepage     https://github.com/fznhq/userscript-collection
 // @license      GNU GPLv3
 // ==/UserScript==
 
@@ -156,25 +157,14 @@
         const keyLabel = `label_${key}`;
         /** @type {Option} */
         const option = subName ? options[name].sub[subName] : options[name];
-        const savedOption = await GM.getValue(key);
+        option.value = await GM.getValue(key, option.value);
 
-        if (savedOption === undefined) {
-            saveOption(key, option.value, option);
-        } else {
-            option.value = savedOption;
-        }
+        let label = option.label;
+        if (label.endsWith(";")) label = await GM.getValue(keyLabel, label);
+        else GM.setValue(keyLabel, label);
+        option.label = label.replace(/;$/, "");
 
         const icon = JSON.parse(option.icon || subIcon);
-        const savedLabel = await GM.getValue(keyLabel);
-        let label = option.label;
-
-        if (!label.endsWith(";")) {
-            GM.setValue(keyLabel, label);
-        } else if (savedLabel !== undefined) {
-            label = savedLabel;
-        }
-
-        option.label = label.replace(/;$/, "");
         option.icon = createNS("svg", icon.svg, [createNS("path", icon.path)]);
     }
 
