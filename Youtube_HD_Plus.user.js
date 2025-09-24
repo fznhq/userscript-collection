@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.5.5
+// @version            2.5.6
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -33,8 +33,8 @@
 // @icon               https://www.google.com/s2/favicons?sz=64&domain=youtube.com
 // @grant              GM.getValue
 // @grant              GM.setValue
-// @updateURL          https://github.com/fznhq/userscript-collection/raw/main/Youtube_Quality_HD.user.js
-// @downloadURL        https://github.com/fznhq/userscript-collection/raw/main/Youtube_Quality_HD.user.js
+// @updateURL          https://github.com/fznhq/userscript-collection/raw/main/Youtube_HD_Plus.user.js
+// @downloadURL        https://github.com/fznhq/userscript-collection/raw/main/Youtube_HD_Plus.user.js
 // @author             Fznhq
 // @namespace          https://github.com/fznhq
 // @homepageURL        https://github.com/fznhq/userscript-collection
