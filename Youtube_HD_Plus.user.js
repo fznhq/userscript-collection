@@ -1,24 +1,45 @@
 // ==UserScript==
-// @name         YouTube HD Plus
-// @version      2.5.4
-// @description  Automatically select your desired video quality and applies Premium playback when possible. (Support YouTube Desktop, Music & Mobile)
-// @run-at       document-end
-// @inject-into  content
-// @match        https://www.youtube.com/*
-// @match        https://www.youtube-nocookie.com/*
-// @match        https://m.youtube.com/*
-// @match        https://music.youtube.com/*
-// @exclude      https://*.youtube.com/live_chat*
-// @exclude      https://*.youtube.com/tv*
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
-// @grant        GM.getValue
-// @grant        GM.setValue
-// @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Quality_HD.user.js
-// @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Quality_HD.user.js
-// @author       Fznhq
-// @namespace    https://github.com/fznhq
-// @homepageURL  https://github.com/fznhq/userscript-collection
-// @license      GNU GPLv3
+// @name               YouTube HD Plus
+// @name:en            YouTube HD Plus
+// @name:id            YouTube HD Plus
+// @name:zh-CN         YouTube HD Plus
+// @name:zh-TW         YouTube HD Plus
+// @name:ja            YouTube HD Plus
+// @name:ko            YouTube HD Plus
+// @name:fr            YouTube HD Plus
+// @name:es            YouTube HD Plus
+// @name:de            YouTube HD Plus
+// @name:ru            YouTube HD Plus
+// @description        Automatically select your preferred video quality and enable Premium playback when available. (Supports YouTube Desktop, Music & Mobile)
+// @description:en     Automatically select your preferred video quality and enable Premium playback when available. (Supports YouTube Desktop, Music & Mobile)
+// @description:id     Otomatis memilih kualitas video yang Anda sukai dan mengaktifkan pemutaran Premium jika tersedia. (Mendukung YouTube Desktop, Music & Mobile)
+// @description:zh-CN  自动选择您偏好的视频画质，并在可用时启用 Premium 播放。 (支持 YouTube 桌面版、音乐和移动端)
+// @description:zh-TW  自動選擇您偏好的影片畫質，並在可用時啟用 Premium 播放。 (支援 YouTube 桌面版、音樂和行動裝置)
+// @description:ja     希望する画質を自動で選択し、利用可能な場合は Premium 再生を有効にします。（対応: YouTube デスクトップ、Music、モバイル）
+// @description:ko     선호하는 동영상 화질을 자동으로 선택하고, 가능할 경우 Premium 재생을 활성화합니다. (지원: YouTube 데스크톱, Music, 모바일)
+// @description:fr     Sélectionne automatiquement la qualité vidéo préférée et active la lecture Premium lorsque disponible. (Compatible avec YouTube Desktop, Music et Mobile)
+// @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
+// @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
+// @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
+// @version            2.5.6
+// @run-at             document-end
+// @inject-into        content
+// @match              https://www.youtube.com/*
+// @match              https://www.youtube-nocookie.com/*
+// @match              https://m.youtube.com/*
+// @match              https://music.youtube.com/*
+// @exclude            https://*.youtube.com/live_chat*
+// @exclude            https://*.youtube.com/tv*
+// @icon               https://www.google.com/s2/favicons?sz=64&domain=youtube.com
+// @grant              GM.getValue
+// @grant              GM.setValue
+// @updateURL          https://github.com/fznhq/userscript-collection/raw/main/Youtube_HD_Plus.user.js
+// @downloadURL        https://github.com/fznhq/userscript-collection/raw/main/Youtube_HD_Plus.user.js
+// @author             Fznhq
+// @namespace          https://github.com/fznhq
+// @homepageURL        https://github.com/fznhq/userscript-collection
+// @homepage           https://github.com/fznhq/userscript-collection
+// @license            GNU GPLv3
 // ==/UserScript==
 
 // Icons provided by https://uxwing.com/
@@ -93,12 +114,10 @@
 
     for (const key in labels) {
         const storageKeyLabel = `label_${key}`;
-        const savedLabel = await GM.getValue(storageKeyLabel);
         let label = labels[key];
-
-        if (!label.endsWith(";")) saveOption(storageKeyLabel, label);
-        else if (savedLabel !== undefined) label = savedLabel;
-
+        if (label.endsWith(";")) {
+            label = await GM.getValue(storageKeyLabel, label);
+        } else saveOption(storageKeyLabel, label);
         labels[key] = label.replace(/;$/, "");
     }
 
@@ -114,24 +133,16 @@
      */
     async function loadOptions(init) {
         for (const key in options) {
-            const saved = await GM.getValue(key);
+            const value = options[key];
+            const defaultValue = value ?? fallbackOptions[key];
+            const saved = await GM.getValue(key, defaultValue);
             const lastDefaultKey = `last_default_${key}`;
             const lastDefault = await GM.getValue(lastDefaultKey);
-            const value = options[key];
+            const isDefaultChange = init && lastDefault !== value;
 
-            if (init && lastDefault !== value) {
-                saveOption(lastDefaultKey, value);
-            }
-
-            if (init && value !== undefined && lastDefault !== value) {
-                saveOption(key, value);
-            } else if (init && value === undefined && saved === undefined) {
-                saveOption(key, fallbackOptions[key]);
-            } else if (saved === undefined) {
-                saveOption(key, value);
-            } else {
-                options[key] = saved;
-            }
+            if (isDefaultChange) saveOption(lastDefaultKey, value);
+            if (isDefaultChange && value !== undefined) saveOption(key, value);
+            else options[key] = saved;
         }
     }
 
@@ -532,9 +543,11 @@
         }
     }
 
-    (function checkOptions() {
-        setTimeout(() => syncOptions().then(checkOptions), 1000);
-    })();
+    if (options.show_ui) {
+        (function checkOptions() {
+            setTimeout(() => syncOptions().then(checkOptions), 1000);
+        })();
+    }
 
     (function music() {
         if (!isMusic) return;
@@ -662,7 +675,7 @@
             }
         }
 
-        const videoIdRegex = /(?:shorts\/|watch\?v=|clip\/)([^#\&\?]*)/;
+        const videoIdRegex = /(?:shorts\/|watch\?v=|clip\/)([^#&?]*)/;
 
         /**
          * @returns {boolean | string}
