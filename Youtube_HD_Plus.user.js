@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.5.6
+// @version            2.5.7
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -613,15 +613,15 @@
 
             const item = find(customListMenu, queryItem);
             const menu = item.parentElement;
-            const header = find(customListMenu, "#header-wrapper");
-            const content = find(customListMenu, "#content-wrapper");
+            const content = find(customListMenu, "[id*=content]");
+            const header = content.previousElementSibling;
             const contentHeight = parseInt(content.style.maxHeight || 150);
             const maxHeight = Math.min(contentHeight + 20, 250);
             const { items, preferredIndex } = listQualityToItem(item);
 
             menu.textContent = "";
             menu.append(...items);
-            header.remove();
+            header?.remove();
             content.style.maxHeight = maxHeight + "px";
             body.style.overflow = "hidden";
             container.parentElement.parentElement.append(customListMenu);
