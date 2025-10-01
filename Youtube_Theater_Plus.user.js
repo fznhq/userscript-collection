@@ -1,23 +1,43 @@
 // ==UserScript==
-// @name         YouTube Theater Plus
-// @version      2.4.1
-// @description  Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI.
-// @run-at       document-body
-// @inject-into  content
-// @match        https://www.youtube.com/*
-// @exclude      https://*.youtube.com/live_chat*
-// @exclude      https://*.youtube.com/embed*
-// @exclude      https://*.youtube.com/tv*
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=youtube.com
-// @grant        GM.getValue
-// @grant        GM.setValue
-// @updateURL    https://github.com/fznhq/userscript-collection/raw/main/Youtube_Theater_Plus.user.js
-// @downloadURL  https://github.com/fznhq/userscript-collection/raw/main/Youtube_Theater_Plus.user.js
-// @author       Fznhq
-// @namespace    https://github.com/fznhq
-// @homepageURL  https://github.com/fznhq/userscript-collection
-// @homepage     https://github.com/fznhq/userscript-collection
-// @license      GNU GPLv3
+// @name               YouTube Theater Plus
+// @name:en            YouTube Theater Plus
+// @name:id            YouTube Theater Plus
+// @name:zh-CN         YouTube Theater Plus
+// @name:zh-TW         YouTube Theater Plus
+// @name:ja            YouTube Theater Plus
+// @name:ko            YouTube Theater Plus
+// @name:fr            YouTube Theater Plus
+// @name:es            YouTube Theater Plus
+// @name:de            YouTube Theater Plus
+// @name:ru            YouTube Theater Plus
+// @description        Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI
+// @description:en     Enhances YouTube Theater with features like Fullpage Theater, Auto Open Theater, and more, including support for the new UI
+// @description:id     Tingkatkan YouTube Theater dengan fitur seperti Fullpage Theater, Auto Open Theater, dan lainnya, termasuk dukungan untuk tampilan baru
+// @description:zh-CN  为 YouTube 剧场模式增强功能，如全屏剧场、自动开启剧场等，并支持新界面
+// @description:zh-TW  為 YouTube 劇場模式增強功能，如全螢幕劇場、自動開啟劇場等，並支援新介面
+// @description:ja     YouTube シアターモードを拡張し、フルページシアター、自動シアター起動などの機能を追加し、新しい UI に対応します
+// @description:ko     YouTube 시어터 모드를 강화하여 전체 페이지 시어터, 자동 시어터 열기 등 다양한 기능을 제공하며 새로운 UI도 지원합니다
+// @description:fr     Améliore YouTube Theater avec des fonctionnalités comme le mode plein écran, l’ouverture automatique et d’autres, y compris la prise en charge de la nouvelle interface
+// @description:es     Mejora YouTube Theater con funciones como el modo de pantalla completa, apertura automática y más, incluyendo soporte para la nueva interfaz
+// @description:de     Erweitert YouTube Theater mit Funktionen wie Vollseiten-Theater, automatischem Öffnen und weiteren, einschließlich Unterstützung für die neue Benutzeroberfläche
+// @description:ru     Расширяет YouTube Theater функциями, такими как полноэкранный режим, автоматическое открытие и другими, включая поддержку нового интерфейса
+// @version            2.4.2
+// @run-at             document-body
+// @inject-into        content
+// @match              https://www.youtube.com/*
+// @exclude            https://*.youtube.com/live_chat*
+// @exclude            https://*.youtube.com/embed*
+// @exclude            https://*.youtube.com/tv*
+// @icon               https://www.google.com/s2/favicons?sz=64&domain=youtube.com
+// @grant              GM.getValue
+// @grant              GM.setValue
+// @updateURL          https://github.com/fznhq/userscript-collection/raw/main/Youtube_Theater_Plus.user.js
+// @downloadURL        https://github.com/fznhq/userscript-collection/raw/main/Youtube_Theater_Plus.user.js
+// @author             Fznhq
+// @namespace          https://github.com/fznhq
+// @homepageURL        https://github.com/fznhq/userscript-collection
+// @homepage           https://github.com/fznhq/userscript-collection
+// @license            GNU GPLv3
 // ==/UserScript==
 
 // Icons provided by https://iconmonstr.com/
@@ -52,7 +72,7 @@
             label: "Fullpage Theater;", // Remove ";" to set your own label.
             value: true,
             onUpdate() {
-                applyTheaterMode(true);
+                if (theater) applyTheaterMode(true);
             },
             sub: {
                 show_title: {
@@ -324,11 +344,11 @@
             display: none;
         }
 
-        html[theater][masthead-hidden] #masthead-container {
+        html[masthead-hidden] #masthead-container {
             transform: translateY(-100%) !important;
         }
 
-        html[theater][masthead-hidden] [fixed-panels] #chat {
+        html[masthead-hidden] [fixed-panels] #chat {
             top: 0 !important;
         }
 
@@ -343,16 +363,13 @@
             max-height: none;
         }
 
-        html[theater][show-title] .ytp-chrome-top {
+        html[show-title] .ytp-chrome-top {
             height: auto !important;
         }
 
-        html[theater][show-title] .ytp-title {
+        html[show-title] .ytp-title,
+        html[show-title] .ytp-gradient-top {
             display: flex !important;
-        }
-
-        html[theater][show-title] .ytp-gradient-top {
-            display: block !important;
         }
 
         .ytc-popup-container {
@@ -366,7 +383,7 @@
         }
 
         .ytc-menu.ytp-panel-menu {
-            background: #000;
+            background: var(--yt-spec-base-background, #0f0f0f);
             width: 400px;
             font-size: 120%;
             padding: 10px;
@@ -383,31 +400,25 @@
             padding: 0 10px 0 0;
             margin-left: -10px;
         }
+
+        .ytc-menu .ytp-menuitem-toggle-checkbox::after {
+            background: #fff !important;
+        }
+
+        .ytc-menu .ytp-menuitem-icon {
+            fill: var(--yt-spec-brand-icon-active, #fff) !important;
+        }
+
+        .ytc-menu .ytp-menuitem-label {
+            color: var(--yt-spec-text-primary, #f1f1f1) !important;
+        }
+
+        .ytc-menu [aria-checked=false] .ytp-menuitem-toggle-checkbox {
+            background: #5b5b5b !important;
+        }
     `;
 
-    if (getComputedStyle(html).background.includes("255")) {
-        style.textContent += /*css*/ `
-            .ytc-menu,
-            .ytc-menu [aria-checked=false] .ytp-menuitem-toggle-checkbox::after {
-                background: #fff !important;
-            }
-
-            .ytc-menu .ytp-menuitem-icon {
-                fill: #030303 !important;
-            }
-
-            .ytc-menu .ytp-menuitem-label {
-                color: #0f0f0f !important;
-            }
-
-            .ytc-menu [aria-checked=false] .ytp-menuitem-toggle-checkbox {
-                background: #999 !important;
-            }
-        `;
-    }
-
-    const prefix = "yttp-";
-    const attrId = "-" + Date.now().toString(36).slice(-4);
+    const attrName = "yttp-" + Date.now().toString(36);
     const attr = {
         video_id: "video-id",
         role: "role",
@@ -418,13 +429,12 @@
         hide_card: "hide-card",
         chat_hidden: "chat-hidden",
         show_title: "show-title",
-        trigger: prefix + "trigger" + attrId, // Internal only
     };
 
     for (const key in attr) {
         style.textContent = style.textContent.replaceAll(
-            "[" + attr[key] + "]",
-            "[" + prefix + attr[key] + attrId + "]"
+            `[${attr[key]}]`,
+            `[${attrName}~="${attr[key]}"]`
         );
     }
 
@@ -442,12 +452,15 @@
         cancelable: true,
     });
 
+    const tempAttrs = document.createElement("a");
+
     /**
      * @param {string} attr
      * @param {boolean} state
      */
     function setHtmlAttr(attr, state) {
-        html.toggleAttribute(prefix + attr + attrId, state);
+        tempAttrs.classList.toggle(attr, state);
+        html.setAttribute(attrName, tempAttrs.className);
     }
 
     /**
@@ -560,12 +573,12 @@
     }
 
     /**
-     * @param {true | undefined} force
+     * @param {boolean | undefined} force
      */
     function applyTheaterMode(force) {
         const state = isTheater();
 
-        if (theater === state && (!state || !force)) return;
+        if (theater === state && !force) return;
 
         const opt_ft = options.fullpage_theater;
         theater = state;
@@ -583,7 +596,7 @@
      * @param {MutationRecord[]} mutations
      */
     function autoOpenTheater(mutations) {
-        const attrs = [attr.role, attr.video_id, attr.trigger];
+        const attrs = [attr.role, attr.video_id, attrName];
         const watch = element.watch();
 
         if (
@@ -656,7 +669,7 @@
                 watch,
                 { attributes: true }
             );
-            watch.setAttribute(attr.trigger, "");
+            watch.setAttribute(attrName, "");
             registerEventListener();
         }
     }, body);
