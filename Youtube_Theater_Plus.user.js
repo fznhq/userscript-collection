@@ -21,7 +21,7 @@
 // @description:es     Mejora YouTube Theater con funciones como el modo de pantalla completa, apertura automática y más, incluyendo soporte para la nueva interfaz
 // @description:de     Erweitert YouTube Theater mit Funktionen wie Vollseiten-Theater, automatischem Öffnen und weiteren, einschließlich Unterstützung für die neue Benutzeroberfläche
 // @description:ru     Расширяет YouTube Theater функциями, такими как полноэкранный режим, автоматическое открытие и другими, включая поддержку нового интерфейса
-// @version            2.4.2
+// @version            2.4.3
 // @run-at             document-body
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -49,7 +49,7 @@
     const body = document.body;
 
     let theater = false;
-    let fullpage = true;
+    let fullpage = false;
     let headerOpen = false;
 
     /**
@@ -611,13 +611,12 @@
     }
 
     /**
-     * @returns {boolean | undefined}
+     * @returns {boolean}
      */
-    function isChatFixed() {
+    function isChatHidden() {
         const chat = document.getElementById("chat");
-        const frame = chat && chat.querySelector("iframe");
+        const frame = chat?.querySelector("iframe");
 
-        if (!chat) return;
         if (
             frame &&
             chat.offsetHeight &&
@@ -631,21 +630,20 @@
                 styleChat.visibility !== "hidden" &&
                 Number(styleChat.opacity)
             ) {
-                return true;
+                return false;
             }
         }
 
-        return false;
+        return !!chat;
     }
 
     let chatState = false;
 
     function observeChatChange() {
-        const state = isChatFixed();
+        const state = isChatHidden();
 
         if (state !== chatState) {
-            chatState = state;
-            setHtmlAttr(attr.chat_hidden, state === false);
+            setHtmlAttr(attr.chat_hidden, (chatState = state));
             resizeWindow();
         }
     }
