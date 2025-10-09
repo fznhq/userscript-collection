@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.5.7
+// @version            2.5.8
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -105,7 +105,7 @@
 
     /**
      * @param {string} key
-     * @param {any} value
+     * @param {*} value
      */
     function saveOption(key, value) {
         GM.setValue(key, value);
@@ -194,8 +194,8 @@
     /**
      * @param {string} id
      * @param {'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo' | 'loadVideoById'} name
-     * @param  {string[]} args
-     * @returns {Promise<string>}
+     * @param {string[]} [args]
+     * @returns {Promise<*>}
      */
     function API(id, name, ...args) {
         const uniqueId = generateId(name);
@@ -212,7 +212,7 @@
     /**
      * @param {Document | HTMLElement} context
      * @param {string} query
-     * @param {boolean} all
+     * @param {boolean} [all=false]
      * @returns {HTMLElement | NodeListOf<HTMLElement> | null}
      */
     function find(context, query, all = false) {
@@ -221,8 +221,8 @@
 
     /**
      * @param {string} query
-     * @param {boolean} cache
-     * @returns {() => HTMLElement | null}
+     * @param {boolean} [cache=true]
+     * @returns {() => (HTMLElement | null)}
      */
     function $(query, cache = true) {
         let element = null;
@@ -248,19 +248,15 @@
 
     const style = head.appendChild(document.createElement("style"));
     style.textContent = /*css*/ `
-        [dir=rtl] svg.transform-icon-svg {
-            transform: scale(-1, 1);
-        }
-
-        #items.ytmusic-menu-popup-renderer {
-            width: 250px !important;
-        }
+        [dir=rtl] svg.transform-icon-svg { transform: scale(-1, 1); }
+        #items.ytmusic-menu-popup-renderer { width: 250px !important; }
+        .ythdp-icon { fill: currentColor; }
     `;
 
     /**
      * @param {MutationCallback} callback
-     * @param {Node} target
-     * @param {MutationObserverInit | undefined} options
+     * @param {Node} [target]
+     * @param {MutationObserverInit | undefined} [options]
      */
     function observer(callback, target = body, options) {
         const mutation = new MutationObserver(callback);
@@ -277,7 +273,7 @@
 
     /**
      * @typedef {object} QualityData
-     * @property {any} formatId
+     * @property {*} formatId
      * @property {string} qualityLabel
      * @property {string} quality
      * @property {boolean} isPlayable
@@ -356,9 +352,9 @@
 
     /**
      * @param {keyof options} optionKey
-     * @param {any} newValue
+     * @param {*} newValue
      * @param {HTMLElement} player
-     * @param {Boolean} override
+     * @param {Boolean} [clearOverride]
      */
     function savePreferred(optionKey, newValue, player, clearOverride) {
         if (clearOverride) manualOverride = false;
@@ -370,7 +366,7 @@
 
     /**
      * @param {string} className
-     * @param {Array} append
+     * @param {Node[]} [append]
      * @returns {HTMLDivElement}
      */
     function itemElement(className = "", append = []) {
@@ -430,9 +426,9 @@
     /**
      * @param {Object} param
      * @param {HTMLElement} param.menuItem
-     * @param {SVGSVGElement | undefined} param.icon
-     * @param {string} param.label
-     * @param {Boolean} param.selected
+     * @param {SVGSVGElement | undefined} [param.icon]
+     * @param {string} [param.label]
+     * @param {Boolean} [param.selected=true]
      */
     function parseItem({
         menuItem,
@@ -447,7 +443,10 @@
         const optionLabel = iText.cloneNode();
         const optionIcon = iIcon.cloneNode();
         const wrapperIcon = (icon) => {
-            return itemElement(" yt-icon-shape yt-spec-icon-shape", [icon]);
+            return itemElement(
+                " ythdp-icon yt-icon-shape yt-spec-icon-shape ytSpecIconShapeHost",
+                [icon]
+            );
         };
 
         item.setAttribute(bridgeName, "");
@@ -509,7 +508,7 @@
     }
 
     /**
-     * @param {'watch' | 'shorts' | 'embed'} type
+     * @param {'watch' | 'shorts' | 'embed'} [type]
      * @returns {boolean}
      */
     function isVideoPage(type) {
@@ -734,8 +733,7 @@
             const inner = checkbox ? [itemElement("toggle-checkbox")] : [];
             const content = itemElement("content", inner);
             const label = itemElement("label", [textLabel]);
-            const icon = itemElement("icon", [svg.cloneNode(true)]);
-            icon.style.fill = "currentColor";
+            const icon = itemElement("icon ythdp-icon", [svg.cloneNode(true)]);
             return { item: itemElement("", [icon, label, content]), content };
         }
 
