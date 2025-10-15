@@ -21,7 +21,7 @@
 // @description:es     Mejora YouTube Theater con funciones como el modo de pantalla completa, apertura automática y más, incluyendo soporte para la nueva interfaz
 // @description:de     Erweitert YouTube Theater mit Funktionen wie Vollseiten-Theater, automatischem Öffnen und weiteren, einschließlich Unterstützung für die neue Benutzeroberfläche
 // @description:ru     Расширяет YouTube Theater функциями, такими как полноэкранный режим, автоматическое открытие и другими, включая поддержку нового интерфейса
-// @version            2.4.5
+// @version            2.4.6
 // @run-at             document-body
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -363,12 +363,14 @@
             max-height: none;
         }
 
-        html[show-title] .ytp-chrome-top {
+        html[show-title] #movie_player:not(.ytp-fullscreen-metadata-top) .ytp-chrome-top {
             height: auto !important;
         }
 
-        html[show-title] .ytp-title,
-        html[show-title] .ytp-gradient-top {
+        html[show-title] #movie_player:not(.ytp-fullscreen-metadata-top) .ytp-title,
+        html[show-title] #movie_player:not(.ytp-fullscreen-metadata-top) .ytp-title-text,
+        html[show-title] #movie_player:not(.ytp-fullscreen-metadata-top) .ytp-gradient-top,
+        html[show-title] #movie_player .ytp-fullscreen-metadata {
             display: flex !important;
         }
 
@@ -387,7 +389,8 @@
             width: 400px;
             font-size: 120%;
             padding: 10px;
-            fill: #eee;
+            color: var(--yt-spec-text-primary, #f1f1f1) !important;
+            fill: currentColor !important;
         }
 
         .ytc-menu input {
@@ -403,14 +406,6 @@
 
         .ytc-menu .ytp-menuitem-toggle-checkbox::after {
             background: #fff !important;
-        }
-
-        .ytc-menu .ytp-menuitem-icon {
-            fill: var(--yt-spec-brand-icon-active, #fff) !important;
-        }
-
-        .ytc-menu .ytp-menuitem-label {
-            color: var(--yt-spec-text-primary, #f1f1f1) !important;
         }
 
         .ytc-menu [aria-checked=false] .ytp-menuitem-toggle-checkbox {
