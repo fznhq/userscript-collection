@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.5.6
+// @version            2.5.9
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -80,9 +80,9 @@
 
     const icons = {
         premium: `{"svg":{"viewBox":"-12 -12 147 119"},"path":{"d":"M1 28 20 1a3 3 0 0 1 3-1h77a3 3 0 0 1 3 1l19 27a3 3 0 0 1 1 2 3 3 0 0 1-1 2L64 94a3 3 0 0 1-4 0L1 32a3 3 0 0 1-1-1 3 3 0 0 1 1-3m44 5 17 51 17-51Zm39 0L68 82l46-49ZM56 82 39 33H9zM28 5l13 20L56 5Zm39 0 15 20L95 5Zm33 2L87 27h28zM77 27 61 7 47 27Zm-41 0L22 7 8 27Z"}}`,
-        quality: `{"svg":{"viewBox":"-12 -12 147 131"},"path":{"fill-rule":"evenodd","d":"M113 57a4 4 0 0 1 2 1l3 4a5 5 0 0 1 1 2 4 4 0 0 1 0 1 4 4 0 0 1 0 2 4 4 0 0 1-1 1l-3 2v1l1 1v2h3a4 4 0 0 1 3 1 4 4 0 0 1 1 2 4 4 0 0 1 0 1l-1 6a4 4 0 0 1-1 3 4 4 0 0 1-3 1h-3l-1 1-1 1v1l2 2a4 4 0 0 1 1 1 4 4 0 0 1-1 3 4 4 0 0 1-1 2l-4 3a4 4 0 0 1-1 1 4 4 0 0 1-2 0 5 5 0 0 1-1 0 4 4 0 0 1-2-1l-2-3a1 1 0 0 1 0 1h-3v3a4 4 0 0 1-1 2 4 4 0 0 1-1 1 4 4 0 0 1-1 1 4 4 0 0 1-2 0h-5a4 4 0 0 1-4-5v-3l-2-1-1-1-2 2a4 4 0 0 1-2 1 4 4 0 0 1-1 0 4 4 0 0 1-2 0 4 4 0 0 1-1-1l-4-4a5 5 0 0 1 0-2 4 4 0 0 1-1-2 4 4 0 0 1 2-3l2-2v-1l-1-2h-2a4 4 0 0 1-2-1 4 4 0 0 1-1-1 4 4 0 0 1-1-1 4 4 0 0 1 0-2v-5a4 4 0 0 1 1-2 5 5 0 0 1 1-1 4 4 0 0 1 1-1 4 4 0 0 1 2 0h3l1-1v-2l-1-2a4 4 0 0 1-1-1 4 4 0 0 1 0-2 4 4 0 0 1 0-2 4 4 0 0 1 1-1l4-3a5 5 0 0 1 2-1 4 4 0 0 1 1-1 4 4 0 0 1 2 1 4 4 0 0 1 1 1l2 2h2l1-1 1-2a4 4 0 0 1 0-2 4 4 0 0 1 1-1 4 4 0 0 1 2-1 4 4 0 0 1 1 0h6a5 5 0 0 1 1 1 4 4 0 0 1 2 1 4 4 0 0 1 0 1 4 4 0 0 1 1 2l-1 3h1l1 1 1 1 3-2a4 4 0 0 1 1-1 4 4 0 0 1 2 0 4 4 0 0 1 1 0M11 0h82a11 11 0 0 1 11 11v30h-1a11 11 0 0 0-2-1h-2V21H5v49h51a12 12 0 0 0 0 2v4h-1v11h4l1 1h1l-1 1a12 12 0 0 0 0 2v1H11A11 11 0 0 1 0 81V11A11 11 0 0 1 11 0m35 31 19 13a3 3 0 0 1 0 4L47 61a3 3 0 0 1-2 0 3 3 0 0 1-3-2V33l1-1a3 3 0 0 1 3-1m4 56V76H29v11ZM24 76H5v5a6 6 0 0 0 6 6h13zm52-60V5H55v11Zm5-11v11h18v-5a6 6 0 0 0-6-6ZM50 16V5H29v11Zm-26 0V5H11a6 6 0 0 0-6 6v5Zm70 56a6 6 0 1 1-6 7 6 6 0 0 1 6-7m-1-8a14 14 0 1 1-13 16 14 14 0 0 1 13-16"}}`,
+        quality: `{"svg":{"viewBox":"-12 -12 147 131"},"path":{"fill-rule":"evenodd","d":"M89.8 56.3c-.925.267-1.862.484-2.8.7l-2.1-2.5c-1.447-1.791-4.18-1.847-6-.4l-4 3.6c-1.785 1.575-2.014 4.318-.5 6.1l1.8 2.1c-.595.898-1.098 1.848-1.6 2.8l-3.2-.2c-2.373-.142-4.362 1.565-4.5 4L67 80c.529 1.974 2.318 2.752 3.6 2.8l2.7.2c.263 1.056.643 2.074 1 3.1l-2.5 2c-1.624 1.298-1.722 3.357-1.3 4.6.854 2.08 2.104 4.051 3.5 5.9 1.533 1.77 4.28 1.831 6 .4l2-2a13 13 0 0 0 1.2.8l1.4.7.2.1-.2 3.2a4.2 4.2 0 0 0 4 4.5l5.4.4c2.4.178 4.427-1.605 4.5-3.9l.2-2.7c1.144-.244 2.23-.639 3.3-1.1l2 2.4c1.213 1.415 3.22 1.686 4.6 1.2.887-.3 5.542-3.716 6.6-5.7.865-1.642.35-3.582-.6-4.7l-1.8-2.1c.595-.898 1.098-1.848 1.6-2.8l3.2.2a4.115 4.115 0 0 0 4.5-4l.4-5.5c.124-2.228-1.387-4.394-3.9-4.5l-2.7-.2c-.222-1.07-.628-2.077-1-3.1l2.5-2.1c1.427-1.21 2.03-3.55.4-6-1.354-2.214-2.274-4.385-4.8-5.1m-20 7c-8 .683-13.871 7.818-13 15.8 1.374 12.585 17.215 17.308 25.258 7.534S105.614 62.924 93 64m1 7.8a6.4 6.4 0 0 0-5.8 7c.556 5.661 7.668 7.838 11.297 3.458S99.667 71.294 94 71.8M5.2 15.9v-5.1a5.6 5.6 0 0 1 5.6-5.6H24V16Zm23.8 0V5.2h21v10.7ZM93.2 5.2a5.6 5.6 0 0 1 5.7 5.6v5.1h-18V5.2ZM55.3 15.9V5.2h20.4v10.7ZM24 86.9H10.8a5.6 5.6 0 0 1-5.6-5.6v-5.7H24Zm5 0V75.6h21V87Zm17.5-56c-.348-.261-3.94-2.2-4.1 2.1v25.6c0 2.216 2.592 3.376 4.2 2l18.775-13.152c1.017-.88 1.13-1.996.025-3.048M10.8 0C4.835 0 0 4.835 0 10.8v70.5C.055 87.226 4.874 92 10.8 92h49c-.035-1.268.318-2.502.7-3.7L59 86.8h-3.7V75.5h.7c.073-1.752-.311-4.056.946-5.231L5.2 70.3V21h93.6v19.2c2.12.018 3.675.325 4.8.7l.4.1V10.8C104 4.835 99.165 0 93.2 0ZM113 57c-1.605-.52-3.349-.203-4.4.7l-2.1 1.8c-.868-.655-1.814-1.152-2.8-1.6l.2-3.3c.137-2.274-1.431-4.333-4-4.5l-5.4-.4c-2.465-.183-4.416 1.662-4.5 3.9l-.2 2.7"}}`,
         check_mark: `{"svg":{"viewBox":"-32 -32 186.9 153.8"},"path":{"d":"M1.2 55.5a3.7 3.7 0 0 1 5-5.5l34.1 30.9 76.1-79.7a3.8 3.8 0 0 1 5.4 5.1L43.2 88.7a3.7 3.7 0 0 1-5.2.2L1.2 55.5z"}}`,
-        arrow: `{"svg":{"class":"transform-icon-svg","viewBox":"0 0 24 24"},"path":{"d":"m9.4 18.4-.7-.7 5.6-5.6-5.7-5.7.7-.7 6.4 6.4-6.3 6.3z"}}`,
+        arrow: `{"svg":{"class":"transform-icon-svg","viewBox":"0 0 24 24"},"path":{"d":"M8.793 5.293a1 1 0 000 1.414L14.086 12l-5.293 5.293a1 1 0 101.414 1.414L16.914 12l-6.707-6.707a1 1 0 00-1.414 0Z"}}`,
     };
 
     /**
@@ -105,7 +105,7 @@
 
     /**
      * @param {string} key
-     * @param {any} value
+     * @param {*} value
      */
     function saveOption(key, value) {
         GM.setValue(key, value);
@@ -156,20 +156,20 @@
         return prefix + (Date.now() + Math.random() * 10e20).toString(36);
     }
 
-    const bridgeName = generateId("bridge-");
-    const bridgeMain = function () {
+    const proxyName = generateId("ythdp-proxy-");
+    const proxyFunction = function () {
         function handleAPI(ev) {
-            const [uniqueId, id, fn, ...args] = ev.detail.split("|");
-            const player = document.getElementById(id);
-            const detail = player[fn] ? player[fn](...args) : "";
-            document.dispatchEvent(new CustomEvent(uniqueId, { detail }));
+            const [id, elementId, fn, ...args] = ev.detail.split("|");
+            const player = document.getElementById(elementId);
+            const detail = { id, response: player[fn]?.(...args) };
+            document.dispatchEvent(
+                new CustomEvent("receiver-proxyName", { detail })
+            );
         }
 
         function spoofData(ev) {
-            if (ev.target.closest) {
-                const item = ev.target.closest("[bridgeName]");
-                if (item) item.data = {};
-            }
+            const item = ev.target.closest?.("[proxyName]");
+            if (item) item.data = {};
         }
 
         const create = (name) => document.createElement(name);
@@ -177,42 +177,48 @@
         container.style.display = "none";
         container.append(create("ytd-toggle-menu-service-item-renderer"));
 
-        document.addEventListener("bridgeName", handleAPI);
+        document.addEventListener("proxyName", handleAPI);
         window.addEventListener("touchstart", spoofData, true);
         window.addEventListener("mousedown", spoofData, true);
     }.toString();
 
     const policyOptions = { createScript: (script) => script };
-    const bridgePolicy = window.trustedTypes
-        ? window.trustedTypes.createPolicy(bridgeName, policyOptions)
+    const proxyPolicy = window.trustedTypes
+        ? window.trustedTypes.createPolicy(proxyName, policyOptions)
         : policyOptions;
     const script = head.appendChild(document.createElement("script"));
-    script.textContent = bridgePolicy.createScript(
-        `(${bridgeMain.replace(/bridgeName/g, bridgeName)})();`
+    script.textContent = proxyPolicy.createScript(
+        `(${proxyFunction.replace(/proxyName/g, proxyName)})();`
     );
 
+    /** @type {Map<string, (response: any) => void>}  */
+    const APIQueue = new Map();
+
+    document.addEventListener("receiver-" + proxyName, (ev) => {
+        const { id, response } = ev.detail;
+        APIQueue.get(id)(response);
+        APIQueue.delete(id);
+    });
+
     /**
-     * @param {string} id
+     * @param {string} elementId
      * @param {'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo' | 'loadVideoById'} name
-     * @param  {string[]} args
-     * @returns {Promise<string>}
+     * @param {string[]} [args]
+     * @returns {Promise<*>}
      */
-    function API(id, name, ...args) {
-        const uniqueId = generateId(name);
-        const detail = [uniqueId, id, name, ...args].join("|");
+    function API(elementId, name, ...args) {
+        const id = generateId(name);
+        const detail = [id, elementId, name, ...args].join("|");
         return new Promise((resolve) => {
-            document.addEventListener(uniqueId, function callback(ev) {
-                resolve(ev.detail);
-                document.removeEventListener(uniqueId, callback);
-            });
-            document.dispatchEvent(new CustomEvent(bridgeName, { detail }));
+            APIQueue.set(id, resolve);
+            document.dispatchEvent(new CustomEvent(proxyName, { detail }));
         });
     }
 
     /**
      * @param {Document | HTMLElement} context
      * @param {string} query
-     * @param {boolean} all
+     * @param {boolean} [all=false]
      * @returns {HTMLElement | NodeListOf<HTMLElement> | null}
      */
     function find(context, query, all = false) {
@@ -221,8 +227,8 @@
 
     /**
      * @param {string} query
-     * @param {boolean} cache
-     * @returns {() => HTMLElement | null}
+     * @param {boolean} [cache=true]
+     * @returns {() => (HTMLElement | null)}
      */
     function $(query, cache = true) {
         let element = null;
@@ -248,19 +254,15 @@
 
     const style = head.appendChild(document.createElement("style"));
     style.textContent = /*css*/ `
-        [dir=rtl] svg.transform-icon-svg {
-            transform: scale(-1, 1);
-        }
-
-        #items.ytmusic-menu-popup-renderer {
-            width: 250px !important;
-        }
+        [dir=rtl] svg.transform-icon-svg { transform: scale(-1, 1); }
+        #items.ytmusic-menu-popup-renderer { width: 250px !important; }
+        .ythdp-icon { fill: currentColor; }
     `;
 
     /**
      * @param {MutationCallback} callback
-     * @param {Node} target
-     * @param {MutationObserverInit | undefined} options
+     * @param {Node} [target]
+     * @param {MutationObserverInit | undefined} [options]
      */
     function observer(callback, target = body, options) {
         const mutation = new MutationObserver(callback);
@@ -277,7 +279,7 @@
 
     /**
      * @typedef {object} QualityData
-     * @property {any} formatId
+     * @property {*} formatId
      * @property {string} qualityLabel
      * @property {string} quality
      * @property {boolean} isPlayable
@@ -356,9 +358,9 @@
 
     /**
      * @param {keyof options} optionKey
-     * @param {any} newValue
+     * @param {*} newValue
      * @param {HTMLElement} player
-     * @param {Boolean} override
+     * @param {Boolean} [clearOverride]
      */
     function savePreferred(optionKey, newValue, player, clearOverride) {
         if (clearOverride) manualOverride = false;
@@ -370,7 +372,7 @@
 
     /**
      * @param {string} className
-     * @param {Array} append
+     * @param {Node[]} [append]
      * @returns {HTMLDivElement}
      */
     function itemElement(className = "", append = []) {
@@ -425,14 +427,31 @@
         return element[0];
     }
 
+    /**
+     * @param {HTMLElement} element
+     * @returns {HTMLElement}
+     */
+    function removeDisabled(element) {
+        const query = "[disabled], [aria-disabled=true], [class*=disabled]";
+        const items = find(element, query, true);
+
+        for (const item of items) {
+            item.removeAttribute("disabled");
+            item.setAttribute("aria-disabled", false);
+            item.className = item.className.replaceAll("disabled", "");
+        }
+
+        return element;
+    }
+
     let selectedLabel = document.createTextNode("");
 
     /**
      * @param {Object} param
      * @param {HTMLElement} param.menuItem
-     * @param {SVGSVGElement | undefined} param.icon
-     * @param {string} param.label
-     * @param {Boolean} param.selected
+     * @param {SVGSVGElement | undefined} [param.icon]
+     * @param {string} [param.label]
+     * @param {Boolean} [param.selected=true]
      */
     function parseItem({
         menuItem,
@@ -440,17 +459,20 @@
         label = labels.quality,
         selected = true,
     }) {
-        const item = body.appendChild(menuItem.cloneNode(true));
+        const item = body.appendChild(removeDisabled(menuItem.cloneNode(true)));
         const iIcon = firstOnly(find(item, "c3-icon, yt-icon", true));
         const iTexts = find(item, "[role=text], yt-formatted-string", true);
         const iText = firstOnly(iTexts);
         const optionLabel = iText.cloneNode();
         const optionIcon = iIcon.cloneNode();
         const wrapperIcon = (icon) => {
-            return itemElement(" yt-icon-shape yt-spec-icon-shape", [icon]);
+            return itemElement(
+                " ythdp-icon yt-icon-shape yt-spec-icon-shape ytSpecIconShapeHost",
+                [icon]
+            );
         };
 
-        item.setAttribute(bridgeName, "");
+        item.setAttribute(proxyName, "");
         item.setAttribute("use-icons", "");
         iText.after(optionLabel, optionIcon);
         removeAttributes([iIcon, iText, optionIcon, optionLabel]);
@@ -509,7 +531,7 @@
     }
 
     /**
-     * @param {'watch' | 'shorts' | 'embed'} type
+     * @param {'watch' | 'shorts' | 'embed'} [type]
      * @returns {boolean}
      */
     function isVideoPage(type) {
@@ -598,7 +620,18 @@
 
         /** @type {HTMLElement} */
         let customListMenu = null;
-        const queryItem = "[role=menuitem], ytm-menu-service-item-renderer";
+
+        /**
+         * @param {HTMLElement} menu
+         * @returns {HTMLElement}
+         */
+        function findItem(menu) {
+            return (
+                find(menu, "[role=menuitem]") ||
+                find(menu, "[role=listitem]") ||
+                find(menu, "ytm-menu-service-item-renderer")
+            );
+        }
 
         /**
          * @param {HTMLElement} container
@@ -611,17 +644,17 @@
                 else history.back();
             });
 
-            const item = find(customListMenu, queryItem);
+            const item = findItem(customListMenu);
             const menu = item.parentElement;
-            const header = find(customListMenu, "#header-wrapper");
-            const content = find(customListMenu, "#content-wrapper");
+            const content = find(customListMenu, "[id*=content]");
+            const header = content.previousElementSibling;
             const contentHeight = parseInt(content.style.maxHeight || 150);
             const maxHeight = Math.min(contentHeight + 20, 250);
             const { items, preferredIndex } = listQualityToItem(item);
 
             menu.textContent = "";
             menu.append(...items);
-            header.remove();
+            header?.remove();
             content.style.maxHeight = maxHeight + "px";
             body.style.overflow = "hidden";
             container.parentElement.parentElement.append(customListMenu);
@@ -641,7 +674,7 @@
             if (container) {
                 settingsClicked = false;
 
-                const menuItem = find(container, queryItem);
+                const menuItem = findItem(container);
                 const item = parseItem({ menuItem });
                 item.addEventListener("click", () => customMenu(container));
                 menuItem.parentElement.append(item);
@@ -734,8 +767,7 @@
             const inner = checkbox ? [itemElement("toggle-checkbox")] : [];
             const content = itemElement("content", inner);
             const label = itemElement("label", [textLabel]);
-            const icon = itemElement("icon", [svg.cloneNode(true)]);
-            icon.style.fill = "currentColor";
+            const icon = itemElement("icon ythdp-icon", [svg.cloneNode(true)]);
             return { item: itemElement("", [icon, label, content]), content };
         }
 
@@ -852,7 +884,7 @@
 
         function attachShortMenuItem() {
             const menu = isVideoPage("shorts") && element.popup_menu();
-            if (menu && !find(menu.parentElement, `[${bridgeName}]`)) {
+            if (menu && !find(menu.parentElement, `[${proxyName}]`)) {
                 menu.parentElement.append(
                     shortPremiumMenu(),
                     shortQualityMenu(menu)
