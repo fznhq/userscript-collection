@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.5.9
+// @version            2.6.0
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -47,7 +47,6 @@
 (async function () {
     "use strict";
 
-    const html = document.documentElement;
     const body = document.body;
     const head = document.head;
 
@@ -55,7 +54,6 @@
     const isMobile = $host.includes("m.youtube");
     const isMusic = $host.includes("music.youtube");
     const isEmbed = isVideoPage("embed");
-    const isLightMode = getComputedStyle(html).background.includes("255");
 
     let manualOverride = false;
     let settingsClicked = false;
@@ -87,8 +85,8 @@
 
     /**
      * @param {string} name
-     * @param {object} attributes
-     * @param {Array} append
+     * @param {Record<string, string | number | boolean>} [attributes]
+     * @param {Node[]} [append]
      * @returns {SVGElement}
      */
     function createNS(name, attributes = {}, append = []) {
@@ -105,7 +103,7 @@
 
     /**
      * @param {string} key
-     * @param {*} value
+     * @param {any} value
      */
     function saveOption(key, value) {
         GM.setValue(key, value);
@@ -129,7 +127,7 @@
     };
 
     /**
-     * @param {boolean | undefined} init
+     * @param {boolean} [init]
      */
     async function loadOptions(init) {
         for (const key in options) {
@@ -149,7 +147,7 @@
     await loadOptions(true);
 
     /**
-     * @param {string} prefix
+     * @param {string} [prefix=id]
      * @returns {string}
      */
     function generateId(prefix = "id") {
@@ -204,7 +202,7 @@
      * @param {string} elementId
      * @param {'getAvailableQualityData' | 'setPlaybackQualityRange' | 'playVideo' | 'loadVideoById'} name
      * @param {string[]} [args]
-     * @returns {Promise<*>}
+     * @returns {Promise<any>}
      */
     function API(elementId, name, ...args) {
         const id = generateId(name);
@@ -236,8 +234,11 @@
     }
 
     const caches = {
+        /** @type {Record<string, HTMLElement[]>} */
         player: {},
+        /** @type {Set<Text>} */
         text_quality: new Set(),
+        /** @type {Set<HTMLElement>} */
         toggle_premium: new Set(),
     };
     const element = {
@@ -262,7 +263,7 @@
     /**
      * @param {MutationCallback} callback
      * @param {Node} [target]
-     * @param {MutationObserverInit | undefined} [options]
+     * @param {MutationObserverInit} [options]
      */
     function observer(callback, target = body, options) {
         const mutation = new MutationObserver(callback);
@@ -279,7 +280,7 @@
 
     /**
      * @typedef {object} QualityData
-     * @property {*} formatId
+     * @property {any} formatId
      * @property {string} qualityLabel
      * @property {string} quality
      * @property {boolean} isPlayable
@@ -304,10 +305,10 @@
 
     /**
      * @param {QualityData[]} qualityData
-     * @returns {QualityData | null | undefined}
+     * @returns {QualityData | undefined}
      */
     function getQuality(qualityData) {
-        const quality = { premium: null, normal: null };
+        const quality = { premium: undefined, normal: undefined };
         const preferred = getPreferredQuality(qualityData);
 
         if (!isFinite(preferred)) return;
@@ -323,7 +324,7 @@
         return (options.preferred_premium && quality.premium) || quality.normal;
     }
 
-    /** @type {Function[]} */
+    /** @type {(() => Promise<void>)[]} */
     let stackSequence = [];
     let isSequenceRun = false;
 
@@ -357,8 +358,33 @@
     }
 
     /**
+     * @param {HTMLElement} [element]
+     * @returns {HTMLElement | undefined}
+     */
+    function togglePremium(element) {
+        if (element) caches.toggle_premium.add(element);
+        caches.toggle_premium.forEach((toggle) => {
+            toggle.toggleAttribute("checked", options.preferred_premium);
+            toggle.setAttribute("aria-checked", options.preferred_premium);
+        });
+        return element;
+    }
+
+    /**
+     * @param {Text} [nodeText]
+     * @returns {Text | undefined}
+     */
+    function setTextQuality(nodeText) {
+        if (nodeText) caches.text_quality.add(nodeText);
+        caches.text_quality.forEach((text) => {
+            text.textContent = options.preferred_quality + "p";
+        });
+        return nodeText;
+    }
+
+    /**
      * @param {keyof options} optionKey
-     * @param {*} newValue
+     * @param {any} newValue
      * @param {HTMLElement} player
      * @param {Boolean} [clearOverride]
      */
@@ -382,32 +408,7 @@
     }
 
     /**
-     * @param {HTMLElement | undefined} element
-     * @returns {HTMLElement | undefined}
-     */
-    function togglePremium(element) {
-        if (element) caches.toggle_premium.add(element);
-        caches.toggle_premium.forEach((/** @type {HTMLElement} */ toggle) => {
-            toggle.toggleAttribute("checked", options.preferred_premium);
-            toggle.setAttribute("aria-checked", options.preferred_premium);
-        });
-        return element;
-    }
-
-    /**
-     * @param {Text | undefined} nodeText
-     * @returns {Text | undefined}
-     */
-    function setTextQuality(nodeText) {
-        if (nodeText) caches.text_quality.add(nodeText);
-        caches.text_quality.forEach((/** @type {Text} */ text) => {
-            text.textContent = options.preferred_quality + "p";
-        });
-        return nodeText;
-    }
-
-    /**
-     * @param {Element[]} elements
+     * @param {HTMLElement[]} elements
      */
     function removeAttributes(elements) {
         for (const element of elements) {
@@ -419,7 +420,7 @@
     }
 
     /**
-     * @param {NodeListOf<Element>} element
+     * @param {NodeListOf<HTMLElement>} element
      * @returns {HTMLElement}
      */
     function firstOnly(element) {
@@ -486,8 +487,8 @@
             optionLabel.style.marginInline = "auto 0";
             optionLabel.append(setTextQuality(selectedLabel));
             if (iTexts.length === 1) {
-                optionLabel.style.color = isLightMode ? "#606060" : "#aaa";
                 optionLabel.style.fontSize = "1.4rem";
+                optionLabel.style.opacity = "0.7";
             }
         } else optionIcon.remove();
 
@@ -760,7 +761,7 @@
         /**
          * @param {SVGElement} svg
          * @param {string} textLabel
-         * @param {Boolean} checkbox
+         * @param {Boolean} [checkbox]
          * @returns {{item: HTMLDivElement, content: HTMLDivElement}}
          */
         function createMenuItem(svg, textLabel, checkbox) {
@@ -793,9 +794,8 @@
         }
 
         function shortPremiumMenu() {
-            const tag = "ytd-toggle-menu-service-item-renderer";
             const item = parseItem({
-                menuItem: find(document, tag),
+                menuItem: find(body, "ytd-toggle-menu-service-item-renderer"),
                 label: labels.premium,
                 icon: icons.premium,
                 selected: false,
