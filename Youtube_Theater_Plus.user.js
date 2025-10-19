@@ -21,7 +21,7 @@
 // @description:es     Mejora YouTube Theater con funciones como el modo de pantalla completa, apertura automática y más, incluyendo soporte para la nueva interfaz
 // @description:de     Erweitert YouTube Theater mit Funktionen wie Vollseiten-Theater, automatischem Öffnen und weiteren, einschließlich Unterstützung für die neue Benutzeroberfläche
 // @description:ru     Расширяет YouTube Theater функциями, такими как полноэкранный режим, автоматическое открытие и другими, включая поддержку нового интерфейса
-// @version            2.4.6
+// @version            2.5.0
 // @run-at             document-body
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -48,17 +48,19 @@
     const html = document.documentElement;
     const body = document.body;
 
+    let popup = false;
     let theater = false;
     let fullpage = false;
-    let headerOpen = false;
+    let headerShow = false;
 
     /**
      * @typedef {object} Option
-     * @property {string} icon
+     * @property {string} [key]
+     * @property {string} [icon]
      * @property {string} label
      * @property {any} value
-     * @property {Function} onUpdate
-     * @property {Option} sub
+     * @property {() => void} [onUpdate]
+     * @property {Option} [sub]
      */
 
     /**
@@ -79,7 +81,7 @@
                     label: "In Player Title;", // Remove ";" to set your own label.
                     value: false,
                     onUpdate() {
-                        if (fullpage) setHtmlAttr(attr.show_title, this.value);
+                        if (fullpage) setAttrValue(attr.show_title, this.value);
                     },
                 },
             },
@@ -98,7 +100,7 @@
             value: true,
             onUpdate() {
                 if (theater) {
-                    setHtmlAttr(attr.no_scroll, this.value);
+                    setAttrValue(attr.no_scroll, this.value);
                     resizeWindow();
                 }
             },
@@ -113,7 +115,7 @@
             label: "Hide Cards;", // Remove ";" to set your own label.
             value: true,
             onUpdate() {
-                setHtmlAttr(attr.hide_card, this.value);
+                setAttrValue(attr.hide_card, this.value);
             },
         },
         show_header_near: {
@@ -139,8 +141,8 @@
 
     /**
      * @param {string} name
-     * @param {object} attributes
-     * @param {Array} append
+     * @param {Record<string, string | number | boolean>} [attributes]
+     * @param {Node[]} [append]
      * @returns {SVGElement}
      */
     function createNS(name, attributes = {}, append = []) {
@@ -150,33 +152,26 @@
     }
 
     /**
-     * @param {string} name
-     * @param {any} value
      * @param {Option} option
+     * @param {any} value
      * @returns {any}
      */
-    function saveOption(name, value, option) {
-        GM.setValue(name, value);
+    function saveOption(option, value) {
+        GM.setValue(option.key, value);
         return (option.value = value);
     }
 
     /**
      * @param {string} name
-     * @param {string} subName
-     */
-    function optionKey(name, subName) {
-        return subName ? `${name}_sub_${subName}` : name;
-    }
-
-    /**
-     * @param {string} name
-     * @param {string} subName
+     * @param {string} [subName]
      */
     async function loadOption(name, subName) {
-        const key = optionKey(name, subName);
+        const key = subName ? `${name}_sub_${subName}` : name;
         const keyLabel = `label_${key}`;
+
         /** @type {Option} */
         const option = subName ? options[name].sub[subName] : options[name];
+        option.key = key;
         option.value = await GM.getValue(key, option.value);
 
         let label = option.label;
@@ -197,7 +192,7 @@
 
     /**
      * @param {string} className
-     * @param {Array} append
+     * @param {Node[]} [append]
      * @returns {HTMLDivElement}
      */
     function createDiv(className, append = []) {
@@ -207,117 +202,116 @@
     }
 
     /**
-     * @param {string} name
-     * @param {Option} option
-     * @returns {HTMLInputElement}
+     * @returns {boolean}
      */
-    function itemInput(name, option) {
-        const input = document.createElement("input");
-        const val = () => Number(input.value.replace(/\D/g, ""));
-        const setValue = (value) => (input.value = value);
-
-        setValue(option.value);
-
-        input.addEventListener("input", () => setValue(val()));
-        input.addEventListener("change", () => saveOption(name, val(), option));
-
-        return input;
+    function isActiveEditable() {
+        /** @type {HTMLElement} */
+        const active = document.activeElement;
+        return (
+            active.tagName === "TEXTAREA" ||
+            active.tagName === "INPUT" ||
+            active.isContentEditable
+        );
     }
 
-    /** @type {Map<HTMLElement, HTMLElement[]>} */
-    const menuItems = new Map();
+    (function initPopup() {
+        /** @type {Record<string, HTMLElement[]>} */
+        const menuItems = {};
+        const panel = createDiv(" ytc-menu ytp-panel-menu");
+        const menu = createDiv(" ytc-popup-container", [panel]);
 
-    /**
-     * @param {HTMLElement} item
-     * @param {boolean} checked
-     */
-    function toggleItemSub(item, checked) {
-        for (const itemSub of menuItems.get(item)) {
-            itemSub.style.display = checked ? "" : "none";
-        }
-    }
+        /**
+         * @param {Option} option
+         * @returns {HTMLInputElement}
+         */
+        function itemInput(option) {
+            const input = document.createElement("input");
+            const value = () => Number(input.value.replace(/\D/g, ""));
+            const setValue = (value) => (input.value = value);
 
-    /**
-     * @param {string} name
-     * @param {Option} option
-     * @returns  {HTMLElement}
-     */
-    function createItem(name, option) {
-        const checkbox = typeof option.value === "boolean";
-        const isSub = name.includes("sub_");
-        const icon = isSub ? [] : [option.icon];
-        const label = isSub
-            ? [createDiv("icon", [option.icon]), option.label]
-            : [option.label];
-        const content = checkbox
-            ? [createDiv("toggle-checkbox")]
-            : [itemInput(name, option)];
-        const item = createDiv("", [
-            createDiv("icon", icon),
-            createDiv("label", label),
-            createDiv("content", content),
-        ]);
+            setValue(option.value);
 
-        if (checkbox) {
-            item.setAttribute("aria-checked", option.value);
-            item.addEventListener("click", () => {
-                const checked = saveOption(name, !option.value, option);
-                item.setAttribute("aria-checked", checked);
-                if (!isSub) toggleItemSub(item, checked);
-                if (option.onUpdate) option.onUpdate();
-            });
+            input.addEventListener("input", () => setValue(value()));
+            input.addEventListener("change", () => saveOption(option, value()));
+
+            return input;
         }
 
-        return item;
-    }
+        /**
+         * @param {string} name
+         * @param {boolean} checked
+         */
+        function toggleSub(name, checked) {
+            for (const item of menuItems[name]) {
+                item.style.display = checked ? "" : "none";
+            }
+        }
 
-    const popup = {
-        show: false,
-        menu: (() => {
-            const menu = createDiv(" ytc-menu ytp-panel-menu");
-            const container = createDiv(" ytc-popup-container", [menu]);
+        /**
+         * @param {Option} option
+         * @returns  {HTMLElement}
+         */
+        function createItem(option) {
+            const checkbox = typeof option.value === "boolean";
+            const isSub = option.key.includes("sub_");
+            const icon = isSub ? [] : [option.icon];
+            const label = isSub
+                ? [createDiv("icon", [option.icon]), option.label]
+                : [option.label];
+            const content = checkbox
+                ? [createDiv("toggle-checkbox")]
+                : [itemInput(option)];
+            const item = createDiv("", [
+                createDiv("icon", icon),
+                createDiv("label", label),
+                createDiv("content", content),
+            ]);
 
-            for (const name in options) {
-                const option = options[name];
-                const item = createItem(name, option);
-                menuItems.set(menu.appendChild(item), []);
-
-                for (const subName in option.sub) {
-                    const subOption = option.sub[subName];
-                    const sub = createItem(optionKey(name, subName), subOption);
-                    menuItems.get(item).push(menu.appendChild(sub));
-                }
-
-                toggleItemSub(item, option.value);
+            if (checkbox) {
+                item.setAttribute("aria-checked", option.value);
+                item.addEventListener("click", () => {
+                    const checked = saveOption(option, !option.value);
+                    item.setAttribute("aria-checked", checked);
+                    if (!isSub) toggleSub(option.key, checked);
+                    option.onUpdate?.();
+                });
             }
 
-            window.addEventListener("click", (ev) => {
-                if (popup.show && !menu.contains(ev.target)) {
-                    popup.show = !!container.remove();
-                }
-            });
-
-            return container;
-        })(),
-    };
-
-    window.addEventListener("keydown", (ev) => {
-        const isPressV = ev.key.toLowerCase() === "v" || ev.code === "KeyV";
-
-        if (
-            (isPressV && !ev.ctrlKey && !isActiveEditable()) ||
-            (ev.code === "Escape" && popup.show)
-        ) {
-            document.activeElement.blur();
-            popup.show = popup.show
-                ? !!popup.menu.remove()
-                : !body.append(popup.menu);
+            return panel.appendChild(item);
         }
-    });
+
+        for (const name in options) {
+            const option = options[name];
+            createItem(option);
+            menuItems[name] = [];
+
+            for (const subName in option.sub) {
+                menuItems[name].push(createItem(option.sub[subName]));
+            }
+
+            toggleSub(name, option.value);
+        }
+
+        window.addEventListener("click", (ev) => {
+            if (popup && !panel.contains(ev.target)) popup = !!menu.remove();
+        });
+
+        window.addEventListener("keydown", (ev) => {
+            const isPressV = ev.key.toLowerCase() === "v" || ev.code === "KeyV";
+
+            if (
+                (isPressV && !ev.ctrlKey && !isActiveEditable()) ||
+                (popup && ev.code === "Escape")
+            ) {
+                document.activeElement.blur();
+                popup = popup ? !!menu.remove() : !body.append(menu);
+            }
+        });
+    })();
 
     /**
      * @param {string} query
-     * @returns {() => HTMLElement | null}
+     * @returns {() => (HTMLElement | null)}
      */
     function $(query) {
         let element = null;
@@ -333,10 +327,10 @@
 
         html[no-scroll]::-webkit-scrollbar,
         html[no-scroll] body::-webkit-scrollbar,
-        html[hide-card] ytd-player .ytp-paid-content-overlay,
-        html[hide-card] ytd-player .iv-branding,
-        html[hide-card] ytd-player .ytp-ce-element,
-        html[hide-card] ytd-player .ytp-suggested-action {
+        html[hide-card] #movie_player .ytp-paid-content-overlay,
+        html[hide-card] #movie_player .iv-branding,
+        html[hide-card] #movie_player .ytp-ce-element,
+        html[hide-card] #movie_player .ytp-suggested-action {
             display: none !important;
         }
 
@@ -344,11 +338,11 @@
             display: none;
         }
 
-        html[masthead-hidden] #masthead-container {
+        html[hide-header] #masthead-container {
             transform: translateY(-100%) !important;
         }
 
-        html[masthead-hidden] [fixed-panels] #chat {
+        html[hide-header] [fixed-panels] #chat {
             top: 0 !important;
         }
 
@@ -419,7 +413,7 @@
         role: "role",
         theater: "theater",
         fullscreen: "fullscreen",
-        hidden_header: "masthead-hidden",
+        hide_header: "hide-header",
         no_scroll: "no-scroll",
         hide_card: "hide-card",
         chat_hidden: "chat-hidden",
@@ -453,19 +447,20 @@
      * @param {string} attr
      * @param {boolean} state
      */
-    function setHtmlAttr(attr, state) {
+    function setAttrValue(attr, state) {
         tempAttrs.classList.toggle(attr, state);
         html.setAttribute(attrName, tempAttrs.className);
     }
 
     /**
      * @param {MutationCallback} callback
-     * @param {Node} target
-     * @param {MutationObserverInit | undefined} options
+     * @param {Node} [target]
+     * @param {MutationObserverInit} [option]
      */
-    function observer(callback, target, options) {
+    function observer(callback, target = document, option) {
         const mutation = new MutationObserver(callback);
-        mutation.observe(target, options || { subtree: true, childList: true });
+        option = option || { subtree: true, childList: true, attributes: true };
+        mutation.observe(target, option);
     }
 
     /**
@@ -483,40 +478,33 @@
     /**
      * @returns {boolean}
      */
-    function isActiveEditable() {
-        /** @type {HTMLElement} */
-        const active = document.activeElement;
-        return (
-            active.tagName === "TEXTAREA" ||
-            active.tagName === "INPUT" ||
-            active.isContentEditable
-        );
+    function isSearchFocus() {
+        return document.activeElement === element.search();
     }
 
     /**
      * @param {boolean} state
-     * @param {number} timeout
-     * @param {Function} callback
+     * @param {number} [timeout]
+     * @param {() => void} [callback]
      * @returns {number | boolean}
      */
     function toggleHeader(state, timeout, callback) {
-        const toggle = () => {
-            if (!fullpage) return;
-            if (state || document.activeElement !== element.search()) {
+        function toggle() {
+            if (fullpage && (state || !isSearchFocus())) {
                 const showNear = options.show_header_near.value;
-                headerOpen = state || (!showNear && !!window.scrollY);
-                setHtmlAttr(attr.hidden_header, !headerOpen);
+                headerShow = state || (!showNear && !!window.scrollY);
+                setAttrValue(attr.hide_header, !headerShow);
                 if (callback) callback();
             }
-        };
+        }
         return fullpage && setTimeout(toggle, timeout || 1);
     }
 
     let mouseNearDelayId = 0;
-    let mouseNearTimerId = 0;
+    let mouseNearDurationId = 0;
 
     /**
-     * @param {number} delay
+     * @param {number} [delay=0]
      * @returns {number}
      */
     function mouseNearHide(delay = 0) {
@@ -530,12 +518,12 @@
         if (options.show_header_near.value && fullpage) {
             const subOptions = options.show_header_near.sub;
             const area = subOptions.trigger_area.value;
-            const state = !popup.show && ev.clientY < area;
-            const delay = headerOpen ? 0 : subOptions.delay.value;
+            const state = !popup && ev.clientY < area;
+            const delay = headerShow ? 0 : subOptions.delay.value;
 
-            if (state && (!mouseNearDelayId || headerOpen)) {
-                clearTimeout(mouseNearTimerId);
-                mouseNearTimerId = mouseNearHide(delay + 1500);
+            if (state && (!mouseNearDelayId || headerShow)) {
+                clearTimeout(mouseNearDurationId);
+                mouseNearDurationId = mouseNearHide(delay + 1500);
                 mouseNearDelayId = toggleHeader(true, delay);
             } else if (!state) mouseNearHide();
         }
@@ -546,13 +534,13 @@
     }
 
     function onEscapePress(/** @type {KeyboardEvent} */ ev) {
-        if (ev.code !== "Escape" || !theater || popup.show) return;
+        if (ev.code !== "Escape" || !theater || popup) return;
 
         const input = element.search();
 
         if (options.close_theater_with_esc.value) toggleTheater();
-        else if (document.activeElement !== input) input.focus();
-        else input.blur();
+        else if (isSearchFocus()) input.blur();
+        else input.focus();
     }
 
     function registerEventListener() {
@@ -569,7 +557,7 @@
     }
 
     /**
-     * @param {boolean | undefined} force
+     * @param {boolean} [force]
      */
     function applyTheaterMode(force) {
         const state = isTheater();
@@ -580,11 +568,11 @@
         theater = state;
         fullpage = theater && opt_ft.value;
 
-        setHtmlAttr(attr.theater, fullpage);
-        setHtmlAttr(attr.hidden_header, fullpage);
-        setHtmlAttr(attr.show_title, fullpage && opt_ft.sub.show_title.value);
-        setHtmlAttr(attr.no_scroll, theater && options.hide_scrollbar.value);
-        setHtmlAttr(attr.hide_card, options.hide_cards.value);
+        setAttrValue(attr.theater, fullpage);
+        setAttrValue(attr.hide_header, fullpage);
+        setAttrValue(attr.show_title, fullpage && opt_ft.sub.show_title.value);
+        setAttrValue(attr.no_scroll, theater && options.hide_scrollbar.value);
+        setAttrValue(attr.hide_card, options.hide_cards.value);
         resizeWindow();
     }
 
@@ -639,17 +627,12 @@
         const state = isChatHidden();
 
         if (state !== chatState) {
-            setHtmlAttr(attr.chat_hidden, (chatState = state));
+            setAttrValue(attr.chat_hidden, (chatState = state));
             resizeWindow();
         }
     }
 
-    observer(observeChatChange, document, {
-        subtree: true,
-        childList: true,
-        attributes: true,
-    });
-
+    observer(observeChatChange);
     observer((_, observe) => {
         const watch = element.watch();
 
@@ -666,5 +649,5 @@
             watch.setAttribute(attrName, "");
             registerEventListener();
         }
-    }, body);
+    });
 })();
