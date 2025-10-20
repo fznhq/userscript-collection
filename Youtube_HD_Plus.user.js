@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.6.0
+// @version            2.6.1
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -258,6 +258,7 @@
         [dir=rtl] svg.transform-icon-svg { transform: scale(-1, 1); }
         #items.ytmusic-menu-popup-renderer { width: 250px !important; }
         .ythdp-icon { fill: currentColor; }
+        .ythdp-toggle [role=button] { display: flex !important; }
     `;
 
     /**
@@ -364,6 +365,7 @@
     function togglePremium(element) {
         if (element) caches.toggle_premium.add(element);
         caches.toggle_premium.forEach((toggle) => {
+            toggle.removeAttribute("hidden");
             toggle.toggleAttribute("checked", options.preferred_premium);
             toggle.setAttribute("aria-checked", options.preferred_premium);
         });
@@ -800,6 +802,7 @@
                 icon: icons.premium,
                 selected: false,
             });
+            item.classList.add("ythdp-toggle");
             find(item, ".toggle-label").textContent = "";
             premiumOption(item, element.short_player());
             return item;
