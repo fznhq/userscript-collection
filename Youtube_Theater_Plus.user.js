@@ -21,7 +21,7 @@
 // @description:es     Mejora YouTube Theater con funciones como el modo de pantalla completa, apertura automática y más, incluyendo soporte para la nueva interfaz
 // @description:de     Erweitert YouTube Theater mit Funktionen wie Vollseiten-Theater, automatischem Öffnen und weiteren, einschließlich Unterstützung für die neue Benutzeroberfläche
 // @description:ru     Расширяет YouTube Theater функциями, такими как полноэкранный режим, автоматическое открытие и другими, включая поддержку нового интерфейса
-// @version            2.5.0
+// @version            2.5.1
 // @run-at             document-body
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -37,6 +37,11 @@
 // @namespace          https://github.com/fznhq
 // @homepageURL        https://github.com/fznhq/userscript-collection
 // @homepage           https://github.com/fznhq/userscript-collection
+// @compatible         chrome
+// @compatible         firefox
+// @compatible         opera
+// @compatible         edge
+// @compatible         safari
 // @license            GNU GPLv3
 // ==/UserScript==
 

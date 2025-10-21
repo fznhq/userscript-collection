@@ -21,7 +21,7 @@
 // @description:es     Redirige automáticamente YouTube Shorts al reproductor normal sin recargar la página
 // @description:de     Leitet YouTube Shorts automatisch zum normalen Videoplayer um, ohne die Seite neu zu laden
 // @description:ru     Автоматически перенаправляет YouTube Shorts в обычный видеоплеер без перезагрузки страницы
-// @version            2.1.1
+// @version            2.1.2
 // @run-at             document-start
 // @inject-into        page
 // @match              https://www.youtube.com/*
@@ -35,6 +35,11 @@
 // @namespace          https://github.com/fznhq
 // @homepageURL        https://github.com/fznhq/userscript-collection
 // @homepage           https://github.com/fznhq/userscript-collection
+// @compatible         firefox
+// @compatible         chrome
+// @compatible         safari
+// @compatible         opera
+// @compatible         edge
 // @license            GNU GPLv3
 // ==/UserScript==
 
