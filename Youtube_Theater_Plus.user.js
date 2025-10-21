@@ -37,11 +37,11 @@
 // @namespace          https://github.com/fznhq
 // @homepageURL        https://github.com/fznhq/userscript-collection
 // @homepage           https://github.com/fznhq/userscript-collection
-// @compatible         chrome
 // @compatible         firefox
+// @compatible         chrome
+// @compatible         safari
 // @compatible         opera
 // @compatible         edge
-// @compatible         safari
 // @license            GNU GPLv3
 // ==/UserScript==
 
