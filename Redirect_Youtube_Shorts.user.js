@@ -21,7 +21,7 @@
 // @description:es     Redirige automáticamente YouTube Shorts al reproductor normal sin recargar la página
 // @description:de     Leitet YouTube Shorts automatisch zum normalen Videoplayer um, ohne die Seite neu zu laden
 // @description:ru     Автоматически перенаправляет YouTube Shorts в обычный видеоплеер без перезагрузки страницы
-// @version            2.1.3
+// @version            2.1.4
 // @run-at             document-start
 // @inject-into        page
 // @match              https://www.youtube.com/*
@@ -52,18 +52,21 @@
      * @param {object} obj
      * @param {string} target
      * @param {any} [value]
+     * @param {boolean} [parent]
      * @returns {any}
      */
-    function dig(obj, target, value) {
+    function dig(obj, target, value, parent) {
         if (obj && typeof obj === "object") {
+            const output = parent && typeof parent === "object" ? parent : obj;
+
             if (value) {
-                if (target in obj && obj[target] === value) return obj;
+                if (target in obj && obj[target] === value) return output;
             } else {
-                if (target in obj && !dig(obj[target], target)) return obj;
+                if (target in obj && !dig(obj[target], target)) return output;
             }
 
             for (const k in obj) {
-                const result = dig(obj[k], target, value);
+                const result = dig(obj[k], target, value, parent && obj);
                 if (result !== undefined) return result;
             }
         }
@@ -83,38 +86,28 @@
     }
 
     /**
-     * @param {Object} command
-     * @param {string} url
-     * @param {string} id
-     */
-    function replaceShortProperty(command, url, id) {
-        if (command) {
-            const metadata = dig(command, "url");
-            metadata.url = url;
-            metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
-            command.watchEndpoint = { videoId: id };
-            command.reelWatchEndpoint = {};
-        }
-    }
-
-    /**
      * @param {string} id
      */
     function redirectShorts(id) {
         const elements = document.querySelectorAll(`a[href*="${id}"]`);
 
         for (const element of elements) {
-            const command = findData(element, "reelWatchEndpoint");
+            let data = findData(element, "reelWatchEndpoint");
             const url = (element.href = `/watch?v=${id}`);
 
-            if (command) {
-                if (command.reelWatchEndpoint.videoId === id) {
-                    replaceShortProperty(command, url, id);
-                } else if (command.reelWatchEndpoint.videoId) {
-                    const items = findData(element, "items");
-                    const item = dig(items, "videoId", id);
-                    const command2 = dig(items, "reelWatchEndpoint", item);
-                    replaceShortProperty(command2, url, id);
+            if (data) {
+                const { videoId } = data.reelWatchEndpoint;
+
+                if (videoId && videoId !== id) {
+                    data = dig(findData(element, "items"), "videoId", id, true);
+                }
+
+                if (data.reelWatchEndpoint.videoId) {
+                    const metadata = dig(data, "url");
+                    metadata.url = url;
+                    metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
+                    data.watchEndpoint = { videoId: id };
+                    data.reelWatchEndpoint = {};
                 }
             }
         }
