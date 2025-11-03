@@ -21,7 +21,7 @@
 // @description:es     Redirige automáticamente YouTube Shorts al reproductor normal sin recargar la página
 // @description:de     Leitet YouTube Shorts automatisch zum normalen Videoplayer um, ohne die Seite neu zu laden
 // @description:ru     Автоматически перенаправляет YouTube Shorts в обычный видеоплеер без перезагрузки страницы
-// @version            2.1.5
+// @version            2.1.6
 // @run-at             document-start
 // @inject-into        page
 // @match              https://www.youtube.com/*
@@ -57,12 +57,10 @@
      */
     function dig(obj, target, value, parent) {
         if (obj && typeof obj === "object") {
-            const output = parent && typeof parent === "object" ? parent : obj;
-
-            if (value) {
-                if (target in obj && obj[target] === value) return output;
-            } else {
-                if (target in obj && !dig(obj[target], target)) return output;
+            if (target in obj) {
+                if (value ? obj[target] === value : !dig(obj[target], target)) {
+                    return parent && typeof parent === "object" ? parent : obj;
+                }
             }
 
             for (const k in obj) {
@@ -78,12 +76,12 @@
      * @returns {object | undefined}
      */
     function findData(element, key) {
-        const endpoint = "reelWatchEndpoint";
-        const isShortExists = (data) => key === endpoint || dig(data, endpoint);
+        const reel = "reelWatchEndpoint";
+        const isShorts = (data) => key === reel || dig(data, reel);
 
         while (element && element.tagName !== "YTD-APP") {
             const data = dig(element.data, key);
-            if (data && isShortExists(data)) return data;
+            if (data && isShorts(data)) return key === reel ? data : data[key];
             element = element.parentElement;
         }
     }
@@ -103,12 +101,12 @@
 
                 if (videoId && videoId !== id) {
                     const videos =
-                        findData(element, "items")?.items ||
-                        findData(element, "contents")?.contents;
-                    data = dig(videos, "videoId", id, true);
+                        findData(element, "items") ||
+                        findData(element, "contents");
+                    if (videos) data = dig(videos, "videoId", id, true);
                 }
 
-                if (data.reelWatchEndpoint.videoId) {
+                if (data.reelWatchEndpoint.videoId === id) {
                     const metadata = dig(data, "url");
                     metadata.url = url;
                     metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
