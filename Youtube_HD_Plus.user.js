@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.6.3
+// @version            2.6.4
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -164,7 +164,7 @@
         function handleAPI(ev) {
             const [id, elementId, fn, ...args] = ev.detail.split("|");
             const player = document.getElementById(elementId);
-            const detail = { id, response: player[fn]?.(...args) };
+            const detail = { id, response: player?.[fn]?.(...args) };
             document.dispatchEvent(
                 new CustomEvent("receiver-proxyName", { detail })
             );
@@ -191,7 +191,7 @@
         : policyOptions;
     const script = head.appendChild(document.createElement("script"));
     script.textContent = proxyPolicy.createScript(
-        `(${proxyFunction.replace(/proxyName/g, proxyName)})();`
+        `(${proxyFunction.replaceAll("proxyName", proxyName)})();`
     );
 
     /** @type {Map<string, (response: any) => void>}  */
@@ -246,6 +246,7 @@
         /** @type {Set<HTMLElement>} */
         toggle_premium: new Set(),
     };
+
     const element = {
         settings: $(".ytp-settings-menu"),
         panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
@@ -290,6 +291,7 @@
      * @property {string} qualityLabel
      * @property {string} quality
      * @property {boolean} isPlayable
+     * @property {object} paygatedQualityDetails
      */
 
     /**
@@ -320,9 +322,11 @@
         if (!isFinite(preferred)) return;
 
         qualityData.forEach((data) => {
-            const label = data.qualityLabel;
-            if (data.isPlayable && parseQualityLabel(label) === preferred) {
-                if (/premium/i.test(label)) quality.premium = data;
+            if (
+                data.isPlayable &&
+                parseQualityLabel(data.qualityLabel) === preferred
+            ) {
+                if (data.paygatedQualityDetails) quality.premium = data;
                 else quality.normal = data;
             }
         });
@@ -556,7 +560,7 @@
      * @param {string} query
      */
     function setManualOverride(ev, query) {
-        const item = ev.target.closest(query);
+        const item = ev.target.closest?.(query);
         if (item) {
             const selected = parseQualityLabel(item.textContent);
             manualOverride = listQuality.includes(selected);
@@ -603,7 +607,7 @@
         }
 
         function musicSetSettingsClicked(/** @type {MouseEvent} */ ev) {
-            settingsClicked = !!ev.target.closest(
+            settingsClicked = !!ev.target.closest?.(
                 "#main-panel [class*=menu], .middle-controls-buttons [class*=menu]"
             );
         }
@@ -691,7 +695,7 @@
 
         function mobileSetSettingsClicked(/** @type {MouseEvent} */ ev) {
             if (isVideoPage() && !element.m_bottom_container()) {
-                settingsClicked = !!ev.target.closest(
+                settingsClicked = !!ev.target.closest?.(
                     "player-top-controls .player-settings-icon, shorts-video ytm-bottom-sheet-renderer"
                 );
             }
