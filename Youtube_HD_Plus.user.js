@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.6.4
+// @version            2.6.5
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -630,8 +630,7 @@
     (function mobile() {
         if (!isMobile && !isEmbed) return;
 
-        /** @type {HTMLElement} */
-        let customListMenu = null;
+        let menuStep = 0;
 
         /**
          * @param {HTMLElement} menu
@@ -649,16 +648,9 @@
          * @param {HTMLElement} container
          */
         function customMenu(container) {
-            location.replace("#custom-q-bottom-menu");
-            customListMenu = container.cloneNode(true);
-            customListMenu.addEventListener("click", () => {
-                if (isEmbed) location.hash = "";
-                else history.back();
-            });
-
-            const item = findItem(customListMenu);
+            const item = findItem(container);
             const menu = item.parentElement;
-            const content = find(customListMenu, "[id*=content]");
+            const content = find(container, "[id*=content]");
             const header = content.previousElementSibling;
             const contentHeight = parseInt(content.style.maxHeight || 150);
             const maxHeight = Math.min(contentHeight + 20, 250);
@@ -668,8 +660,6 @@
             menu.append(...items);
             header?.remove();
             content.style.maxHeight = maxHeight + "px";
-            body.style.overflow = "hidden";
-            container.parentElement.parentElement.append(customListMenu);
 
             const preferred = items[preferredIndex];
             const preferredHeight = preferred.offsetHeight;
@@ -688,7 +678,11 @@
 
                 const menuItem = findItem(container);
                 const item = parseItem({ menuItem });
-                item.addEventListener("click", () => customMenu(container));
+                item.addEventListener("click", (ev) => {
+                    menuStep = -1;
+                    ev.stopPropagation();
+                    customMenu(container);
+                });
                 menuItem.parentElement.append(item);
             }
         }
@@ -701,23 +695,14 @@
             }
         }
 
-        let menuStep = 0;
-
         function mobileSetOverride(ev) {
-            if (manualOverride || customListMenu) return;
+            if (manualOverride) return;
             if (!element.m_bottom_container()) menuStep = 0;
             if (menuStep++ >= 2) setManualOverride(ev, "[role=menuitem]");
         }
 
         function mobilePlayerUpdated(/** @type {CustomEvent} */ ev) {
             if (isVideoPage() && ev.detail.type === "newdata") resetState();
-        }
-
-        function mobileHandlePressBack() {
-            if (customListMenu) {
-                customListMenu = customListMenu.remove();
-                body.style.overflow = "";
-            }
         }
 
         const videoIdRegex = /(?:shorts\/|watch\?v=|clip\/)([^#&?]*)/;
@@ -757,7 +742,6 @@
         }
 
         window.addEventListener("click", mobileSetOverride, true);
-        window.addEventListener("popstate", mobileHandlePressBack);
         document.addEventListener("video-data-change", mobilePlayerUpdated);
 
         observer(() => {
