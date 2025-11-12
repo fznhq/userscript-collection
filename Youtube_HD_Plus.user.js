@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.6.5
+// @version            2.6.6
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -633,22 +633,10 @@
         let menuStep = 0;
 
         /**
-         * @param {HTMLElement} menu
-         * @returns {HTMLElement}
-         */
-        function findItem(menu) {
-            return (
-                find(menu, "[role=menuitem]") ||
-                find(menu, "[role=listitem]") ||
-                find(menu, "ytm-menu-service-item-renderer")
-            );
-        }
-
-        /**
          * @param {HTMLElement} container
+         * @param {HTMLElement} item
          */
-        function customMenu(container) {
-            const item = findItem(container);
+        function customMenu(container, item) {
             const menu = item.parentElement;
             const content = find(container, "[id*=content]");
             const header = content.previousElementSibling;
@@ -676,12 +664,15 @@
             if (container) {
                 settingsClicked = false;
 
-                const menuItem = findItem(container);
+                const menuItem =
+                    find(container, "[role=menuitem]") ||
+                    find(container, "[role=listitem]") ||
+                    find(container, "ytm-menu-service-item-renderer");
                 const item = parseItem({ menuItem });
                 item.addEventListener("click", (ev) => {
                     menuStep = -1;
                     ev.stopPropagation();
-                    customMenu(container);
+                    customMenu(container, menuItem);
                 });
                 menuItem.parentElement.append(item);
             }
@@ -711,9 +702,8 @@
          * @returns {boolean | string}
          */
         function getVideoId() {
-            const id1 = element.link().href.match(videoIdRegex);
-            const id2 = location.href.match(videoIdRegex);
-            return id1 && id2 && id1[1] === id2[1] && id1[1];
+            const id = element.link().href.match(videoIdRegex);
+            return id && location.href.includes(id[0]) && id[1];
         }
 
         function registerPlayer() {
