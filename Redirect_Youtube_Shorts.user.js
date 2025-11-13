@@ -21,7 +21,7 @@
 // @description:es     Redirige automáticamente YouTube Shorts al reproductor normal sin recargar la página
 // @description:de     Leitet YouTube Shorts automatisch zum normalen Videoplayer um, ohne die Seite neu zu laden
 // @description:ru     Автоматически перенаправляет YouTube Shorts в обычный видеоплеер без перезагрузки страницы
-// @version            2.1.6
+// @version            2.1.7
 // @run-at             document-start
 // @inject-into        page
 // @match              https://www.youtube.com/*
@@ -77,7 +77,7 @@
      */
     function findData(element, key) {
         const reel = "reelWatchEndpoint";
-        const isShorts = (data) => key === reel || dig(data, reel);
+        const isShorts = (data) => key === reel || dig(data[key], reel);
 
         while (element && element.tagName !== "YTD-APP") {
             const data = dig(element.data, key);
@@ -93,8 +93,8 @@
         const elements = document.querySelectorAll(`a[href*="${id}"]`);
 
         for (const element of elements) {
-            let data = findData(element, "reelWatchEndpoint");
             const url = (element.href = `/watch?v=${id}`);
+            let data = findData(element, "reelWatchEndpoint");
 
             if (data) {
                 const { videoId } = data.reelWatchEndpoint;
