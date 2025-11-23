@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.6.7
+// @version            2.6.8
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -770,10 +770,14 @@
             return togglePremium(toggle);
         }
 
-        function premiumMenu() {
+        /**
+         * @param {"c4_player" | "movie_player"} playerId
+         * @returns {HTMLElement}
+         */
+        function premiumMenu(playerId) {
             return premiumOption(
                 createMenuItem(icons.premium, labels.premium, true).item,
-                element.movie_player()
+                element[playerId]()
             );
         }
 
@@ -819,13 +823,17 @@
             setTextQuality(text);
         }
 
-        function qualityMenu() {
+        /**
+         * @param {"c4_player" | "movie_player"} playerId
+         * @returns {HTMLElement}
+         */
+        function qualityMenu(playerId) {
             const menu = createMenuItem(icons.quality, labels.quality);
 
             menu.item.style.cursor = "default";
             menu.content.style.fontSize = "130%";
 
-            qualityOption(menu.content, element.movie_player());
+            qualityOption(menu.content, element[playerId]());
             return menu.item;
         }
 
@@ -889,8 +897,9 @@
             if (options.show_ui) {
                 const settings = find(player, ".ytp-settings-menu");
                 if (settings) {
+                    const id = player.id.replace("-", "_");
                     const panel = find(settings, ".ytp-panel-menu");
-                    panel.append(premiumMenu(), qualityMenu());
+                    panel.append(premiumMenu(id), qualityMenu(id));
                     settings.addEventListener("click", setOverride, true);
                 }
             }
