@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.6.6
+// @version            2.6.7
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -248,10 +248,9 @@
     };
 
     const element = {
-        settings: $(".ytp-settings-menu"),
-        panel_settings: $(".ytp-settings-menu .ytp-panel-menu"),
         movie_player: $("#movie_player", !isMobile),
         short_player: $("#shorts-player"),
+        c4_player: $("#c4-player", false),
         popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
         music_menu_item: $("ytmusic-menu-service-item-renderer[class*=popup]"),
@@ -299,8 +298,8 @@
      * @returns {number}
      */
     function getPreferredQuality(data) {
-        let preferred = 0,
-            min = Infinity;
+        let preferred = 0;
+        let min = Infinity;
 
         for (const d of data) {
             const q = parseQualityLabel(d.qualityLabel);
@@ -703,7 +702,7 @@
          */
         function getVideoId() {
             const id = element.link().href.match(videoIdRegex);
-            return id && location.href.includes(id[0]) && id[1];
+            return !!id && location.href.includes(id[0]) && id[1];
         }
 
         function registerPlayer() {
@@ -882,21 +881,39 @@
             window.addEventListener("click", attachShortMenuItem);
         }
 
+        /**
+         * @param {HTMLElement} player
+         */
+        function attachDesktopSettings(player) {
+            addVideoListener(player);
+            if (options.show_ui) {
+                const settings = find(player, ".ytp-settings-menu");
+                if (settings) {
+                    const panel = find(settings, ".ytp-panel-menu");
+                    panel.append(premiumMenu(), qualityMenu());
+                    settings.addEventListener("click", setOverride, true);
+                }
+            }
+        }
+
+        let c4Player = null;
+
+        /** Special case for c4-player  */
+        observer(() => {
+            const player = element.c4_player();
+            if (player && c4Player !== player) attachDesktopSettings(player);
+            c4Player = player;
+        });
+
         observer((_, observe) => {
             const moviePlayer = element.movie_player();
             const shortPlayer = element.short_player();
 
             if (shortPlayer) addVideoListener(shortPlayer);
-            if (!moviePlayer) return;
-
-            observe.disconnect();
-            addVideoListener(moviePlayer);
-            document.addEventListener("yt-player-updated", playerUpdated);
-            const panelSettings = options.show_ui && element.panel_settings();
-
-            if (panelSettings) {
-                panelSettings.append(premiumMenu(), qualityMenu());
-                element.settings().addEventListener("click", setOverride, true);
+            if (moviePlayer) {
+                observe.disconnect();
+                document.addEventListener("yt-player-updated", playerUpdated);
+                attachDesktopSettings(moviePlayer);
             }
         });
     })();
