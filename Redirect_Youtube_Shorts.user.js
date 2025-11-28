@@ -21,7 +21,7 @@
 // @description:es     Redirige automáticamente YouTube Shorts al reproductor normal sin recargar la página
 // @description:de     Leitet YouTube Shorts automatisch zum normalen Videoplayer um, ohne die Seite neu zu laden
 // @description:ru     Автоматически перенаправляет YouTube Shorts в обычный видеоплеер без перезагрузки страницы
-// @version            2.1.7
+// @version            2.2.0
 // @run-at             document-start
 // @inject-into        page
 // @match              https://www.youtube.com/*
@@ -53,35 +53,34 @@
      * @param {string} target
      * @param {any} [value]
      * @param {boolean} [parent]
+     * @param {boolean} [checkReel]
      * @returns {any}
      */
-    function dig(obj, target, value, parent) {
-        if (obj && typeof obj === "object") {
-            if (target in obj) {
-                if (value ? obj[target] === value : !dig(obj[target], target)) {
-                    return parent && typeof parent === "object" ? parent : obj;
-                }
-            }
+    function dig(obj, target, value, parent, checkReel, _parent_obj) {
+        if (!obj || typeof obj !== "object") return;
 
-            for (const k in obj) {
-                const result = dig(obj[k], target, value, parent && obj);
-                if (result !== undefined) return result;
+        if (target in obj) {
+            if (value ? obj[target] === value : !dig(obj[target], target)) {
+                const output = (parent && _parent_obj) || obj;
+                if (!checkReel || output.reelWatchEndpoint) return output;
             }
+        }
+
+        for (const k in obj) {
+            const result = dig(obj[k], target, value, parent, checkReel, obj);
+            if (result !== undefined) return result;
         }
     }
 
     /**
      * @param {HTMLAnchorElement} element
-     * @param {string} key
+     * @param {string} id
      * @returns {object | undefined}
      */
-    function findData(element, key) {
-        const reel = "reelWatchEndpoint";
-        const isShorts = (data) => key === reel || dig(data[key], reel);
-
+    function findData(element, id) {
         while (element && element.tagName !== "YTD-APP") {
-            const data = dig(element.data, key);
-            if (data && isShorts(data)) return key === reel ? data : data[key];
+            const data = dig(element.data, "videoId", id, true, true);
+            if (data) return data;
             element = element.parentElement;
         }
     }
@@ -90,29 +89,16 @@
      * @param {string} id
      */
     function redirectShorts(id) {
-        const elements = document.querySelectorAll(`a[href*="${id}"]`);
-
-        for (const element of elements) {
+        for (const element of document.querySelectorAll(`a[href*="${id}"]`)) {
             const url = (element.href = `/watch?v=${id}`);
-            let data = findData(element, "reelWatchEndpoint");
+            const data = findData(element, id);
 
-            if (data) {
-                const { videoId } = data.reelWatchEndpoint;
-
-                if (videoId && videoId !== id) {
-                    const videos =
-                        findData(element, "items") ||
-                        findData(element, "contents");
-                    if (videos) data = dig(videos, "videoId", id, true);
-                }
-
-                if (data.reelWatchEndpoint.videoId === id) {
-                    const metadata = dig(data, "url");
-                    metadata.url = url;
-                    metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
-                    data.watchEndpoint = { videoId: id };
-                    data.reelWatchEndpoint = {};
-                }
+            if (data && data.reelWatchEndpoint.videoId) {
+                const metadata = dig(data, "url");
+                metadata.url = url;
+                metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
+                data.watchEndpoint = { videoId: id };
+                data.reelWatchEndpoint = {};
             }
         }
     }
@@ -120,7 +106,7 @@
     const idRegex = /shorts\/([^#&?]*)/;
 
     function handleShorts(/** @type {MouseEvent} */ ev) {
-        const url = ev.target.closest?.("a[href*='/shorts/']");
+        const url = ev.target.closest?.("a[href^='/shorts/']");
         if (url) redirectShorts(url.href.match(idRegex)[1]);
     }
 
