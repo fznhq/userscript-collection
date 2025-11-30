@@ -21,7 +21,7 @@
 // @description:es     Redirige automáticamente YouTube Shorts al reproductor normal sin recargar la página
 // @description:de     Leitet YouTube Shorts automatisch zum normalen Videoplayer um, ohne die Seite neu zu laden
 // @description:ru     Автоматически перенаправляет YouTube Shorts в обычный видеоплеер без перезагрузки страницы
-// @version            2.2.1
+// @version            2.2.2
 // @run-at             document-start
 // @inject-into        page
 // @match              https://www.youtube.com/*
@@ -53,7 +53,6 @@
      * @param {string} target
      * @param {any} [value]
      * @param {boolean} [parent]
-     * @param {boolean} [checkReel]
      * @returns {any}
      */
     function dig(obj, target, value, parent, _parent_obj) {
