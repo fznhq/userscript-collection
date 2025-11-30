@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.6.8
+// @version            2.6.9
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -251,7 +251,7 @@
         movie_player: $("#movie_player", !isMobile),
         short_player: $("#shorts-player"),
         c4_player: $("#c4-player", false),
-        popup_menu: $("ytd-popup-container ytd-menu-service-item-renderer"),
+        popup_menu: $("ytd-popup-container > :not([aria-hidden=true]) #items"),
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
         music_menu_item: $("ytmusic-menu-service-item-renderer[class*=popup]"),
         link: $("link[rel=canonical]"),
@@ -444,7 +444,7 @@
      */
     function removeDisabled(element) {
         const query = "[disabled], [aria-disabled=true], [class*=disabled]";
-        const items = find(element, query, true);
+        const items = [element, ...find(element, query, true)];
 
         for (const item of items) {
             item.removeAttribute("disabled");
@@ -781,7 +781,10 @@
             );
         }
 
-        function shortPremiumMenu() {
+        /**
+         * @returns {HTMLElement}
+         */
+        function shortPremiumItem() {
             const item = parseItem({
                 menuItem: find(body, "ytd-toggle-menu-service-item-renderer"),
                 label: labels.premium,
@@ -838,11 +841,13 @@
         }
 
         /**
-         * @param {HTMLElement} menuItem
          * @returns {HTMLElement}
          */
-        function shortQualityMenu(menuItem) {
-            const item = parseItem({ menuItem, selected: false });
+        function shortQualityItem() {
+            const item = parseItem({
+                menuItem: find(body, "ytd-menu-service-item-renderer"),
+                selected: false,
+            });
             const container = find(item, "yt-formatted-string:last-of-type");
             const option = document.createElement("div");
 
@@ -875,13 +880,16 @@
             }
         }
 
-        function attachShortMenuItem() {
-            const menu = isVideoPage("shorts") && element.popup_menu();
-            if (menu && !find(menu.parentElement, `[${proxyName}]`)) {
-                menu.parentElement.append(
-                    shortPremiumMenu(),
-                    shortQualityMenu(menu)
-                );
+        function attachShortMenuItem(/** @type {MouseEvent} */ ev) {
+            if (isVideoPage("shorts") && ev.target.closest("#menu-button")) {
+                const menu = element.popup_menu();
+                const cache = [shortPremiumItem(), shortQualityItem()];
+                const append = () => {
+                    if (!menu.contains(cache[0])) menu.append(...cache);
+                };
+                append();
+                observer(append, menu, { childList: true });
+                window.removeEventListener("click", attachShortMenuItem);
             }
         }
 
