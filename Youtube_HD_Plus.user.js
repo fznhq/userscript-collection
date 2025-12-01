@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.6.9
+// @version            2.7.0
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -274,6 +274,7 @@
     function observer(callback, target = body, options) {
         const mutation = new MutationObserver(callback);
         mutation.observe(target, options || { subtree: true, childList: true });
+        callback([], mutation);
     }
 
     /**
@@ -600,7 +601,6 @@
                 document.dispatchEvent(new Event("resize", { bubbles: true }));
             });
 
-            addItem();
             observer(addItem, dropdown, { attributeFilter: ["aria-hidden"] });
             find(item, "yt-formatted-string + yt-icon").style.marginInline = 0;
         }
@@ -844,10 +844,8 @@
          * @returns {HTMLElement}
          */
         function shortQualityItem() {
-            const item = parseItem({
-                menuItem: find(body, "ytd-menu-service-item-renderer"),
-                selected: false,
-            });
+            const menuItem = find(body, "ytd-menu-service-item-renderer");
+            const item = parseItem({ menuItem, selected: false });
             const container = find(item, "yt-formatted-string:last-of-type");
             const option = document.createElement("div");
 
@@ -883,12 +881,11 @@
         function attachShortMenuItem(/** @type {MouseEvent} */ ev) {
             if (isVideoPage("shorts") && ev.target.closest("#menu-button")) {
                 const menu = element.popup_menu();
-                const cache = [shortPremiumItem(), shortQualityItem()];
-                const append = () => {
-                    if (!menu.contains(cache[0])) menu.append(...cache);
+                const items = [shortPremiumItem(), shortQualityItem()];
+                const addItems = () => {
+                    if (!menu.contains(items[0])) menu.append(...items);
                 };
-                append();
-                observer(append, menu, { childList: true });
+                observer(addItems, menu, { childList: true });
                 window.removeEventListener("click", attachShortMenuItem);
             }
         }
