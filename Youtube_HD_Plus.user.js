@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.7.0
+// @version            2.7.1
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -251,11 +251,10 @@
         movie_player: $("#movie_player", !isMobile),
         short_player: $("#shorts-player"),
         c4_player: $("#c4-player", false),
-        popup_menu: $("ytd-popup-container > :not([aria-hidden=true]) #items"),
-        m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
-        music_menu_item: $("ytmusic-menu-service-item-renderer[class*=popup]"),
         link: $("link[rel=canonical]"),
         offline: $("[class*=offline][style*='v=']", false),
+        m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
+        popup: $("[class*=popup-container]:not([aria-hidden=true]) #items"),
     };
 
     const style = head.appendChild(document.createElement("style"));
@@ -567,6 +566,10 @@
         }
     }
 
+    function resizeWindow() {
+        document.dispatchEvent(new Event("resize", { bubbles: true }));
+    }
+
     async function syncOptions() {
         if ((await GM.getValue("updated_id")) !== options.updated_id) {
             await loadOptions(), togglePremium(), setTextQuality();
@@ -587,22 +590,26 @@
         if (!isMusic) return;
 
         /**
-         * @param {HTMLElement} menuItem
+         * @param {HTMLElement} menu
+         * @returns {boolean}
          */
-        function musicPopupObserver(menuItem) {
-            const dropdown = menuItem.closest("tp-yt-iron-dropdown");
-            const menu = find(dropdown, "#items");
+        function initPopup(menu) {
+            const menuItem = find(menu, "ytmusic-menu-service-item-renderer");
+            if (!menuItem) return false;
+
+            const dropdown = menu.closest("tp-yt-iron-dropdown");
             const item = parseItem({ menuItem });
             const addItem = () => settingsClicked && menu.append(item);
 
             item.addEventListener("click", () => {
                 menu.textContent = "";
                 menu.append(...listQualityToItem(item).items);
-                document.dispatchEvent(new Event("resize", { bubbles: true }));
+                resizeWindow();
             });
 
             observer(addItem, dropdown, { attributeFilter: ["aria-hidden"] });
             find(item, "yt-formatted-string + yt-icon").style.marginInline = 0;
+            return true;
         }
 
         function musicSetSettingsClicked(/** @type {MouseEvent} */ ev) {
@@ -618,11 +625,12 @@
 
         observer((_, observe) => {
             const player = element.movie_player();
-            const menuItem = settingsClicked && element.music_menu_item();
+            const menu = settingsClicked && element.popup();
 
             if (player && !caches.player[player.id]) addVideoListener(player);
-            if (menuItem || (!options.show_ui && player)) observe.disconnect();
-            if (menuItem) musicPopupObserver(menuItem);
+            if ((menu && initPopup(menu)) || (!options.show_ui && player)) {
+                observe.disconnect();
+            }
         });
     })();
 
@@ -637,24 +645,21 @@
          */
         function customMenu(container, item) {
             const menu = item.parentElement;
-            const content = find(container, "[id*=content]");
-            const header = content.previousElementSibling;
-            const contentHeight = parseInt(content.style.maxHeight || 150);
-            const maxHeight = Math.min(contentHeight + 20, 250);
+            const content = find(container, "[style*='max-height']");
             const { items, preferredIndex } = listQualityToItem(item);
 
             menu.textContent = "";
             menu.append(...items);
-            header?.remove();
-            content.style.maxHeight = maxHeight + "px";
 
             const preferred = items[preferredIndex];
             const preferredHeight = preferred.offsetHeight;
             const scrollTarget =
                 preferredHeight * preferredIndex -
-                maxHeight / 2 +
+                parseInt(content.style.maxHeight) / 2 +
                 preferredHeight / 2;
+
             content.scrollTo(0, scrollTarget);
+            resizeWindow();
         }
 
         function mobileQualityMenu() {
@@ -880,7 +885,7 @@
 
         function attachShortMenuItem(/** @type {MouseEvent} */ ev) {
             if (isVideoPage("shorts") && ev.target.closest("#menu-button")) {
-                const menu = element.popup_menu();
+                const menu = element.popup();
                 const items = [shortPremiumItem(), shortQualityItem()];
                 const addItems = () => {
                     if (!menu.contains(items[0])) menu.append(...items);
@@ -890,7 +895,7 @@
             }
         }
 
-        if (options.show_ui) {
+        if (options.show_ui && !isEmbed) {
             window.addEventListener("click", attachShortMenuItem);
         }
 
