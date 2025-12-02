@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.7.1
+// @version            2.7.2
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -250,7 +250,6 @@
     const element = {
         movie_player: $("#movie_player", !isMobile),
         short_player: $("#shorts-player"),
-        c4_player: $("#c4-player", false),
         link: $("link[rel=canonical]"),
         offline: $("[class*=offline][style*='v=']", false),
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
@@ -597,9 +596,10 @@
             const menuItem = find(menu, "ytmusic-menu-service-item-renderer");
             if (!menuItem) return false;
 
-            const dropdown = menu.closest("tp-yt-iron-dropdown");
             const item = parseItem({ menuItem });
-            const addItem = () => settingsClicked && menu.append(item);
+            const addItem = () => {
+                if (settingsClicked && !menu.contains(item)) menu.append(item);
+            };
 
             item.addEventListener("click", () => {
                 menu.textContent = "";
@@ -607,9 +607,8 @@
                 resizeWindow();
             });
 
-            observer(addItem, dropdown, { attributeFilter: ["aria-hidden"] });
-            find(item, "yt-formatted-string + yt-icon").style.marginInline = 0;
-            return true;
+            find(item, "yt-icon:last-child").style.marginLeft = 0;
+            return !observer(addItem, menu, { childList: true });
         }
 
         function musicSetSettingsClicked(/** @type {MouseEvent} */ ev) {
@@ -919,7 +918,7 @@
 
         /** Special case for c4-player  */
         observer(() => {
-            const player = element.c4_player();
+            const player = document.getElementById("c4-player");
             if (player && c4Player !== player) attachDesktopSettings(player);
             c4Player = player;
         });
