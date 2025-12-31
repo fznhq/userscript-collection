@@ -21,10 +21,11 @@
 // @description:es     Redirige automáticamente YouTube Shorts al reproductor normal sin recargar la página
 // @description:de     Leitet YouTube Shorts automatisch zum normalen Videoplayer um, ohne die Seite neu zu laden
 // @description:ru     Автоматически перенаправляет YouTube Shorts в обычный видеоплеер без перезагрузки страницы
-// @version            2.2.2
+// @version            3.0.0
 // @run-at             document-start
 // @inject-into        page
 // @match              https://www.youtube.com/*
+// @match              https://m.youtube.com/*
 // @exclude            https://*.youtube.com/live_chat*
 // @exclude            https://*.youtube.com/embed*
 // @exclude            https://*.youtube.com/tv*
@@ -47,6 +48,10 @@
     if (location.pathname.startsWith("/shorts")) {
         return location.replace(location.href.replace("/shorts/", "/watch?v="));
     }
+
+    const isMobile = location.host === "m.youtube.com";
+    const shortsIdRegex = /shorts\/([^#&?]*)/;
+    const anchor = document.createElement("a");
 
     /**
      * @param {object} obj
@@ -85,30 +90,70 @@
     }
 
     /**
+     * @param {object} data
+     * @param {string} id
+     */
+    function replaceState(data, id) {
+        if (data && data.reelWatchEndpoint.videoId) {
+            const metadata = dig(data, "url");
+            metadata.url = "/watch?v=" + id;
+            metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
+            data.watchEndpoint = { videoId: id };
+            data.reelWatchEndpoint = {};
+        }
+    }
+
+    /**
      * @param {string} id
      */
     function redirectShorts(id) {
         for (const element of document.querySelectorAll(`a[href*="${id}"]`)) {
-            const url = (element.href = `/watch?v=${id}`);
-            const data = findData(element, id);
+            element.href = "/watch?v=" + id;
+            replaceState(findData(element, id), id);
+        }
+    }
 
-            if (data && data.reelWatchEndpoint.videoId) {
-                const metadata = dig(data, "url");
-                metadata.url = url;
-                metadata.webPageType = "WEB_PAGE_TYPE_WATCH";
-                data.watchEndpoint = { videoId: id };
-                data.reelWatchEndpoint = {};
+    /**F
+     * @param {string} url
+     */
+    function redirectShortsMobile(url) {
+        document.body.append(anchor);
+        anchor.href = url.replace("/shorts/", "/watch?v=");
+        anchor.click();
+        anchor.remove();
+    }
+
+    function handleShorts(/** @type {MouseEvent} */ ev) {
+        const shorts = ev.target.closest?.("a[href^='/shorts/']");
+
+        if (shorts) {
+            if (isMobile) {
+                ev.preventDefault();
+                ev.stopPropagation();
+                redirectShortsMobile(shorts.href);
+            } else {
+                redirectShorts(shorts.href.match(shortsIdRegex)[1]);
             }
         }
     }
 
-    const idRegex = /shorts\/([^#&?]*)/;
+    function NavigationHandler(/** @type {CustomEvent} */ ev) {
+        const endpoint = ev.detail.endpoint;
+        const id = endpoint?.reelWatchEndpoint?.videoId;
 
-    function handleShorts(/** @type {MouseEvent} */ ev) {
-        const url = ev.target.closest?.("a[href^='/shorts/']");
-        if (url) redirectShorts(url.href.match(idRegex)[1]);
+        if (id) {
+            const target = document.querySelector("a[href='/']");
+            if (target && target.data) {
+                replaceState(endpoint, id);
+                const originalState = target.data;
+                target.data = endpoint;
+                target.click();
+                target.data = originalState;
+            }
+        }
     }
 
+    window.addEventListener("yt-navigate-start", NavigationHandler, true);
     window.addEventListener("click", handleShorts, true);
-    window.addEventListener("mouseover", handleShorts, true);
+    if (!isMobile) window.addEventListener("mouseover", handleShorts, true);
 })();
