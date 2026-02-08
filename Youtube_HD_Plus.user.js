@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.7.4
+// @version            2.7.5
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -314,22 +314,22 @@
      * @returns {QualityData | undefined}
      */
     function getQuality(qualityData) {
-        const quality = { premium: undefined, normal: undefined };
+        let premium, normal;
         const preferred = getPreferredQuality(qualityData);
 
         if (!isFinite(preferred)) return;
 
-        qualityData.forEach((data) => {
+        for (const data of qualityData) {
             if (
                 data.isPlayable &&
                 parseQualityLabel(data.qualityLabel) === preferred
             ) {
-                if (data.paygatedQualityDetails) quality.premium = data;
-                else quality.normal = data;
+                if (data.paygatedQualityDetails) premium = data;
+                else normal = data;
             }
-        });
+        }
 
-        return (options.preferred_premium && quality.premium) || quality.normal;
+        return (options.preferred_premium && premium) || normal;
     }
 
     /** @type {(() => Promise<void>) | null} */
@@ -371,11 +371,11 @@
      */
     function togglePremium(element) {
         if (element) caches.toggle_premium.add(element);
-        caches.toggle_premium.forEach((toggle) => {
+        for (const toggle of caches.toggle_premium) {
             toggle.removeAttribute("hidden");
             toggle.toggleAttribute("checked", options.preferred_premium);
             toggle.setAttribute("aria-checked", options.preferred_premium);
-        });
+        }
         return element;
     }
 
@@ -385,9 +385,9 @@
      */
     function setTextQuality(nodeText) {
         if (nodeText) caches.text_quality.add(nodeText);
-        caches.text_quality.forEach((text) => {
+        for (const text of caches.text_quality) {
             text.textContent = options.preferred_quality + "p";
-        });
+        }
         return nodeText;
     }
 
@@ -395,7 +395,7 @@
      * @param {keyof options} optionKey
      * @param {any} newValue
      * @param {HTMLElement} player
-     * @param {Boolean} [clearOverride]
+     * @param {boolean} [clearOverride]
      */
     function savePreferred(optionKey, newValue, player, clearOverride) {
         if (clearOverride) manualOverride = false;
@@ -461,7 +461,7 @@
      * @param {HTMLElement} param.menuItem
      * @param {SVGSVGElement | undefined} [param.icon]
      * @param {string} [param.label]
-     * @param {Boolean} [param.selected=true]
+     * @param {boolean} [param.selected=true]
      */
     function parseItem({
         menuItem,
@@ -536,7 +536,7 @@
             caches.player[player.id] = [player, video];
             const fn = setVideoQuality.bind(player);
             const types = ["playing", "resize"];
-            types.forEach((type) => video.addEventListener(type, fn));
+            for (const type of types) video.addEventListener(type, fn);
         }
     }
 
@@ -703,7 +703,7 @@
         const videoIdRegex = /(?:shorts\/|watch\?v=|clip\/)([^#&?]*)/;
 
         /**
-         * @returns {boolean | string}
+         * @returns {string | boolean}
          */
         function getVideoId() {
             const id = element.link().href.match(videoIdRegex);
