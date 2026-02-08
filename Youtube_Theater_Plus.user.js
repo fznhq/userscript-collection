@@ -21,7 +21,7 @@
 // @description:es     Mejora YouTube Theater con funciones como el modo de pantalla completa, apertura automática y más, incluyendo soporte para la nueva interfaz
 // @description:de     Erweitert YouTube Theater mit Funktionen wie Vollseiten-Theater, automatischem Öffnen und weiteren, einschließlich Unterstützung für die neue Benutzeroberfläche
 // @description:ru     Расширяет YouTube Theater функциями, такими как полноэкранный режим, автоматическое открытие и другими, включая поддержку нового интерфейса
-// @version            2.5.1
+// @version            2.5.2
 // @run-at             document-body
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -60,12 +60,12 @@
 
     /**
      * @typedef {object} Option
-     * @property {string} [key]
-     * @property {string} [icon]
+     * @property {string} key
+     * @property {string | SVGElement} [icon]
      * @property {string} label
-     * @property {any} value
+     * @property {boolean | number | string} value
      * @property {() => void} [onUpdate]
-     * @property {Option} [sub]
+     * @property {Record<string, Option>} [sub]
      */
 
     /**
@@ -153,12 +153,12 @@
     function createNS(name, attributes = {}, append = []) {
         const el = document.createElementNS("http://www.w3.org/2000/svg", name);
         for (const k in attributes) el.setAttributeNS(null, k, attributes[k]);
-        return el.append(...append), el;
+        return (el.append(...append), el);
     }
 
     /**
      * @param {Option} option
-     * @param {any} value
+     * @param {boolean | number | string} value
      * @returns {any}
      */
     function saveOption(option, value) {
@@ -169,6 +169,7 @@
     /**
      * @param {string} name
      * @param {string} [subName]
+     * @returns {Promise<void>}
      */
     async function loadOption(name, subName) {
         const key = subName ? `${name}_sub_${subName}` : name;
@@ -203,7 +204,7 @@
     function createDiv(className, append = []) {
         const el = document.createElement("div");
         el.className = "ytp-menuitem" + (className ? "-" + className : "");
-        return el.append(...append), el;
+        return (el.append(...append), el);
     }
 
     /**
@@ -254,7 +255,7 @@
 
         /**
          * @param {Option} option
-         * @returns  {HTMLElement}
+         * @returns {HTMLDivElement}
          */
         function createItem(option) {
             const checkbox = typeof option.value === "boolean";
@@ -447,14 +448,18 @@
     });
 
     const tempAttrs = document.createElement("a");
+    const attrState = {};
 
     /**
      * @param {string} attr
      * @param {boolean} state
      */
     function setAttrValue(attr, state) {
-        tempAttrs.classList.toggle(attr, state);
-        html.setAttribute(attrName, tempAttrs.className);
+        if (attrState[attr] !== state) {
+            attrState[attr] = state;
+            tempAttrs.classList.toggle(attr, state);
+            html.setAttribute(attrName, tempAttrs.className);
+        }
     }
 
     /**
@@ -510,7 +515,7 @@
 
     /**
      * @param {number} [delay=0]
-     * @returns {number}
+     * @returns {number | boolean}
      */
     function mouseNearHide(delay = 0) {
         return toggleHeader(false, delay, () => {
@@ -526,11 +531,12 @@
             const state = !popup && ev.clientY < area;
             const delay = headerShow ? 0 : subOptions.delay.value;
 
-            if (state && (!mouseNearDelayId || headerShow)) {
+            if (!state) mouseNearHide();
+            else if (!mouseNearDelayId || headerShow) {
                 clearTimeout(mouseNearDurationId);
                 mouseNearDurationId = mouseNearHide(delay + 1500);
                 mouseNearDelayId = toggleHeader(true, delay);
-            } else if (!state) mouseNearHide();
+            }
         }
     }
 
@@ -554,9 +560,13 @@
         window.addEventListener("mouseout", (ev) => {
             if (ev.clientY <= 0) mouseNearHide();
         });
-        window.addEventListener("scroll", () => {
-            if (!options.show_header_near.value) toggleHeader();
-        });
+        window.addEventListener(
+            "scroll",
+            () => {
+                if (!options.show_header_near.value) toggleHeader();
+            },
+            { passive: true }
+        );
         element.search().addEventListener("focus", () => toggleHeader(true));
         element.search().addEventListener("blur", () => toggleHeader(false));
     }
