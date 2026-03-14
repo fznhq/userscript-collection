@@ -541,7 +541,7 @@
     }
 
     /**
-    * @param {'watch' | 'shorts' | 'embed'} [type]
+     * @param {'watch' | 'shorts' | 'embed'} [type]
      * @returns {boolean}
      */
     function isVideoPage(type) {
@@ -764,7 +764,7 @@
             const icon = itemElement("icon ythdp-icon", [svg.cloneNode(true)]);
             return { item: itemElement("", [icon, label, content]), content };
         }
-        
+
         /**
          * @param {HTMLElement} item
          * @param {HTMLElement} player
