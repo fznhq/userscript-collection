@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.7.5
+// @version            2.7.6
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -541,7 +541,7 @@
     }
 
     /**
-     * @param {'watch' | 'shorts' | 'embed'} [type]
+    * @param {'watch' | 'shorts' | 'embed'} [type]
      * @returns {boolean}
      */
     function isVideoPage(type) {
@@ -663,22 +663,26 @@
         }
 
         function mobileQualityMenu() {
+            if (!settingsClicked) return;
+
             const container = element.m_bottom_container();
 
             if (container) {
-                settingsClicked = false;
-
                 const menuItem =
                     find(container, "[role=menuitem]") ||
                     find(container, "[role=listitem]") ||
                     find(container, "ytm-menu-service-item-renderer");
-                const item = parseItem({ menuItem });
-                item.addEventListener("click", (ev) => {
-                    menuStep = -1;
-                    ev.stopPropagation();
-                    customMenu(container, menuItem);
-                });
-                menuItem.parentElement.append(item);
+
+                if (menuItem) {
+                    settingsClicked = false;
+                    const item = parseItem({ menuItem });
+                    item.addEventListener("click", (ev) => {
+                        menuStep = -1;
+                        ev.stopPropagation();
+                        customMenu(container, menuItem);
+                    });
+                    menuItem.parentElement.append(item);
+                }
             }
         }
 
@@ -740,7 +744,7 @@
 
         observer(() => {
             if (!isEmbed && isVideoPage()) registerPlayer();
-            if (settingsClicked) mobileQualityMenu();
+            mobileQualityMenu();
         });
     })();
 
@@ -760,7 +764,7 @@
             const icon = itemElement("icon ythdp-icon", [svg.cloneNode(true)]);
             return { item: itemElement("", [icon, label, content]), content };
         }
-
+        
         /**
          * @param {HTMLElement} item
          * @param {HTMLElement} player
