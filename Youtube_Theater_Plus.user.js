@@ -21,7 +21,7 @@
 // @description:es     Mejora YouTube Theater con funciones como el modo de pantalla completa, apertura automática y más, incluyendo soporte para la nueva interfaz
 // @description:de     Erweitert YouTube Theater mit Funktionen wie Vollseiten-Theater, automatischem Öffnen und weiteren, einschließlich Unterstützung für die neue Benutzeroberfläche
 // @description:ru     Расширяет YouTube Theater функциями, такими как полноэкранный режим, автоматическое открытие и другими, включая поддержку нового интерфейса
-// @version            2.5.3
+// @version            2.5.4
 // @run-at             document-body
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -50,6 +50,16 @@
 (async function () {
     "use strict";
 
+    if (
+        typeof GM === "undefined" ||
+        typeof GM.getValue !== "function" ||
+        typeof GM.setValue !== "function"
+    ) {
+        throw new Error(
+            "YouTube Theater Plus requires GM.getValue and GM.setValue support."
+        );
+    }
+
     const html = document.documentElement;
     const body = document.body;
 
@@ -57,6 +67,7 @@
     let theater = false;
     let fullpage = false;
     let headerShow = false;
+    let queuePress = false;
 
     /**
      * @typedef {object} Option
@@ -214,9 +225,10 @@
         /** @type {HTMLElement} */
         const active = document.activeElement;
         return (
-            active.tagName === "TEXTAREA" ||
-            active.tagName === "INPUT" ||
-            active.isContentEditable
+            !!active &&
+            (active.tagName === "TEXTAREA" ||
+                active.tagName === "INPUT" ||
+                active.isContentEditable)
         );
     }
 
@@ -302,17 +314,24 @@
             if (popup && !panel.contains(ev.target)) popup = !!menu.remove();
         });
 
-        window.addEventListener("keydown", (ev) => {
-            const isPressV = ev.key.toLowerCase() === "v" || ev.code === "KeyV";
+        function togglePopup(/** @type {KeyboardEvent} */ ev) {
+            const isPressV =
+                ev.code === "KeyV" ||
+                (typeof ev.key === "string" && ev.key.toLowerCase() === "v");
+            const hasModifiers =
+                ev.ctrlKey || ev.metaKey || ev.altKey || ev.shiftKey;
 
             if (
-                (isPressV && !ev.ctrlKey && !isActiveEditable()) ||
+                (isPressV && !hasModifiers && !isActiveEditable()) ||
                 (popup && ev.code === "Escape")
             ) {
                 document.activeElement.blur();
                 popup = popup ? !!menu.remove() : !body.append(menu);
+                queuePress = true;
             }
-        });
+        }
+
+        window.addEventListener("keydown", togglePopup, true);
     })();
 
     /**
@@ -545,7 +564,9 @@
     }
 
     function onEscapePress(/** @type {KeyboardEvent} */ ev) {
-        if (ev.code !== "Escape" || !theater || popup) return;
+        if (queuePress || ev.code !== "Escape" || !theater || popup) {
+            return (queuePress = false);
+        }
 
         const input = element.search();
 
