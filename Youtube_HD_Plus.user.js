@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.7.6
+// @version            2.7.7
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -51,6 +51,16 @@
 
 (async function () {
     "use strict";
+
+    if (
+        typeof GM === "undefined" ||
+        typeof GM.getValue !== "function" ||
+        typeof GM.setValue !== "function"
+    ) {
+        throw new Error(
+            "[YouTube HD Plus] requires GM.getValue and GM.setValue support."
+        );
+    }
 
     const body = document.body;
     const head = document.head;
@@ -191,7 +201,7 @@
         : policyOptions;
     const script = head.appendChild(document.createElement("script"));
     script.textContent = proxyPolicy.createScript(
-        `(${proxyFunction.replaceAll("proxyName", proxyName)})();`
+        `(${proxyFunction.replace(/proxyName/g, proxyName)})();`
     );
 
     /** @type {Map<string, (response: any) => void>}  */
@@ -339,7 +349,13 @@
     async function runTasks() {
         if (isExecuting) return;
         isExecuting = true;
-        while (pendingTask) await pendingTask((pendingTask = null));
+        try {
+            while (pendingTask) {
+                const task = pendingTask;
+                pendingTask = null;
+                await task();
+            }
+        } catch (e) {}
         isExecuting = false;
     }
 
@@ -448,7 +464,7 @@
         for (const item of items) {
             item.removeAttribute("disabled");
             item.setAttribute("aria-disabled", false);
-            item.className = item.className.replaceAll("disabled", "");
+            item.className = item.className.replace(/disabled/g, "");
         }
 
         return element;
