@@ -56,7 +56,7 @@
         typeof GM.setValue !== "function"
     ) {
         throw new Error(
-            "YouTube Theater Plus requires GM.getValue and GM.setValue support."
+            "[YouTube Theater Plus] requires GM.getValue and GM.setValue support."
         );
     }
 
