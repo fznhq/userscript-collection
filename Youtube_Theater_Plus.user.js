@@ -21,7 +21,7 @@
 // @description:es     Mejora YouTube Theater con funciones como el modo de pantalla completa, apertura automática y más, incluyendo soporte para la nueva interfaz
 // @description:de     Erweitert YouTube Theater mit Funktionen wie Vollseiten-Theater, automatischem Öffnen und weiteren, einschließlich Unterstützung für die neue Benutzeroberfläche
 // @description:ru     Расширяет YouTube Theater функциями, такими как полноэкранный режим, автоматическое открытие и другими, включая поддержку нового интерфейса
-// @version            2.5.4
+// @version            2.5.5
 // @run-at             document-body
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -446,8 +446,8 @@
     };
 
     for (const key in attr) {
-        style.textContent = style.textContent.replaceAll(
-            `[${attr[key]}]`,
+        style.textContent = style.textContent.replace(
+            new RegExp(`\\[${attr[key]}\\]`, "g"),
             `[${attrName}~="${attr[key]}"]`
         );
     }
