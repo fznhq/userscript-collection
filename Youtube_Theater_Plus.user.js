@@ -21,7 +21,7 @@
 // @description:es     Mejora YouTube Theater con funciones como el modo de pantalla completa, apertura automática y más, incluyendo soporte para la nueva interfaz
 // @description:de     Erweitert YouTube Theater mit Funktionen wie Vollseiten-Theater, automatischem Öffnen und weiteren, einschließlich Unterstützung für die neue Benutzeroberfläche
 // @description:ru     Расширяет YouTube Theater функциями, такими как полноэкранный режим, автоматическое открытие и другими, включая поддержку нового интерфейса
-// @version            2.5.6
+// @version            2.5.7
 // @run-at             document-body
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -207,6 +207,13 @@
         }
     }
 
+    const uniqueNumber = Date.now() + Math.round(Math.random() * 1e13);
+    const uniqueChar = "u" + uniqueNumber.toString(16);
+    const customClasses = {
+        "ytc-popup-container": "p" + uniqueChar,
+        "ytc-menu": "m" + uniqueChar,
+    };
+
     /**
      * @param {string} className
      * @param {Node[]} [append]
@@ -214,7 +221,12 @@
      */
     function createDiv(className, append = []) {
         const el = document.createElement("div");
-        el.className = "ytp-menuitem" + (className ? "-" + className : "");
+        for (const name in customClasses)
+            className = className.replace(name, customClasses[name]);
+        el.className =
+            className[0] === " "
+                ? className.trim()
+                : "ytp-menuitem" + (className ? "-" + className : "");
         return (el.append(...append), el);
     }
 
@@ -432,7 +444,7 @@
         }
     `;
 
-    const attrName = "yttp-" + Date.now().toString(36);
+    const attrName = "yttp-" + uniqueChar;
     const attr = {
         video_id: "video-id",
         role: "role",
@@ -449,6 +461,13 @@
         style.textContent = style.textContent.replace(
             new RegExp(`\\[${attr[key]}\\]`, "g"),
             `[${attrName}~="${attr[key]}"]`
+        );
+    }
+
+    for (const name in customClasses) {
+        style.textContent = style.textContent.replace(
+            new RegExp(name, "g"),
+            customClasses[name]
         );
     }
 
