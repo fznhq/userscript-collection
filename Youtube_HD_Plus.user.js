@@ -436,10 +436,12 @@
      * @param {HTMLElement[]} elements
      */
     function removeAttributes(elements) {
+        const preserveAttributes = ["role", "class"];
         for (const element of elements) {
             element.textContent = "";
             for (const attr of element.attributes) {
-                if (attr.name !== "class") element.removeAttribute(attr.name);
+                if (!preserveAttributes.includes(attr.name))
+                    element.removeAttribute(attr.name);
             }
         }
     }
@@ -486,9 +488,12 @@
         selected = true,
     }) {
         const item = body.appendChild(removeDisabled(menuItem.cloneNode(true)));
-        const iIcon = firstOnly(find(item, "c3-icon, yt-icon", true));
+        const iIcon = firstOnly(
+            find(item, "c3-icon, yt-icon, [role=img]", true)
+        );
         const iTexts = find(item, "[role=text], yt-formatted-string", true);
         const iText = firstOnly(iTexts);
+        const button = find(item, "button");
         const optionLabel = iText.cloneNode();
         const optionIcon = iIcon.cloneNode();
         const wrapperIcon = (icon) => {
@@ -504,6 +509,7 @@
         removeAttributes([iIcon, iText, optionIcon, optionLabel]);
         iText.textContent = label;
 
+        if (button) button.style.width = "100%";
         if (icon) iIcon.append(wrapperIcon(icon.cloneNode(true)));
         if (selected) {
             optionIcon.append(wrapperIcon(icons.arrow));
@@ -869,13 +875,30 @@
          * @returns {HTMLElement}
          */
         function shortQualityItem() {
-            const menuItem = find(body, "ytd-menu-service-item-renderer");
-            const item = parseItem({ menuItem, selected: false });
-            const container = find(item, "yt-formatted-string:last-of-type");
+            const menuItem = find(
+                body,
+                "ytd-menu-service-item-renderer, yt-list-item-view-model"
+            );
+            let item = parseItem({ menuItem, selected: false });
+            let button = item;
+
+            if (item.nodeName.toLowerCase() === "yt-list-item-view-model") {
+                const oldItem = item;
+                item = item.cloneNode(true);
+                button = find(item, "button");
+                oldItem.remove();
+            }
+
+            const container = find(
+                item,
+                "yt-formatted-string:last-of-type, [role=text]:last-of-type"
+            );
             const option = document.createElement("div");
 
-            item.style.userSelect = "none";
-            item.style.cursor = "default";
+            item.firstElementChild.style.userSelect = button.style.userSelect =
+                "none";
+            item.firstElementChild.style.cursor = button.style.cursor =
+                "default";
             container.append(option);
             container.style.minWidth = "130px";
             option.style.margin = container.style.margin = "0 auto";
