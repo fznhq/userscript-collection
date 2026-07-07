@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.8.0
+// @version            2.8.1
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -941,20 +941,40 @@
         if (options.show_ui && !isEmbed) {
             window.addEventListener("click", attachShortMenuItem);
         }
+        /**
+         * @param {HTMLElement} player
+         */
+        async function mountSettings(player) {
+            const settings = find(player, ".ytp-settings-menu");
+
+            if (settings) {
+                settings.addEventListener("click", setOverride, true);
+
+                if (options.show_ui) {
+                    const items = [premiumMenu(player), qualityMenu(player)];
+                    const panel = find(settings, ".ytp-panel-menu");
+                    panel.append(...items);
+                    if (panel.contains(items[0])) return;
+                } else return;
+
+                settings.removeEventListener("click", setOverride, true);
+            }
+
+            throw new Error("Not mounted.");
+        }
 
         /**
          * @param {HTMLElement} player
          */
         function attachDesktopSettings(player) {
             addVideoListener(player);
-            if (options.show_ui) {
-                const settings = find(player, ".ytp-settings-menu");
-                if (settings) {
-                    const panel = find(settings, ".ytp-panel-menu");
-                    panel.append(premiumMenu(player), qualityMenu(player));
-                    settings.addEventListener("click", setOverride, true);
-                }
-            }
+
+            let attempt = 5;
+            (function mount() {
+                mountSettings(player).catch(
+                    () => attempt-- && setTimeout(mount, 100)
+                );
+            })();
         }
 
         let c4Player = null;
