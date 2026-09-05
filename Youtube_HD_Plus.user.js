@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.8.2
+// @version            2.8.3
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -691,8 +691,8 @@
 
             if (container) {
                 const menuItem =
-                    find(container, "[role=menuitem]") ||
-                    find(container, "[role=listitem]") ||
+                    find(container, "[role=menuitem]:not(button)") ||
+                    find(container, "[role=listitem]:not(button)") ||
                     find(container, "ytm-menu-service-item-renderer");
 
                 if (menuItem) {
