@@ -21,7 +21,7 @@
 // @description:es     Selecciona automáticamente la calidad de vídeo preferida y activa la reproducción Premium cuando esté disponible. (Compatible con YouTube Desktop, Music y Móvil)
 // @description:de     Wählt automatisch die bevorzugte Videoqualität und aktiviert Premium-Wiedergabe, wenn verfügbar. (Unterstützt YouTube Desktop, Music & Mobile)
 // @description:ru     Автоматически выбирает предпочтительное качество видео и включает воспроизведение Premium, если доступно. (Поддерживает YouTube Desktop, Music и Mobile)
-// @version            2.8.3
+// @version            2.8.4
 // @run-at             document-end
 // @inject-into        content
 // @match              https://www.youtube.com/*
@@ -263,7 +263,10 @@
         link: $("link[rel=canonical]"),
         offline: $("[class*=offline][style*='v=']", false),
         m_bottom_container: $("bottom-sheet-container:not(:empty)", false),
-        popup: $("[class*=popup-container]:not([aria-hidden=true]) #items"),
+        popup: $(
+            "ytd-popup-container tp-yt-iron-dropdown:not([aria-hidden=true]) [role=menu], [class*=popup-container]:not([aria-hidden=true]) #items",
+            false
+        ),
     };
 
     const style = head.appendChild(document.createElement("style"));
@@ -283,6 +286,13 @@
         const mutation = new MutationObserver(callback);
         mutation.observe(target, options || { subtree: true, childList: true });
         callback([], mutation);
+    }
+
+    async function retry(callback, attempt = 5) {
+        try {
+            if ((await callback()) !== false) return;
+        } catch {}
+        if (--attempt) setTimeout(() => retry(callback, attempt), 100);
     }
 
     /**
@@ -792,10 +802,11 @@
          * @param {HTMLElement} player
          * @returns {HTMLElement}
          */
-        function premiumOption(item, player) {
+        function premiumOption(item, player, keepOpen) {
             const name = "preferred_premium";
             const toggle = find(item, "[role=button]") || item;
-            item.addEventListener("click", () => {
+            item.addEventListener("click", (ev) => {
+                if (keepOpen) ev.stopPropagation();
                 savePreferred(name, !options[name], player);
             });
             return togglePremium(toggle);
@@ -824,7 +835,7 @@
             });
             item.classList.add("ythdp-toggle");
             find(item, ".toggle-label").textContent = "";
-            premiumOption(item, element.short_player());
+            premiumOption(item, element.short_player(), true);
             return item;
         }
 
@@ -832,7 +843,7 @@
          * @param {HTMLElement} content
          * @param {HTMLElement} player
          */
-        function qualityOption(content, player) {
+        function qualityOption(content, player, keepOpen) {
             const name = "preferred_quality";
             const text = document.createTextNode("");
 
@@ -840,6 +851,7 @@
             content.style.wordSpacing = "2rem";
             content.append("< ", text, " >");
             content.addEventListener("click", (ev) => {
+                if (keepOpen) ev.stopPropagation();
                 const threshold = content.clientWidth / 2;
                 const contentLeft = content.getBoundingClientRect().left;
                 const clickPos = ev.clientX - contentLeft;
@@ -901,10 +913,11 @@
                 "default";
             container.append(option);
             container.style.minWidth = "130px";
-            option.style.margin = container.style.margin = "0 auto";
+            container.style.margin = "0 auto";
+            option.style.margin = "0 0 0 auto";
             option.style.width = "fit-content";
 
-            qualityOption(option, element.short_player());
+            qualityOption(option, element.short_player(), true);
             return item;
         }
 
@@ -932,12 +945,12 @@
 
         function attachShortMenuItem(/** @type {MouseEvent} */ ev) {
             if (isVideoPage("shorts") && ev.target.closest("#menu-button")) {
-                const menu = element.popup();
-                const items = [shortPremiumItem(), shortQualityItem()];
-                const addItems = () => {
+                retry(() => {
+                    const menu = element.popup();
+                    if (!menu) return false;
+                    const items = [shortPremiumItem(), shortQualityItem()];
                     if (!menu.contains(items[0])) menu.append(...items);
-                };
-                observer(addItems, menu, { childList: true });
+                });
                 window.removeEventListener("click", attachShortMenuItem);
             }
         }
@@ -972,13 +985,7 @@
          */
         function attachDesktopSettings(player) {
             addVideoListener(player);
-
-            let attempt = 5;
-            (function mount() {
-                mountSettings(player).catch(
-                    () => attempt-- && setTimeout(mount, 100)
-                );
-            })();
+            retry(() => mountSettings(player));
         }
 
         observer((_, observe) => {
